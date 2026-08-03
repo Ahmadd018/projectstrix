@@ -21,6 +21,7 @@ export default function Sidebar() {
   const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">(
     "loading",
   );
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const check = async () => {
@@ -39,16 +40,25 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.logo}>
-        <div className={styles.logoIcon}>S</div>
-        <div className={styles.logoText}>Strix</div>
+    <aside className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ""}`}>
+      <div className={styles.headerRow}>
+        <div className={styles.logo}>
+          <div className={styles.logoIcon}>S</div>
+          {!isCollapsed && <div className={styles.logoText}>Strix</div>}
+        </div>
+        <button 
+          className={styles.collapseBtn} 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {isCollapsed ? "»" : "«"}
+        </button>
       </div>
 
       {/* New Scan CTA */}
-      <Link href="/scans?new=1" className={styles.newScanBtn}>
-        <span>＋</span>
-        <span>New Scan</span>
+      <Link href="/scans?new=1" className={styles.newScanBtn} title="New Scan">
+        <span className={styles.plusIcon}>＋</span>
+        {!isCollapsed && <span>New Scan</span>}
       </Link>
 
       <nav className={styles.nav}>
@@ -62,9 +72,10 @@ export default function Sidebar() {
               key={item.name}
               href={item.path}
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+              title={isCollapsed ? item.name : undefined}
             >
               <span className={styles.icon}>-</span>
-              <span>{item.name}</span>
+              {!isCollapsed && <span>{item.name}</span>}
             </Link>
           );
         })}
@@ -72,7 +83,7 @@ export default function Sidebar() {
 
       <div className={styles.footer}>
         {/* Health indicator */}
-        <div className={styles.healthBadge}>
+        <div className={styles.healthBadge} title={apiStatus === "ok" ? "API Online" : "API Offline"}>
           <span
             className={styles.healthDot}
             style={{
@@ -86,24 +97,30 @@ export default function Sidebar() {
                 apiStatus === "ok" ? "0 0 6px var(--accent-primary)" : "none",
             }}
           />
-          <span className={styles.healthLabel}>
-            {apiStatus === "ok"
-              ? "API Online"
-              : apiStatus === "error"
-                ? "API Offline"
-                : "Checking…"}
-          </span>
-          <Link href="/api-docs" className={styles.docsChip}>
-            Swagger
-          </Link>
+          {!isCollapsed && (
+            <>
+              <span className={styles.healthLabel}>
+                {apiStatus === "ok"
+                  ? "API Online"
+                  : apiStatus === "error"
+                    ? "API Offline"
+                    : "Checking…"}
+              </span>
+              <Link href="/api-docs" className={styles.docsChip}>
+                Swagger
+              </Link>
+            </>
+          )}
         </div>
 
         <div className={styles.userProfile}>
           <div className={styles.avatar}>A</div>
-          <div className={styles.userInfo}>
-            <span className={styles.userName}>Admin User</span>
-            <span className={styles.userRole}>Security Engineer</span>
-          </div>
+          {!isCollapsed && (
+            <div className={styles.userInfo}>
+              <span className={styles.userName}>Admin User</span>
+              <span className={styles.userRole}>Security Engineer</span>
+            </div>
+          )}
         </div>
       </div>
     </aside>

@@ -6,14 +6,52 @@
   flex-direction: column;
   padding: 24px 0;
   height: 100%;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
-.logo {
+.collapsed {
+  width: 80px;
+}
+
+.headerRow {
   padding: 0 24px;
   margin-bottom: 32px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.collapsed .headerRow {
+  padding: 0;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.collapseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapseBtn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
 }
 
 .logoIcon {
@@ -56,6 +94,12 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 16px var(--accent-primary-glow);
   letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.collapsed .newScanBtn {
+  margin: 0 16px 20px;
+  padding: 12px 0;
 }
 
 .newScanBtn:hover {
@@ -72,6 +116,10 @@
   flex: 1;
 }
 
+.collapsed .nav {
+  padding: 0 12px;
+}
+
 .navItem {
   display: flex;
   align-items: center;
@@ -81,6 +129,12 @@
   color: var(--text-secondary);
   font-weight: 500;
   transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.collapsed .navItem {
+  justify-content: center;
+  padding: 12px 0;
 }
 
 .navItem:hover {
@@ -109,6 +163,13 @@
   padding: 16px 24px;
   border-top: 1px solid var(--border-color);
   margin-top: auto;
+}
+
+.collapsed .footer {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .userProfile {
@@ -154,6 +215,12 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-color);
   border-radius: 8px;
+}
+
+.collapsed .healthBadge {
+  padding: 8px;
+  margin: 0 0 16px 0;
+  justify-content: center;
 }
 
 .healthDot {

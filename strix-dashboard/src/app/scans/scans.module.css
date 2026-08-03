@@ -68,10 +68,11 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
 }
 
 .table th {
-  padding: 14px 20px;
+  padding: 16px 20px;
   text-align: left;
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -79,6 +80,7 @@
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .row {
@@ -113,7 +115,7 @@
 
 .targetText {
   font-weight: 500;
-  max-width: 280px;
+  max-width: 350px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -128,17 +130,20 @@
   font-weight: 600;
   text-transform: capitalize;
   border: 1px solid rgba(59, 130, 246, 0.2);
+  white-space: nowrap;
 }
 
 .modelCell {
   font-size: 0.82rem;
   color: var(--text-secondary);
   font-family: "Courier New", monospace;
+  white-space: nowrap;
 }
 
 .timeCell {
   color: var(--text-secondary);
   font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .statusBadge {
