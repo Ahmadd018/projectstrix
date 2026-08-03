@@ -11,6 +11,7 @@ const navItems = [
   { name: "Vulnerabilities", path: "/vulnerabilities" },
   { name: "Live Graph", path: "/graph" },
   { name: "Reports", path: "/reports" },
+  { name: "System Logs", path: "/logs" },
   { name: "API Docs", path: "/api-docs" },
   { name: "Settings", path: "/settings" },
 ];

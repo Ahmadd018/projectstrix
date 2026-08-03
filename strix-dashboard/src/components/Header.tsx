@@ -8,8 +8,8 @@ const routeTitles: Record<string, string> = {
   "/scans": "Scans & Targets",
   "/vulnerabilities": "Vulnerabilities",
   "/graph": "Agent Live Graph",
-  "/remediation": "Auto-Fix PRs",
   "/reports": "Compliance Reports",
+  "/logs": "System Logs",
   "/api-docs": "API Documentation",
   "/settings": "Settings",
 };
