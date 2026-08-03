@@ -139,3 +139,46 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+
+/* Health badge in footer */
+.healthBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0 12px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.healthDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.healthLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.docsChip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.docsChip:hover {
+  background: rgba(0, 230, 118, 0.2);
+}

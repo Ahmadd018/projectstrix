@@ -1,0 +1,96 @@
+.page {
+  min-height: 100vh;
+  background: #0d1117;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+  background: rgba(13, 17, 23, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 0 8px rgba(0, 230, 118, 0.5));
+}
+
+.title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 2px 0 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rawLink,
+.healthLink {
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.rawLink {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.rawLink:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.healthLink {
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.25);
+  color: #00e676;
+}
+
+.healthLink:hover {
+  background: rgba(0, 230, 118, 0.2);
+}
+
+/* Override Swagger UI default styles to match dark theme */
+.swaggerWrapper {
+  flex: 1;
+}
+
+/* Swagger UI dark overrides */
+.swaggerWrapper :global(.swagger-ui) {
+  filter: invert(88%) hue-rotate(180deg);
+}
+.swaggerWrapper :global(.swagger-ui .highlight-code *),
+.swaggerWrapper :global(.swagger-ui .microlight) {
+  filter: invert(100%) hue-rotate(180deg);
+}
