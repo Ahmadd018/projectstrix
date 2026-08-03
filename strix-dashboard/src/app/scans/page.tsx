@@ -230,7 +230,7 @@ function ScansContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>LLM Model</Label>
-                  <Select value={form.llmModel} onValueChange={v => setForm({...form, llmModel: v})} disabled={launching}>
+                  <Select value={form.llmModel} onValueChange={v => setForm({...form, llmModel: v || ""})} disabled={launching}>
                     <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
                     <SelectContent>
                       {LLM_MODELS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
@@ -239,7 +239,7 @@ function ScansContent() {
                 </div>
                 <div className="space-y-2">
                   <Label>Scan Mode</Label>
-                  <Select value={form.scanMode} onValueChange={v => setForm({...form, scanMode: v})} disabled={launching}>
+                  <Select value={form.scanMode} onValueChange={v => setForm({...form, scanMode: v || ""})} disabled={launching}>
                     <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
                     <SelectContent>
                       {SCAN_MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
