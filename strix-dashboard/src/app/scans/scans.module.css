@@ -164,6 +164,19 @@
 .groupIcon {
   font-size: 1.1rem;
   opacity: 0.8;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.groupIcon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.groupCount {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-left: 4px;
 }
 
 .targetText {

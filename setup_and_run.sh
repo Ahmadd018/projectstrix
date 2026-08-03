@@ -135,6 +135,7 @@ echo ""
 echo " To START the dashboard on port 80:"
 echo "  cd $DASH_DIR"
 echo "  sudo pm2 start npm --name strix-dashboard -- start -- -p 80"
+echo "  sudo pm2 start scheduler.js --name strix-scheduler"
 echo "  sudo pm2 save && sudo pm2 startup"
 echo ""
 PUB_IP=$(curl -s --max-time 3 ifconfig.me 2>/dev/null || echo "YOUR_IP")

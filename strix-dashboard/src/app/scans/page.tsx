@@ -112,11 +112,21 @@ function ScansContent() {
     configFile: "",
     maxBudget: "",
     maxTurns: "",
+    maxTurns: "",
     resumeRun: "",
+    scheduledAt: "",
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "finished">("all");
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  };
 
   const fetchScans = useCallback(async () => {
     const controller = new AbortController();
@@ -210,6 +220,7 @@ function ScansContent() {
         maxBudget: "",
         maxTurns: "",
         resumeRun: "",
+        scheduledAt: "",
       });
       router.push(`/scans/${data.scanId}`);
     } catch {
@@ -302,16 +313,26 @@ function ScansContent() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(groupedScans).map(([groupName, scansInGroup]) => (
+              {Object.entries(groupedScans).map(([groupName, scansInGroup]) => {
+                const isCollapsed = collapsedGroups[groupName];
+                return (
                 <React.Fragment key={groupName}>
-                  <tr className={styles.groupHeaderRow}>
+                  <tr 
+                    className={styles.groupHeaderRow} 
+                    onClick={() => toggleGroup(groupName)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td colSpan={7}>
                       <div className={styles.groupHeaderContent}>
-                        <span className={styles.groupIcon}>📁</span> {groupName}
+                        <span className={`${styles.groupIcon} ${isCollapsed ? styles.collapsed : ''}`}>
+                          {isCollapsed ? '📁' : '📂'}
+                        </span>
+                        {groupName}
+                        <span className={styles.groupCount}>({scansInGroup.length})</span>
                       </div>
                     </td>
                   </tr>
-                  {scansInGroup.map((scan, i) => (
+                  {!isCollapsed && scansInGroup.map((scan, i) => (
                     <tr
                       key={scan.id || `unknown-${i}`}
                       onClick={() => router.push(`/scans/${scan.id || ""}`)}
@@ -366,9 +387,9 @@ function ScansContent() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                  ))}
                 </React.Fragment>
-              ))}
+              )})}
             </tbody>
           </table>
         )}
@@ -410,11 +431,18 @@ function ScansContent() {
                   <input
                     className={styles.input}
                     type="text"
+                    list="existing-groups"
                     placeholder="Auto-detected from target if empty"
                     value={form.projectName}
                     onChange={(e) => setForm({ ...form, projectName: e.target.value })}
                     disabled={launching}
+                    autoComplete="off"
                   />
+                  <datalist id="existing-groups">
+                    {Object.keys(groupedScans).map(g => (
+                      <option key={g} value={g} />
+                    ))}
+                  </datalist>
                   <span className={styles.hint}>
                     Leave blank to group by domain name
                   </span>
@@ -546,6 +574,22 @@ function ScansContent() {
                       disabled={launching}
                       rows={3}
                     />
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Scheduled Time (Optional)</label>
+                      <input
+                        className={styles.input}
+                        type="datetime-local"
+                        value={form.scheduledAt}
+                        onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+                        disabled={launching}
+                      />
+                      <span className={styles.hint}>
+                        Leave blank to run immediately
+                      </span>
+                    </div>
                   </div>
 
                   <div className={styles.fieldRow}>
