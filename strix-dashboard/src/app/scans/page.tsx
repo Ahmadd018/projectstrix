@@ -114,6 +114,7 @@ function ScansContent() {
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"all" | "active" | "finished">("all");
 
   const fetchScans = useCallback(async () => {
     const controller = new AbortController();
@@ -129,6 +130,14 @@ function ScansContent() {
       setLoading(false);
     }
   }, []);
+
+  const filteredScans = scans.filter((scan) => {
+    if (filter === "all") return true;
+    const isFinished = ["completed", "failed", "stopped"].includes(scan.status);
+    if (filter === "active") return !isFinished;
+    if (filter === "finished") return isFinished;
+    return true;
+  });
 
   useEffect(() => {
     fetchScans();
@@ -191,8 +200,18 @@ function ScansContent() {
 
   async function handleStop(id: string, e: React.MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     await fetch(`/api/scans/${id}`, { method: "DELETE" });
     fetchScans();
+  }
+
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Are you sure you want to permanently delete this scan and all its data?")) {
+      await fetch(`/api/scans/${id}?purge=true`, { method: "DELETE" });
+      fetchScans();
+    }
   }
 
   return (
@@ -211,12 +230,33 @@ function ScansContent() {
 
       {/* Scans Table */}
       <div className={`glass-panel ${styles.tableCard}`}>
+        <div className={styles.filterTabs}>
+          <button 
+            className={`${styles.filterTab} ${filter === "all" ? styles.activeTab : ""}`}
+            onClick={() => setFilter("all")}
+          >
+            All Scans
+          </button>
+          <button 
+            className={`${styles.filterTab} ${filter === "active" ? styles.activeTab : ""}`}
+            onClick={() => setFilter("active")}
+          >
+            Active
+          </button>
+          <button 
+            className={`${styles.filterTab} ${filter === "finished" ? styles.activeTab : ""}`}
+            onClick={() => setFilter("finished")}
+          >
+            Finished
+          </button>
+        </div>
+        
         {loading ? (
           <div className={styles.empty}>
             <div className={styles.spinner} />
             <p>Loading scans…</p>
           </div>
-        ) : scans.length === 0 ? (
+        ) : filteredScans.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}></div>
             <h3>No scans yet</h3>
@@ -242,7 +282,7 @@ function ScansContent() {
               </tr>
             </thead>
             <tbody>
-              {scans.map((scan, i) => (
+              {filteredScans.map((scan, i) => (
                 <tr
                   key={scan.id || `unknown-${i}`}
                   onClick={() => router.push(`/scans/${scan.id || ""}`)}
@@ -279,12 +319,19 @@ function ScansContent() {
                       >
                         View
                       </Link>
-                      {scan.status === "running" && (
+                      {scan.status === "running" ? (
                         <button
                           className={`${styles.actionBtn} ${styles.stopBtn}`}
                           onClick={(e) => handleStop(scan.id, e)}
                         >
                           Stop
+                        </button>
+                      ) : (
+                        <button
+                          className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                          onClick={(e) => handleDelete(scan.id, e)}
+                        >
+                          Delete
                         </button>
                       )}
                     </div>

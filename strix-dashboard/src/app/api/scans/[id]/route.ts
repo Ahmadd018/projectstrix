@@ -56,18 +56,21 @@ export async function GET(
   return NextResponse.json({ ...run, vulnerabilities });
 }
 
-// DELETE /api/scans/[id] — stop a running scan
+// DELETE /api/scans/[id] — stop a running scan or delete it
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  log.info(`DELETE /api/scans/${id}`, "Stop scan requested");
+  const url = new URL(req.url);
+  const purge = url.searchParams.get("purge") === "true";
+  
+  log.info(`DELETE /api/scans/${id}`, `Stop/Delete scan requested, purge=${purge}`);
 
   const scanDir = getScanDir(id);
   const runFile = path.join(scanDir, "run.json");
 
-  if (!fs.existsSync(runFile)) {
+  if (!fs.existsSync(runFile) && !purge) {
     log.warn(`DELETE /api/scans/${id}`, "Scan not found — cannot stop");
     return NextResponse.json({ error: "Scan not found" }, { status: 404 });
   }
@@ -87,6 +90,14 @@ export async function DELETE(
       `DELETE /api/scans/${id}`,
       "No running process found in memory (may have already finished)",
     );
+  }
+
+  if (purge) {
+    if (fs.existsSync(scanDir)) {
+      fs.rmSync(scanDir, { recursive: true, force: true });
+      log.info(`DELETE /api/scans/${id}`, "Scan directory deleted from disk");
+    }
+    return NextResponse.json({ success: true, deleted: true });
   }
 
   const run = JSON.parse(fs.readFileSync(runFile, "utf-8"));
