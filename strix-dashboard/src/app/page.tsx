@@ -64,14 +64,21 @@ export default function Dashboard() {
       const vulns: Vuln[] = [];
       for (const scan of scanList.slice(0, 3)) {
         try {
-          const detail = await fetch(`/api/scans/${scan.id}`).then((r) => r.json());
-          for (const v of (detail.vulnerabilities ?? [])) {
+          const detail = await fetch(`/api/scans/${scan.id}`).then((r) =>
+            r.json(),
+          );
+          for (const v of detail.vulnerabilities ?? []) {
             vulns.push({ ...v, scanTarget: scan.target, scanId: scan.id });
           }
         } catch {}
       }
       vulns.sort((a, b) => {
-        const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+        const order: Record<string, number> = {
+          critical: 0,
+          high: 1,
+          medium: 2,
+          low: 3,
+        };
         return order[a.severity] - order[b.severity];
       });
       setRecentVulns(vulns.slice(0, 5));
@@ -90,14 +97,25 @@ export default function Dashboard() {
   }, [fetchData]);
 
   const totalVulns = scans.reduce((s, sc) => s + sc.vulnCount, 0);
-  const criticalVulns = recentVulns.filter((v) => v.severity === "critical").length;
+  const criticalVulns = recentVulns.filter(
+    (v) => v.severity === "critical",
+  ).length;
   const activeScans = scans.filter((s) => s.status === "running").length;
   const score = securityScore(recentVulns);
 
   return (
     <div className={styles.dashboard}>
       {loading ? (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "300px", gap: "16px", color: "var(--text-secondary)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "300px",
+            gap: "16px",
+            color: "var(--text-secondary)",
+          }}
+        >
           <div className={styles.spinner} />
           <span>Loading dashboard…</span>
         </div>
@@ -109,13 +127,28 @@ export default function Dashboard() {
               <div className={styles.cardGlow} />
               <div className={styles.metricHeader}>
                 <span>Security Score</span>
-                <span className={styles.icon}>🛡️</span>
+                <span className={styles.icon}></span>
               </div>
-              <div className={styles.metricValue} style={{ color: score > 70 ? "var(--accent-primary)" : score > 40 ? "var(--accent-warning)" : "var(--accent-danger)" }}>
+              <div
+                className={styles.metricValue}
+                style={{
+                  color:
+                    score > 70
+                      ? "var(--accent-primary)"
+                      : score > 40
+                        ? "var(--accent-warning)"
+                        : "var(--accent-danger)",
+                }}
+              >
                 {score}/100
               </div>
-              <div className={`${styles.metricChange} ${score >= 70 ? styles.changePositive : styles.changeNegative}`}>
-                <span>{score >= 70 ? "Good" : score >= 40 ? "Fair" : "Critical"}</span> security posture
+              <div
+                className={`${styles.metricChange} ${score >= 70 ? styles.changePositive : styles.changeNegative}`}
+              >
+                <span>
+                  {score >= 70 ? "Good" : score >= 40 ? "Fair" : "Critical"}
+                </span>{" "}
+                security posture
               </div>
             </div>
 
@@ -124,13 +157,28 @@ export default function Dashboard() {
               <div className={styles.cardGlow} />
               <div className={styles.metricHeader}>
                 <span>Critical Vulns</span>
-                <span className={styles.icon}>🚨</span>
+                <span className={styles.icon}></span>
               </div>
-              <div className={styles.metricValue} style={{ color: criticalVulns > 0 ? "var(--accent-danger)" : "inherit" }}>
+              <div
+                className={styles.metricValue}
+                style={{
+                  color: criticalVulns > 0 ? "var(--accent-danger)" : "inherit",
+                }}
+              >
                 {criticalVulns}
               </div>
-              <div className={`${styles.metricChange} ${criticalVulns > 0 ? styles.changeNegative : styles.changePositive}`}>
-                {criticalVulns > 0 ? <><span>⚠ Action required</span></> : <><span>✓ None found</span></>}
+              <div
+                className={`${styles.metricChange} ${criticalVulns > 0 ? styles.changeNegative : styles.changePositive}`}
+              >
+                {criticalVulns > 0 ? (
+                  <>
+                    <span> Action required</span>
+                  </>
+                ) : (
+                  <>
+                    <span> None found</span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -139,14 +187,30 @@ export default function Dashboard() {
               <div className={styles.cardGlow} />
               <div className={styles.metricHeader}>
                 <span>Active Scans</span>
-                <span className={styles.icon}>🎯</span>
+                <span className={styles.icon}></span>
               </div>
               <div className={styles.metricValue}>{activeScans}</div>
               <div className={styles.metricChange}>
                 {activeScans > 0 ? (
-                  <span>Running now · <Link href="/scans" style={{ color: "var(--accent-primary)" }}>View</Link></span>
+                  <span>
+                    Running now ·{" "}
+                    <Link
+                      href="/scans"
+                      style={{ color: "var(--accent-primary)" }}
+                    >
+                      View
+                    </Link>
+                  </span>
                 ) : (
-                  <span>No scans running · <Link href="/scans?new=1" style={{ color: "var(--accent-primary)" }}>Start one</Link></span>
+                  <span>
+                    No scans running ·{" "}
+                    <Link
+                      href="/scans?new=1"
+                      style={{ color: "var(--accent-primary)" }}
+                    >
+                      Start one
+                    </Link>
+                  </span>
                 )}
               </div>
             </div>
@@ -156,11 +220,13 @@ export default function Dashboard() {
               <div className={styles.cardGlow} />
               <div className={styles.metricHeader}>
                 <span>Total Findings</span>
-                <span className={styles.icon}>🔍</span>
+                <span className={styles.icon}></span>
               </div>
               <div className={styles.metricValue}>{totalVulns}</div>
               <div className={styles.metricChange}>
-                <span>Across {scans.length} scan{scans.length !== 1 ? "s" : ""}</span>
+                <span>
+                  Across {scans.length} scan{scans.length !== 1 ? "s" : ""}
+                </span>
               </div>
             </div>
           </div>
@@ -170,31 +236,54 @@ export default function Dashboard() {
             <div className={`glass-panel ${styles.chartCard}`}>
               <div className={styles.chartHeader}>
                 <h2 className={styles.chartTitle}>Recent Scans</h2>
-                <Link href="/scans" className="btn btn-outline" style={{ padding: "6px 14px", fontSize: "0.82rem" }}>
+                <Link
+                  href="/scans"
+                  className="btn btn-outline"
+                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
+                >
                   View All →
                 </Link>
               </div>
               {scans.length === 0 ? (
                 <div className={styles.emptyState}>
                   <p>No scans yet.</p>
-                  <Link href="/scans?new=1" className="btn btn-primary" style={{ marginTop: "12px" }}>
-                    🚀 Start First Scan
+                  <Link
+                    href="/scans?new=1"
+                    className="btn btn-primary"
+                    style={{ marginTop: "12px" }}
+                  >
+                    Start First Scan
                   </Link>
                 </div>
               ) : (
                 <div className={styles.scanList}>
                   {scans.slice(0, 5).map((scan) => (
-                    <Link key={scan.id} href={`/scans/${scan.id}`} className={styles.scanItem}>
+                    <Link
+                      key={scan.id}
+                      href={`/scans/${scan.id}`}
+                      className={styles.scanItem}
+                    >
                       <div className={styles.scanInfo}>
                         <span className={styles.scanTarget}>{scan.target}</span>
                         <div className={styles.scanMeta}>
-                          <span className={styles.modeTag}>{scan.scanMode}</span>
-                          <span style={{ color: "var(--text-secondary)", fontSize: "0.78rem" }}>{timeAgo(scan.startedAt)}</span>
+                          <span className={styles.modeTag}>
+                            {scan.scanMode}
+                          </span>
+                          <span
+                            style={{
+                              color: "var(--text-secondary)",
+                              fontSize: "0.78rem",
+                            }}
+                          >
+                            {timeAgo(scan.startedAt)}
+                          </span>
                         </div>
                       </div>
                       <div className={styles.scanRight}>
                         {scan.vulnCount > 0 && (
-                          <span className={styles.vulnBadge}>{scan.vulnCount}</span>
+                          <span className={styles.vulnBadge}>
+                            {scan.vulnCount}
+                          </span>
                         )}
                         <StatusDot status={scan.status} />
                       </div>
@@ -208,24 +297,49 @@ export default function Dashboard() {
             <div className={`glass-panel ${styles.chartCard}`}>
               <div className={styles.chartHeader}>
                 <h2 className={styles.chartTitle}>Recent Findings</h2>
-                <Link href="/vulnerabilities" className="btn btn-outline" style={{ padding: "6px 14px", fontSize: "0.82rem" }}>
+                <Link
+                  href="/vulnerabilities"
+                  className="btn btn-outline"
+                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
+                >
                   View All →
                 </Link>
               </div>
               {recentVulns.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>
-                    {scans.length === 0 ? "Run a scan to discover vulnerabilities." : "No vulnerabilities found in recent scans."}
+                  <p
+                    style={{
+                      color: "var(--text-secondary)",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    {scans.length === 0
+                      ? "Run a scan to discover vulnerabilities."
+                      : "No vulnerabilities found in recent scans."}
                   </p>
                 </div>
               ) : (
                 <div className={styles.vulnList}>
                   {recentVulns.map((v, i) => (
-                    <div key={`${v.scanId}-${v.id}-${i}`} className={styles.vulnItem}>
+                    <div
+                      key={`${v.scanId}-${v.id}-${i}`}
+                      className={styles.vulnItem}
+                    >
                       <div className={styles.vulnName}>{v.title}</div>
                       <div className={styles.vulnMeta}>
-                        <span className={`badge badge-${v.severity}`}>{v.severity}</span>
-                        <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "120px" }}>
+                        <span className={`badge badge-${v.severity}`}>
+                          {v.severity}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.78rem",
+                            color: "var(--text-secondary)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            maxWidth: "120px",
+                          }}
+                        >
                           {v.endpoint}
                         </span>
                       </div>

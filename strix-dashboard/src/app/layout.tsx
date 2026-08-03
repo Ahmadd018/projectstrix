@@ -20,9 +20,7 @@ export default function RootLayout({
           <Sidebar />
           <main className="main-content">
             <Header />
-            <div className="page-container animate-fade-in">
-              {children}
-            </div>
+            <div className="page-container animate-fade-in">{children}</div>
           </main>
         </div>
       </body>

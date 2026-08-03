@@ -2,7 +2,7 @@
 
 Strix — AI-powered Security Assessment Tool & Interactive Dashboard.
 
-## 🚀 Quick Start (One-Line Setup)
+## Quick Start (One-Line Setup)
 
 Clone the repository and run the setup script:
 
@@ -19,7 +19,7 @@ This script will automatically:
 
 ---
 
-## 🌐 Running the Dashboard
+## Running the Dashboard
 
 After running `setup_and_run.sh`:
 

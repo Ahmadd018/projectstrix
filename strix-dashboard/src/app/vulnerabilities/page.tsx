@@ -32,7 +32,10 @@ const SEVERITIES = ["all", "critical", "high", "medium", "low"] as const;
 
 function SeverityBadge({ s }: { s: string }) {
   const cls: Record<string, string> = {
-    critical: "badge-critical", high: "badge-high", medium: "badge-medium", low: "badge-low"
+    critical: "badge-critical",
+    high: "badge-high",
+    medium: "badge-medium",
+    low: "badge-low",
   };
   return <span className={`badge ${cls[s] ?? "badge-low"}`}>{s}</span>;
 }
@@ -40,7 +43,7 @@ function SeverityBadge({ s }: { s: string }) {
 export default function VulnerabilitiesPage() {
   const [allVulns, setAllVulns] = useState<VulnWithScan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<typeof SEVERITIES[number]>("all");
+  const [filter, setFilter] = useState<(typeof SEVERITIES)[number]>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<VulnWithScan | null>(null);
 
@@ -52,14 +55,18 @@ export default function VulnerabilitiesPage() {
 
       const vulns: VulnWithScan[] = [];
       for (const scan of scans) {
-        const detail = await fetch(`/api/scans/${scan.id}`).then((r) => r.json());
-        for (const v of (detail.vulnerabilities ?? [])) {
+        const detail = await fetch(`/api/scans/${scan.id}`).then((r) =>
+          r.json(),
+        );
+        for (const v of detail.vulnerabilities ?? []) {
           vulns.push({ ...v, scanId: scan.id, scanTarget: scan.target });
         }
       }
 
       // Sort by severity
-      vulns.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+      vulns.sort(
+        (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+      );
       setAllVulns(vulns);
     } catch {}
     setLoading(false);
@@ -74,9 +81,13 @@ export default function VulnerabilitiesPage() {
 
   const filtered = allVulns.filter((v) => {
     if (filter !== "all" && v.severity !== filter) return false;
-    if (search && !v.title.toLowerCase().includes(search.toLowerCase()) &&
-        !v.endpoint.toLowerCase().includes(search.toLowerCase()) &&
-        !v.scanTarget.toLowerCase().includes(search.toLowerCase())) return false;
+    if (
+      search &&
+      !v.title.toLowerCase().includes(search.toLowerCase()) &&
+      !v.endpoint.toLowerCase().includes(search.toLowerCase()) &&
+      !v.scanTarget.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -93,7 +104,9 @@ export default function VulnerabilitiesPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Vulnerabilities</h1>
-          <p className={styles.subtitle}>All findings across your security assessments</p>
+          <p className={styles.subtitle}>
+            All findings across your security assessments
+          </p>
         </div>
       </div>
 
@@ -130,7 +143,12 @@ export default function VulnerabilitiesPage() {
                   className={`${styles.filterTab} ${filter === s ? styles.filterTabActive : ""}`}
                   onClick={() => setFilter(s)}
                 >
-                  {s} {counts[s as keyof typeof counts] > 0 && s !== "all" ? `(${counts[s as keyof typeof counts]})` : s === "all" ? `(${counts.all})` : ""}
+                  {s}{" "}
+                  {counts[s as keyof typeof counts] > 0 && s !== "all"
+                    ? `(${counts[s as keyof typeof counts]})`
+                    : s === "all"
+                      ? `(${counts.all})`
+                      : ""}
                 </button>
               ))}
             </div>
@@ -143,9 +161,15 @@ export default function VulnerabilitiesPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className={styles.empty}>
-              <span className={styles.emptyIcon}>🛡️</span>
-              <h3>{allVulns.length === 0 ? "No vulnerabilities found" : "No results for this filter"}</h3>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>
+              <span className={styles.emptyIcon}></span>
+              <h3>
+                {allVulns.length === 0
+                  ? "No vulnerabilities found"
+                  : "No results for this filter"}
+              </h3>
+              <p
+                style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}
+              >
                 {allVulns.length === 0
                   ? "Run a scan to discover security vulnerabilities."
                   : "Try changing the filter or search term."}
@@ -157,19 +181,29 @@ export default function VulnerabilitiesPage() {
                 <div
                   key={`${v.scanId}-${v.id}`}
                   className={`${styles.vulnCard} ${selected?.id === v.id && selected.scanId === v.scanId ? styles.vulnCardActive : ""}`}
-                  onClick={() => setSelected(selected?.id === v.id && selected.scanId === v.scanId ? null : v)}
+                  onClick={() =>
+                    setSelected(
+                      selected?.id === v.id && selected.scanId === v.scanId
+                        ? null
+                        : v,
+                    )
+                  }
                 >
                   <div className={styles.vulnCardTop}>
                     <SeverityBadge s={v.severity} />
-                    {v.cvss && <span className={styles.cvssTag}>CVSS {v.cvss}</span>}
+                    {v.cvss && (
+                      <span className={styles.cvssTag}>CVSS {v.cvss}</span>
+                    )}
                   </div>
                   <div className={styles.vulnCardTitle}>{v.title}</div>
                   <div className={styles.vulnCardMeta}>
-                    <span className={styles.methodTag}>{v.method ?? "GET"}</span>
+                    <span className={styles.methodTag}>
+                      {v.method ?? "GET"}
+                    </span>
                     <code className={styles.endpoint}>{v.endpoint}</code>
                   </div>
                   <div className={styles.vulnCardScan}>
-                    🎯 <span>{v.scanTarget}</span>
+                    <span>{v.scanTarget}</span>
                   </div>
                 </div>
               ))}
@@ -178,7 +212,9 @@ export default function VulnerabilitiesPage() {
         </div>
 
         {/* Right: PoC drawer */}
-        <div className={`glass-panel ${styles.drawer} ${selected ? styles.drawerOpen : ""}`}>
+        <div
+          className={`glass-panel ${styles.drawer} ${selected ? styles.drawerOpen : ""}`}
+        >
           {selected ? (
             <div className={styles.drawerContent}>
               <div className={styles.drawerHeader}>
@@ -186,17 +222,27 @@ export default function VulnerabilitiesPage() {
                 {selected.cvss && (
                   <span className={styles.cvssScore}>CVSS {selected.cvss}</span>
                 )}
-                <button className={styles.closeBtn} onClick={() => setSelected(null)}>✕</button>
+                <button
+                  className={styles.closeBtn}
+                  onClick={() => setSelected(null)}
+                ></button>
               </div>
 
               <h2 className={styles.drawerTitle}>{selected.title}</h2>
 
               <div className={styles.drawerTarget}>
-                🎯 <a href={`/scans/${selected.scanId}`} className={styles.scanLink}>{selected.scanTarget}</a>
+                <a
+                  href={`/scans/${selected.scanId}`}
+                  className={styles.scanLink}
+                >
+                  {selected.scanTarget}
+                </a>
               </div>
 
               <div className={styles.drawerEndpoint}>
-                <span className={styles.methodTag}>{selected.method ?? "GET"}</span>
+                <span className={styles.methodTag}>
+                  {selected.method ?? "GET"}
+                </span>
                 <code>{selected.endpoint}</code>
               </div>
 
@@ -224,7 +270,7 @@ export default function VulnerabilitiesPage() {
             </div>
           ) : (
             <div className={styles.drawerEmpty}>
-              <span className={styles.drawerEmptyIcon}>🔍</span>
+              <span className={styles.drawerEmptyIcon}></span>
               <p>Select a vulnerability to view details & Proof of Concept</p>
             </div>
           )}

@@ -7,8 +7,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .header {
@@ -38,7 +44,7 @@
   padding: 12px 22px;
   border-radius: 10px;
   background: linear-gradient(135deg, var(--accent-primary) 0%, #00bfa5 100%);
-  color: #0A0F1C;
+  color: #0a0f1c;
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
@@ -127,7 +133,7 @@
 .modelCell {
   font-size: 0.82rem;
   color: var(--text-secondary);
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .timeCell {
@@ -150,8 +156,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .badge-completed {
@@ -261,7 +272,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Modal */
@@ -278,8 +291,12 @@
 }
 
 @keyframes fadeOverlay {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal {
@@ -295,8 +312,14 @@
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modalHeader {
@@ -441,7 +464,7 @@
   padding: 12px 28px;
   border-radius: 10px;
   background: linear-gradient(135deg, var(--accent-primary) 0%, #00bfa5 100%);
-  color: #0A0F1C;
+  color: #0a0f1c;
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
@@ -465,7 +488,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid rgba(10, 15, 28, 0.3);
-  border-top-color: #0A0F1C;
+  border-top-color: #0a0f1c;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }

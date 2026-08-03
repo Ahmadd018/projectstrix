@@ -38,13 +38,15 @@ function statusBadge(status: Scan["status"]) {
     stopped: "badge-stopped",
   };
   const labels: Record<string, string> = {
-    running: "🟢 Running",
-    completed: "✅ Completed",
-    failed: "❌ Failed",
-    stopped: "⏹ Stopped",
+    running: " Running",
+    completed: " Completed",
+    failed: " Failed",
+    stopped: " Stopped",
   };
   return (
-    <span className={`${styles.statusBadge} ${styles[map[status] ?? "badge-stopped"]}`}>
+    <span
+      className={`${styles.statusBadge} ${styles[map[status] ?? "badge-stopped"]}`}
+    >
       {labels[status] ?? status}
     </span>
   );
@@ -105,8 +107,14 @@ function ScansContent() {
   async function handleLaunch(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.target.trim()) { setError("Target is required"); return; }
-    if (!form.apiKey.trim()) { setError("LLM API Key is required"); return; }
+    if (!form.target.trim()) {
+      setError("Target is required");
+      return;
+    }
+    if (!form.apiKey.trim()) {
+      setError("LLM API Key is required");
+      return;
+    }
     setLaunching(true);
     try {
       const res = await fetch("/api/scans", {
@@ -115,10 +123,20 @@ function ScansContent() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Failed to start scan"); setLaunching(false); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Failed to start scan");
+        setLaunching(false);
+        return;
+      }
       setShowModal(false);
       setLaunching(false);
-      setForm({ target: "", llmModel: "openai/gpt-4o", apiKey: "", scanMode: "standard", instruction: "" });
+      setForm({
+        target: "",
+        llmModel: "openai/gpt-4o",
+        apiKey: "",
+        scanMode: "standard",
+        instruction: "",
+      });
       router.push(`/scans/${data.scanId}`);
     } catch {
       setError("Network error. Please try again.");
@@ -137,7 +155,9 @@ function ScansContent() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Scans</h1>
-          <p className={styles.subtitle}>Launch and monitor your security assessments</p>
+          <p className={styles.subtitle}>
+            Launch and monitor your security assessments
+          </p>
         </div>
         <button className={styles.newBtn} onClick={() => setShowModal(true)}>
           <span>＋</span> New Scan
@@ -153,10 +173,13 @@ function ScansContent() {
           </div>
         ) : scans.length === 0 ? (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon}>🎯</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No scans yet</h3>
             <p>Launch your first security assessment to get started.</p>
-            <button className={styles.newBtn} onClick={() => setShowModal(true)}>
+            <button
+              className={styles.newBtn}
+              onClick={() => setShowModal(true)}
+            >
               ＋ Start First Scan
             </button>
           </div>
@@ -175,27 +198,40 @@ function ScansContent() {
             </thead>
             <tbody>
               {scans.map((scan) => (
-                <tr key={scan.id} onClick={() => router.push(`/scans/${scan.id}`)} className={styles.row}>
+                <tr
+                  key={scan.id}
+                  onClick={() => router.push(`/scans/${scan.id}`)}
+                  className={styles.row}
+                >
                   <td>
                     <div className={styles.targetCell}>
-                      <span className={styles.targetIcon}>🎯</span>
+                      <span className={styles.targetIcon}></span>
                       <span className={styles.targetText}>{scan.target}</span>
                     </div>
                   </td>
-                  <td><span className={styles.modeTag}>{scan.scanMode}</span></td>
+                  <td>
+                    <span className={styles.modeTag}>{scan.scanMode}</span>
+                  </td>
                   <td className={styles.modelCell}>{scan.llmModel}</td>
                   <td>{statusBadge(scan.status)}</td>
                   <td>
                     <span className={styles.vulnCount}>
                       {scan.vulnCount > 0 ? (
-                        <span className={styles.vulnCountBadge}>{scan.vulnCount}</span>
-                      ) : "—"}
+                        <span className={styles.vulnCountBadge}>
+                          {scan.vulnCount}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </span>
                   </td>
                   <td className={styles.timeCell}>{timeAgo(scan.startedAt)}</td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className={styles.actions}>
-                      <Link href={`/scans/${scan.id}`} className={styles.actionBtn}>
+                      <Link
+                        href={`/scans/${scan.id}`}
+                        className={styles.actionBtn}
+                      >
                         View
                       </Link>
                       {scan.status === "running" && (
@@ -217,11 +253,17 @@ function ScansContent() {
 
       {/* New Scan Modal */}
       {showModal && (
-        <div className={styles.overlay} onClick={() => !launching && setShowModal(false)}>
+        <div
+          className={styles.overlay}
+          onClick={() => !launching && setShowModal(false)}
+        >
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>🚀 Launch New Scan</h2>
-              <button className={styles.closeBtn} onClick={() => !launching && setShowModal(false)}>✕</button>
+              <h2 className={styles.modalTitle}> Launch New Scan</h2>
+              <button
+                className={styles.closeBtn}
+                onClick={() => !launching && setShowModal(false)}
+              ></button>
             </div>
 
             <form onSubmit={handleLaunch} className={styles.form}>
@@ -235,7 +277,9 @@ function ScansContent() {
                   onChange={(e) => setForm({ ...form, target: e.target.value })}
                   disabled={launching}
                 />
-                <span className={styles.hint}>URL, GitHub repo, or local directory path</span>
+                <span className={styles.hint}>
+                  URL, GitHub repo, or local directory path
+                </span>
               </div>
 
               <div className={styles.fieldRow}>
@@ -244,11 +288,15 @@ function ScansContent() {
                   <select
                     className={styles.select}
                     value={form.llmModel}
-                    onChange={(e) => setForm({ ...form, llmModel: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, llmModel: e.target.value })
+                    }
                     disabled={launching}
                   >
                     {LLM_MODELS.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -257,11 +305,15 @@ function ScansContent() {
                   <select
                     className={styles.select}
                     value={form.scanMode}
-                    onChange={(e) => setForm({ ...form, scanMode: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, scanMode: e.target.value })
+                    }
                     disabled={launching}
                   >
                     {SCAN_MODES.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label} — {m.desc}</option>
+                      <option key={m.value} value={m.value}>
+                        {m.label} — {m.desc}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -278,7 +330,10 @@ function ScansContent() {
                   disabled={launching}
                   autoComplete="off"
                 />
-                <span className={styles.hint}>🔒 Never stored — used only for this scan session</span>
+                <span className={styles.hint}>
+                  {" "}
+                  Never stored — used only for this scan session
+                </span>
               </div>
 
               <div className={styles.field}>
@@ -287,7 +342,9 @@ function ScansContent() {
                   className={styles.textarea}
                   placeholder='e.g. "Focus on authentication and IDOR. Use credentials: admin/password123"'
                   value={form.instruction}
-                  onChange={(e) => setForm({ ...form, instruction: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, instruction: e.target.value })
+                  }
                   disabled={launching}
                   rows={3}
                 />
@@ -304,11 +361,19 @@ function ScansContent() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className={styles.launchBtn} disabled={launching}>
+                <button
+                  type="submit"
+                  className={styles.launchBtn}
+                  disabled={launching}
+                >
                   {launching ? (
-                    <><div className={styles.btnSpinner} /> Launching…</>
+                    <>
+                      <div className={styles.btnSpinner} /> Launching…
+                    </>
                   ) : (
-                    <><span>🚀</span> Launch Scan</>
+                    <>
+                      <span></span> Launch Scan
+                    </>
                   )}
                 </button>
               </div>
@@ -322,7 +387,13 @@ function ScansContent() {
 
 export default function ScansPage() {
   return (
-    <Suspense fallback={<div className={styles.container}><p>Loading...</p></div>}>
+    <Suspense
+      fallback={
+        <div className={styles.container}>
+          <p>Loading...</p>
+        </div>
+      }
+    >
       <ScansContent />
     </Suspense>
   );

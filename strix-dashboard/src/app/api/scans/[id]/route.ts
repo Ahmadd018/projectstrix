@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { getProcess, removeProcess } from '@/lib/scanStore';
-import { log } from '@/lib/logger';
+import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import { getProcess, removeProcess } from "@/lib/scanStore";
+import { log } from "@/lib/logger";
 
-const RUNS_DIR = path.join(process.cwd(), 'strix_runs');
+const RUNS_DIR = path.join(process.cwd(), "strix_runs");
 
 function getScanDir(id: string) {
   return path.join(RUNS_DIR, id);
@@ -13,33 +13,44 @@ function getScanDir(id: string) {
 // GET /api/scans/[id] — get scan status + vulnerabilities
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  log.debug(`GET /api/scans/${id}`, 'Fetching scan detail');
+  log.debug(`GET /api/scans/${id}`, "Fetching scan detail");
 
   const scanDir = getScanDir(id);
-  const runFile = path.join(scanDir, 'run.json');
-  const vulnFile = path.join(scanDir, 'vulnerabilities.json');
+  const runFile = path.join(scanDir, "run.json");
+  const vulnFile = path.join(scanDir, "vulnerabilities.json");
 
   if (!fs.existsSync(runFile)) {
-    log.warn(`GET /api/scans/${id}`, 'Scan not found — run.json missing', { scanDir });
-    return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
+    log.warn(`GET /api/scans/${id}`, "Scan not found — run.json missing", {
+      scanDir,
+    });
+    return NextResponse.json({ error: "Scan not found" }, { status: 404 });
   }
 
-  const run = JSON.parse(fs.readFileSync(runFile, 'utf-8'));
-  log.debug(`GET /api/scans/${id}`, `Scan status: ${run.status}`, { target: run.target });
+  const run = JSON.parse(fs.readFileSync(runFile, "utf-8"));
+  log.debug(`GET /api/scans/${id}`, `Scan status: ${run.status}`, {
+    target: run.target,
+  });
 
   let vulnerabilities: any[] = [];
   if (fs.existsSync(vulnFile)) {
     try {
-      vulnerabilities = JSON.parse(fs.readFileSync(vulnFile, 'utf-8'));
-      log.debug(`GET /api/scans/${id}`, `Loaded ${vulnerabilities.length} vulnerabilities`);
+      vulnerabilities = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
+      log.debug(
+        `GET /api/scans/${id}`,
+        `Loaded ${vulnerabilities.length} vulnerabilities`,
+      );
     } catch (e) {
-      log.error(`GET /api/scans/${id}`, 'Failed to parse vulnerabilities.json', e);
+      log.error(
+        `GET /api/scans/${id}`,
+        "Failed to parse vulnerabilities.json",
+        e,
+      );
     }
   } else {
-    log.debug(`GET /api/scans/${id}`, 'No vulnerabilities.json yet');
+    log.debug(`GET /api/scans/${id}`, "No vulnerabilities.json yet");
   }
 
   return NextResponse.json({ ...run, vulnerabilities });
@@ -48,38 +59,41 @@ export async function GET(
 // DELETE /api/scans/[id] — stop a running scan
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  log.info(`DELETE /api/scans/${id}`, 'Stop scan requested');
+  log.info(`DELETE /api/scans/${id}`, "Stop scan requested");
 
   const scanDir = getScanDir(id);
-  const runFile = path.join(scanDir, 'run.json');
+  const runFile = path.join(scanDir, "run.json");
 
   if (!fs.existsSync(runFile)) {
-    log.warn(`DELETE /api/scans/${id}`, 'Scan not found — cannot stop');
-    return NextResponse.json({ error: 'Scan not found' }, { status: 404 });
+    log.warn(`DELETE /api/scans/${id}`, "Scan not found — cannot stop");
+    return NextResponse.json({ error: "Scan not found" }, { status: 404 });
   }
 
   const proc = getProcess(id);
   if (proc) {
     log.info(`DELETE /api/scans/${id}`, `Killing process pid=${proc.pid}`);
     try {
-      proc.kill('SIGTERM');
-      log.info(`DELETE /api/scans/${id}`, 'SIGTERM sent successfully');
+      proc.kill("SIGTERM");
+      log.info(`DELETE /api/scans/${id}`, "SIGTERM sent successfully");
     } catch (e) {
-      log.error(`DELETE /api/scans/${id}`, 'Failed to kill process', e);
+      log.error(`DELETE /api/scans/${id}`, "Failed to kill process", e);
     }
     removeProcess(id);
   } else {
-    log.warn(`DELETE /api/scans/${id}`, 'No running process found in memory (may have already finished)');
+    log.warn(
+      `DELETE /api/scans/${id}`,
+      "No running process found in memory (may have already finished)",
+    );
   }
 
-  const run = JSON.parse(fs.readFileSync(runFile, 'utf-8'));
-  run.status = 'stopped';
+  const run = JSON.parse(fs.readFileSync(runFile, "utf-8"));
+  run.status = "stopped";
   run.finishedAt = new Date().toISOString();
   fs.writeFileSync(runFile, JSON.stringify(run, null, 2));
-  log.info(`DELETE /api/scans/${id}`, 'Scan marked as stopped');
+  log.info(`DELETE /api/scans/${id}`, "Scan marked as stopped");
 
   return NextResponse.json({ success: true });
 }

@@ -1,4 +1,4 @@
-import { ChildProcess } from 'child_process';
+import { ChildProcess } from "child_process";
 
 // In-memory store: scanId -> ChildProcess
 // This lives in the Node.js server process memory

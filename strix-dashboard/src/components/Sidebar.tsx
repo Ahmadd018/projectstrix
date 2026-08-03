@@ -6,23 +6,27 @@ import { useState, useEffect } from "react";
 import styles from "./Sidebar.module.css";
 
 const navItems = [
-  { name: "Overview", path: "/", icon: "📊" },
-  { name: "Scans", path: "/scans", icon: "🎯" },
-  { name: "Vulnerabilities", path: "/vulnerabilities", icon: "🛡️" },
-  { name: "Live Graph", path: "/graph", icon: "🕸️" },
-  { name: "Reports", path: "/reports", icon: "📄" },
-  { name: "API Docs", path: "/api-docs", icon: "📖" },
-  { name: "Settings", path: "/settings", icon: "⚙️" },
+  { name: "Overview", path: "/" },
+  { name: "Scans", path: "/scans" },
+  { name: "Vulnerabilities", path: "/vulnerabilities" },
+  { name: "Live Graph", path: "/graph" },
+  { name: "Reports", path: "/reports" },
+  { name: "API Docs", path: "/api-docs" },
+  { name: "Settings", path: "/settings" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">("loading");
+  const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">(
+    "loading",
+  );
 
   useEffect(() => {
     const check = async () => {
       try {
-        const r = await fetch("/api/health", { signal: AbortSignal.timeout(3000) });
+        const r = await fetch("/api/health", {
+          signal: AbortSignal.timeout(3000),
+        });
         setApiStatus(r.ok ? "ok" : "error");
       } catch {
         setApiStatus("error");
@@ -58,7 +62,7 @@ export default function Sidebar() {
               href={item.path}
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
             >
-              <span className={styles.icon}>{item.icon}</span>
+              <span className={styles.icon}>-</span>
               <span>{item.name}</span>
             </Link>
           );
@@ -72,17 +76,25 @@ export default function Sidebar() {
             className={styles.healthDot}
             style={{
               background:
-                apiStatus === "ok" ? "var(--accent-primary)" :
-                apiStatus === "error" ? "var(--accent-danger)" :
-                "var(--text-secondary)",
+                apiStatus === "ok"
+                  ? "var(--accent-primary)"
+                  : apiStatus === "error"
+                    ? "var(--accent-danger)"
+                    : "var(--text-secondary)",
               boxShadow:
                 apiStatus === "ok" ? "0 0 6px var(--accent-primary)" : "none",
             }}
           />
           <span className={styles.healthLabel}>
-            {apiStatus === "ok" ? "API Online" : apiStatus === "error" ? "API Offline" : "Checking…"}
+            {apiStatus === "ok"
+              ? "API Online"
+              : apiStatus === "error"
+                ? "API Offline"
+                : "Checking…"}
           </span>
-          <Link href="/api-docs" className={styles.docsChip}>Swagger</Link>
+          <Link href="/api-docs" className={styles.docsChip}>
+            Swagger
+          </Link>
         </div>
 
         <div className={styles.userProfile}>

@@ -10,8 +10,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .header {
@@ -28,7 +34,10 @@
   margin-bottom: 4px;
 }
 
-.subtitle { color: var(--text-secondary); font-size: 0.9rem; }
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
 
 /* Summary cards */
 .summaryRow {
@@ -75,10 +84,18 @@
   font-weight: 600;
 }
 
-.summary_critical .summaryCount { color: var(--accent-danger); }
-.summary_high .summaryCount { color: var(--accent-warning); }
-.summary_medium .summaryCount { color: var(--accent-info); }
-.summary_low .summaryCount { color: var(--accent-primary); }
+.summary_critical .summaryCount {
+  color: var(--accent-danger);
+}
+.summary_high .summaryCount {
+  color: var(--accent-warning);
+}
+.summary_medium .summaryCount {
+  color: var(--accent-info);
+}
+.summary_low .summaryCount {
+  color: var(--accent-primary);
+}
 
 /* Main layout */
 .mainLayout {
@@ -332,7 +349,9 @@
   text-decoration: none;
 }
 
-.scanLink:hover { text-decoration: underline; }
+.scanLink:hover {
+  text-decoration: underline;
+}
 
 .drawerEndpoint {
   display: flex;
@@ -367,7 +386,7 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 14px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 0.8rem;
   color: var(--accent-primary);
   overflow-x: auto;
@@ -401,7 +420,10 @@
   color: var(--text-secondary);
 }
 
-.emptyIcon { font-size: 3rem; margin-bottom: 8px; }
+.emptyIcon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
 
 .empty h3 {
   font-size: 1.1rem;
@@ -419,4 +441,8 @@
   margin-bottom: 8px;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

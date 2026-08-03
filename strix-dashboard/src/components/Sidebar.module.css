@@ -19,7 +19,11 @@
 .logoIcon {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-info) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--accent-primary) 0%,
+    var(--accent-info) 100%
+  );
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -45,7 +49,7 @@
   padding: 11px 16px;
   border-radius: 10px;
   background: linear-gradient(135deg, var(--accent-primary) 0%, #00bfa5 100%);
-  color: #0A0F1C;
+  color: #0a0f1c;
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
@@ -157,7 +161,9 @@
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
-  transition: background 0.3s, box-shadow 0.3s;
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
 }
 
 .healthLabel {
