@@ -30,9 +30,9 @@ echo -e "\n🌐 3/4 Installing Dashboard dependencies..."
 cd ../strix-dashboard
 npm install
 
-echo -e "\n✅ 4/4 Setup complete! Starting the dashboard..."
+echo -e "\n✅ 4/4 Setup complete! Starting the dashboard on Port 80..."
 echo "===================================================="
-echo "🌐 The dashboard will be available on Port 3000"
-echo "👉 Make sure Port 3000 is OPEN in your AWS Security Group!"
+echo "🌐 The dashboard will be available at http://your-ip-address"
+echo "👉 Make sure Port 80 (HTTP) is OPEN in your AWS Security Group!"
 echo "===================================================="
-npm run dev -- -H 0.0.0.0
+sudo npm run dev -- -H 0.0.0.0 -p 80
