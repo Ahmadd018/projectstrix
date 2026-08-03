@@ -101,22 +101,22 @@ export async function POST(req: NextRequest) {
   fs.writeFileSync(runFile, JSON.stringify(runMeta, null, 2));
   fs.writeFileSync(vulnFile, JSON.stringify([], null, 2));
 
-  // Build strix CLI args
+  // Build strix CLI args (using valid strix CLI parameters)
   const args = [
     '--target', target,
     '--non-interactive',
-    '--run-name', scanId,
-    '--output-dir', RUNS_DIR,
   ];
   if (scanMode) args.push('--scan-mode', scanMode);
-  if (instruction) args.push('--instruction', instruction);
+  if (instruction && instruction.trim()) args.push('--instruction', instruction.trim());
 
   const env = {
     ...process.env,
     PATH: `${process.env.PATH || ''}:/usr/local/bin:${process.env.HOME || ''}/.local/bin`,
     STRIX_LLM: llmModel || 'openai/gpt-4o',
     LLM_API_KEY: apiKey,
-    STRIX_OUTPUT_DIR: RUNS_DIR,
+    OPENAI_API_KEY: apiKey,
+    ANTHROPIC_API_KEY: apiKey,
+    GEMINI_API_KEY: apiKey,
   };
 
   let proc;
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     // strix not found — write mock data for demo/dev
-    console.warn('[strix-api] strix not found, running in demo mode:', err.message);
+    console.warn('[strix-api] strix error, running in demo mode:', err.message);
     runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
     return NextResponse.json({ scanId, status: 'running', mode: 'demo' });
   }
