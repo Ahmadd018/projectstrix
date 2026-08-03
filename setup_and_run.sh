@@ -21,10 +21,12 @@ echo "Configuring Docker..."
 sudo systemctl enable --now docker
 sudo usermod -aG docker $USER || true
 
-echo -e "\n🐍 2/4 Installing Strix CLI globally..."
+echo -e "\n🐍 2/4 Installing Strix CLI globally (via venv)..."
 cd "$(dirname "$0")/strix"
-# Ubuntu 23+ requires --break-system-packages for system-wide pip installs
-sudo pip3 install -e . --break-system-packages || sudo pip3 install -e .
+sudo apt-get install -y python3-venv
+python3 -m venv venv
+./venv/bin/pip install -e .
+sudo ln -sf "$(pwd)/venv/bin/strix" /usr/local/bin/strix
 
 echo -e "\n🌐 3/4 Installing Dashboard dependencies and building..."
 cd ../strix-dashboard
