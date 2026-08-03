@@ -19,9 +19,22 @@ interface Scan {
 const LLM_MODELS = [
   { value: "openai/gpt-4o", label: "OpenAI GPT-4o" },
   { value: "openai/gpt-4o-mini", label: "OpenAI GPT-4o Mini" },
-  { value: "anthropic/claude-opus-4-5", label: "Anthropic Claude Opus" },
-  { value: "anthropic/claude-sonnet-4-5", label: "Anthropic Claude Sonnet" },
+  { value: "openai/o1-preview", label: "OpenAI o1-Preview" },
+  { value: "openai/o1-mini", label: "OpenAI o1-Mini" },
+  { value: "openai/gpt-4-turbo", label: "OpenAI GPT-4 Turbo" },
+  { value: "openai/gpt-3.5-turbo", label: "OpenAI GPT-3.5 Turbo" },
+  { value: "anthropic/claude-3-5-sonnet-latest", label: "Anthropic Claude 3.5 Sonnet" },
+  { value: "anthropic/claude-3-5-haiku-latest", label: "Anthropic Claude 3.5 Haiku" },
+  { value: "anthropic/claude-3-opus-latest", label: "Anthropic Claude 3 Opus" },
   { value: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
+  { value: "google/gemini-1.5-pro", label: "Google Gemini 1.5 Pro" },
+  { value: "google/gemini-1.5-flash", label: "Google Gemini 1.5 Flash" },
+  { value: "groq/llama3-70b-8192", label: "Groq LLaMA-3 (70B)" },
+  { value: "groq/llama3-8b-8192", label: "Groq LLaMA-3 (8B)" },
+  { value: "groq/mixtral-8x7b-32768", label: "Groq Mixtral 8x7B" },
+  { value: "deepseek/deepseek-chat", label: "DeepSeek Chat" },
+  { value: "deepseek/deepseek-coder", label: "DeepSeek Coder" },
+  { value: "mistral/mistral-large-latest", label: "Mistral Large" },
 ];
 
 const SCAN_MODES = [
