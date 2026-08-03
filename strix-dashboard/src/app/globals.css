@@ -6,30 +6,34 @@
   --bg-card-hover: #1F2937;
   --text-primary: #FFFFFF;
   --text-secondary: #9CA3AF;
-  
-  --accent-primary: #00E676; /* Emerald Green */
+
+  --accent-primary: #00E676;
   --accent-primary-glow: rgba(0, 230, 118, 0.3);
-  
-  --accent-danger: #FF4C4C; /* Neon Red */
+
+  --accent-danger: #FF4C4C;
   --accent-danger-glow: rgba(255, 76, 76, 0.3);
-  
+
   --accent-warning: #F59E0B;
-  --accent-info: #3B82F6; /* Blue */
-  
+  --accent-info: #3B82F6;
+
   --border-color: #374151;
   --border-color-hover: #4B5563;
-  
+
   --glass-bg: rgba(17, 24, 39, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
-  
+
   --font-sans: 'Inter', sans-serif;
   --font-heading: 'Outfit', sans-serif;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
@@ -39,8 +43,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
-  overflow-x: hidden;
-  min-height: 100vh;
+  overflow: hidden; /* App handles its own scroll */
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -54,32 +57,27 @@ a {
   text-decoration: none;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-main);
-}
-::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #4B5563;
+button {
+  font-family: inherit;
 }
 
-/* Utility Classes */
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+
+/* ── Glass Panel ─────────────────── */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
+/* ── Text Gradients ──────────────── */
 .text-gradient {
   background: linear-gradient(135deg, #FFFFFF 0%, #9CA3AF 100%);
   -webkit-background-clip: text;
@@ -94,30 +92,37 @@ a {
   background-clip: text;
 }
 
+/* ── Buttons ─────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 10px 20px;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   font-family: inherit;
   gap: 8px;
   font-size: 0.9rem;
+  user-select: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-primary {
-  background: var(--text-primary);
-  color: var(--bg-main);
+  background: var(--accent-primary);
+  color: #0A0F1C;
 }
 
-.btn-primary:hover {
-  background: #E5E7EB;
+.btn-primary:hover:not(:disabled) {
+  background: #33eb91;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px var(--accent-primary-glow);
 }
 
 .btn-outline {
@@ -126,38 +131,50 @@ a {
   color: var(--text-primary);
 }
 
-.btn-outline:hover {
+.btn-outline:hover:not(:disabled) {
   border-color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.08);
 }
 
+.btn-danger {
+  background: rgba(255, 76, 76, 0.12);
+  border: 1px solid rgba(255, 76, 76, 0.25);
+  color: var(--accent-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 76, 76, 0.22);
+}
+
+/* ── Badges ──────────────────────── */
 .badge {
-  padding: 4px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .badge-critical {
-  background: rgba(255, 76, 76, 0.1);
+  background: rgba(255, 76, 76, 0.12);
   color: var(--accent-danger);
-  border: 1px solid rgba(255, 76, 76, 0.2);
+  border: 1px solid rgba(255, 76, 76, 0.25);
 }
 
 .badge-high {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--accent-warning);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .badge-medium {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.12);
   color: var(--accent-info);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .badge-low {
@@ -166,7 +183,7 @@ a {
   border: 1px solid rgba(0, 230, 118, 0.2);
 }
 
-/* Layout Utilities */
+/* ── Layout ──────────────────────── */
 .app-container {
   display: flex;
   height: 100vh;
@@ -178,23 +195,51 @@ a {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* page-container: inner scroll area, no extra padding (pages add their own) */
+.page-container {
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
 }
 
-.page-container {
-  padding: 32px;
-  max-width: 1600px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* Animations */
+/* ── Animations ──────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent-primary-glow); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 6px rgba(0, 230, 118, 0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.35s ease-out forwards;
+}
+
+/* ── Modal overlay ───────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }

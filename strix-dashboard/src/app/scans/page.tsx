@@ -77,12 +77,18 @@ function ScansContent() {
   const [error, setError] = useState("");
 
   const fetchScans = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch("/api/scans");
+      const res = await fetch("/api/scans", { signal: controller.signal });
+      clearTimeout(timeout);
       const data = await res.json();
       setScans(data.scans ?? []);
-    } catch {}
-    setLoading(false);
+    } catch {
+      clearTimeout(timeout);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
