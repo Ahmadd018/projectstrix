@@ -66,6 +66,15 @@ step "2/4  Strix CLI (isolated virtualenv)"
 VENV_DIR="$SCRIPT_DIR/strix-venv"
 STRIX_SRC="$SCRIPT_DIR/strix"
 
+if [ -d "$STRIX_SRC/.git" ]; then
+    info "Strix repository already exists, updating..."
+    (cd "$STRIX_SRC" && git pull)
+else
+    info "Cloning Strix repository..."
+    # Change this URL if the original Strix repository is different
+    run git clone https://github.com/infat0x/strix.git "$STRIX_SRC" || run git clone https://github.com/strix-ai/strix.git "$STRIX_SRC"
+fi
+
 info "Creating Python venv at: $VENV_DIR"
 run python3 -m venv "$VENV_DIR"
 PYTHON_VER=$("$VENV_DIR/bin/python" --version 2>&1)
