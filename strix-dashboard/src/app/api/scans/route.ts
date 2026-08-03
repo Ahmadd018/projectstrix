@@ -59,8 +59,12 @@ export async function GET() {
           return null;
         }
         try {
-          const data = JSON.parse(fs.readFileSync(runFile, "utf-8"));
-          const vulnFile = path.join(RUNS_DIR, e.name, "vulnerabilities.json");
+        const data = JSON.parse(fs.readFileSync(runFile, "utf-8"));
+        if (!data.id) {
+          // Skip auto-generated python CLI directories that don't have our UUID data
+          return null;
+        }
+        const vulnFile = path.join(RUNS_DIR, e.name, "vulnerabilities.json");
           let vulnCount = 0;
           if (fs.existsSync(vulnFile)) {
             try {
@@ -206,7 +210,7 @@ export async function POST(req: NextRequest) {
 
   let proc;
   try {
-    proc = spawn(strixCmd, args, { env, cwd: process.cwd(), detached: false });
+    proc = spawn(strixCmd, args, { env, cwd: scanDir, detached: false });
     log.info("POST /api/scans", `Process spawned`, { pid: proc.pid, scanId });
   } catch (err: any) {
     log.error(
@@ -222,6 +226,33 @@ export async function POST(req: NextRequest) {
   registerProcess(scanId, proc);
 
   const logStream = fs.createWriteStream(logFile, { flags: "a" });
+  let pythonDirSyncInterval: NodeJS.Timeout | null = null;
+
+  // Poll for the nested python vulnerabilities.json and copy it to our UUID vulnerabilities.json
+  pythonDirSyncInterval = setInterval(() => {
+    const nestedRunsDir = path.join(scanDir, "strix_runs");
+    if (fs.existsSync(nestedRunsDir)) {
+      try {
+        const nestedDirs = fs.readdirSync(nestedRunsDir, { withFileTypes: true });
+        const targetDir = nestedDirs.find(d => d.isDirectory());
+        if (targetDir) {
+          const nestedVulnFile = path.join(nestedRunsDir, targetDir.name, "vulnerabilities.json");
+          if (fs.existsSync(nestedVulnFile)) {
+             const vulns = fs.readFileSync(nestedVulnFile, "utf-8");
+             // Only write if it's valid JSON and different
+             try {
+                const parsed = JSON.parse(vulns);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                   fs.writeFileSync(vulnFile, JSON.stringify(parsed, null, 2));
+                }
+             } catch {}
+          }
+        }
+      } catch (e) {
+        // ignore errors during polling
+      }
+    }
+  }, 2000);
 
   proc.stdout?.on("data", (chunk: Buffer) => {
     const text = chunk.toString();
@@ -245,6 +276,7 @@ export async function POST(req: NextRequest) {
   });
 
   proc.on("close", (code: number | null) => {
+    if (pythonDirSyncInterval) clearInterval(pythonDirSyncInterval);
     logStream.end();
     removeProcess(scanId);
     const updated = JSON.parse(fs.readFileSync(runFile, "utf-8"));
@@ -263,6 +295,7 @@ export async function POST(req: NextRequest) {
   });
 
   proc.on("error", (err: Error) => {
+    if (pythonDirSyncInterval) clearInterval(pythonDirSyncInterval);
     log.error(
       "PROC_ERROR",
       `Process error for scan ${scanId.slice(0, 8)}`,
