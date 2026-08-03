@@ -366,7 +366,9 @@ function ScansContent() {
                     </div>
                   </td>
                 </tr>
-              )))}
+              ))}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         )}
