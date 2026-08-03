@@ -28,7 +28,7 @@ interface ScanDetail {
   vulnerabilities: Vulnerability[];
 }
 
-const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
 function SeverityBadge({ s }: { s: string }) {
   const cls = { critical: "badge-critical", high: "badge-high", medium: "badge-medium", low: "badge-low" }[s] ?? "badge-low";

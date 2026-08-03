@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import styles from "./scans.module.css";
@@ -60,7 +60,7 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function ScansPage() {
+function ScansContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [scans, setScans] = useState<Scan[]>([]);
@@ -311,5 +311,13 @@ export default function ScansPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ScansPage() {
+  return (
+    <Suspense fallback={<div className={styles.container}><p>Loading...</p></div>}>
+      <ScansContent />
+    </Suspense>
   );
 }

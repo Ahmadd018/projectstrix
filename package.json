@@ -1,0 +1,20 @@
+{
+  "name": "project-strix",
+  "version": "1.0.0",
+  "description": "Strix Security Assessment Tool & Dashboard",
+  "private": true,
+  "scripts": {
+    "setup": "bash setup_and_run.sh",
+    "build": "cd strix-dashboard && npm run build",
+    "dev": "cd strix-dashboard && npm run dev",
+    "start": "cd strix-dashboard && npm start"
+  },
+  "keywords": [
+    "security",
+    "strix",
+    "dashboard",
+    "vulnerability-scanner"
+  ],
+  "author": "",
+  "license": "Apache-2.0"
+}

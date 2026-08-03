@@ -8,6 +8,23 @@ import { registerProcess, removeProcess } from '@/lib/scanStore';
 // strix_runs dir lives alongside the Next.js project root
 const RUNS_DIR = path.join(process.cwd(), 'strix_runs');
 
+function getStrixCommand(): string {
+  if (process.env.STRIX_PATH && fs.existsSync(process.env.STRIX_PATH)) {
+    return process.env.STRIX_PATH;
+  }
+  const home = process.env.HOME || '/root';
+  const candidates = [
+    '/usr/local/bin/strix',
+    path.join(home, '.local/bin/strix'),
+    path.join(process.cwd(), '../venv/bin/strix'),
+    path.join(process.cwd(), '../strix/venv/bin/strix'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return 'strix';
+}
+
 function ensureRunsDir() {
   if (!fs.existsSync(RUNS_DIR)) {
     fs.mkdirSync(RUNS_DIR, { recursive: true });
@@ -96,6 +113,7 @@ export async function POST(req: NextRequest) {
 
   const env = {
     ...process.env,
+    PATH: `${process.env.PATH || ''}:/usr/local/bin:${process.env.HOME || ''}/.local/bin`,
     STRIX_LLM: llmModel || 'openai/gpt-4o',
     LLM_API_KEY: apiKey,
     STRIX_OUTPUT_DIR: RUNS_DIR,
@@ -103,7 +121,7 @@ export async function POST(req: NextRequest) {
 
   let proc;
   try {
-    proc = spawn('strix', args, {
+    proc = spawn(getStrixCommand(), args, {
       env,
       cwd: process.cwd(),
       detached: false,
