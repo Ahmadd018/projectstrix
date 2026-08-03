@@ -102,8 +102,11 @@ DASH_DIR="$SCRIPT_DIR/strix-dashboard"
 info "Dashboard directory: $DASH_DIR"
 cd "$DASH_DIR"
 
+info "Cleaning up old build cache to prevent permission issues..."
+run sudo rm -rf .next node_modules
+
 info "Running npm install..."
-run npm install --prefer-offline 2>&1 | tail -10
+run npm install 2>&1 | tail -20
 
 info "Running npm run build..."
 run npm run build 2>&1
