@@ -23,8 +23,14 @@ const LLM_MODELS = [
   { value: "openai/o1-mini", label: "OpenAI o1-Mini" },
   { value: "openai/gpt-4-turbo", label: "OpenAI GPT-4 Turbo" },
   { value: "openai/gpt-3.5-turbo", label: "OpenAI GPT-3.5 Turbo" },
-  { value: "anthropic/claude-3-5-sonnet-latest", label: "Anthropic Claude 3.5 Sonnet" },
-  { value: "anthropic/claude-3-5-haiku-latest", label: "Anthropic Claude 3.5 Haiku" },
+  {
+    value: "anthropic/claude-3-5-sonnet-latest",
+    label: "Anthropic Claude 3.5 Sonnet",
+  },
+  {
+    value: "anthropic/claude-3-5-haiku-latest",
+    label: "Anthropic Claude 3.5 Haiku",
+  },
   { value: "anthropic/claude-3-opus-latest", label: "Anthropic Claude 3 Opus" },
   { value: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
   { value: "google/gemini-1.5-pro", label: "Google Gemini 1.5 Pro" },
@@ -90,12 +96,20 @@ function ScansContent() {
   const [launching, setLaunching] = useState(false);
   const [form, setForm] = useState({
     target: "",
+    targetList: "",
     llmModel: "openai/gpt-4o",
     apiKey: "",
     scanMode: "standard",
     instruction: "",
     simulationMode: false,
+    scopeMode: "auto",
+    diffBase: "",
+    configFile: "",
+    maxBudget: "",
+    maxTurns: "",
+    resumeRun: "",
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
 
   const fetchScans = useCallback(async () => {
@@ -127,8 +141,8 @@ function ScansContent() {
   async function handleLaunch(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.target.trim()) {
-      setError("Target is required");
+    if (!form.target.trim() && !form.targetList.trim()) {
+      setError("Target or Target List is required");
       return;
     }
     if (!form.apiKey.trim()) {
@@ -152,11 +166,18 @@ function ScansContent() {
       setLaunching(false);
       setForm({
         target: "",
+        targetList: "",
         llmModel: "openai/gpt-4o",
         apiKey: "",
         scanMode: "standard",
         instruction: "",
         simulationMode: false,
+        scopeMode: "auto",
+        diffBase: "",
+        configFile: "",
+        maxBudget: "",
+        maxTurns: "",
+        resumeRun: "",
       });
       router.push(`/scans/${data.scanId}`);
     } catch {
@@ -289,7 +310,7 @@ function ScansContent() {
 
             <form onSubmit={handleLaunch} className={styles.form}>
               <div className={styles.field}>
-                <label className={styles.label}>Target *</label>
+                <label className={styles.label}>Target</label>
                 <input
                   className={styles.input}
                   type="text"
@@ -341,7 +362,9 @@ function ScansContent() {
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label}>LLM API Key {!form.simulationMode && "*"}</label>
+                <label className={styles.label}>
+                  LLM API Key {!form.simulationMode && "*"}
+                </label>
                 <input
                   className={styles.input}
                   type="password"
@@ -352,23 +375,40 @@ function ScansContent() {
                   autoComplete="off"
                 />
                 <span className={styles.hint}>
-                  {form.simulationMode ? "Not required in Simulation Mode" : "Never stored — used only for this scan session"}
+                  {form.simulationMode
+                    ? "Not required in Simulation Mode"
+                    : "Never stored — used only for this scan session"}
                 </span>
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                <label
+                  className={styles.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={form.simulationMode}
-                    onChange={(e) => setForm({ ...form, simulationMode: e.target.checked })}
+                    onChange={(e) =>
+                      setForm({ ...form, simulationMode: e.target.checked })
+                    }
                     disabled={launching}
-                    style={{ width: "16px", height: "16px", accentColor: "var(--accent-primary)" }}
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      accentColor: "var(--accent-primary)",
+                    }}
                   />
                   Run in Simulation Mode (Mock Scan)
                 </label>
                 <span className={styles.hint}>
-                  Bypasses the real Strix agent and injects realistic mock vulnerabilities for UI demonstration.
+                  Bypasses the real Strix agent and injects realistic mock
+                  vulnerabilities for UI demonstration.
                 </span>
               </div>
 
@@ -382,9 +422,126 @@ function ScansContent() {
                     setForm({ ...form, instruction: e.target.value })
                   }
                   disabled={launching}
-                  rows={3}
+                  rows={2}
                 />
               </div>
+
+              <div
+                className={styles.advancedToggle}
+                onClick={() => setShowAdvanced(!showAdvanced)}
+              >
+                <span>{showAdvanced ? "▼" : "▶"} Advanced Configuration</span>
+              </div>
+
+              {showAdvanced && (
+                <div className={styles.advancedFields}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>
+                      Target List (One per line)
+                    </label>
+                    <textarea
+                      className={styles.textarea}
+                      placeholder="https://app.example.com/api&#10;https://app.example.com/admin"
+                      value={form.targetList}
+                      onChange={(e) =>
+                        setForm({ ...form, targetList: e.target.value })
+                      }
+                      disabled={launching}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Scope Mode</label>
+                      <select
+                        className={styles.select}
+                        value={form.scopeMode}
+                        onChange={(e) =>
+                          setForm({ ...form, scopeMode: e.target.value })
+                        }
+                        disabled={launching}
+                      >
+                        <option value="auto">Auto</option>
+                        <option value="diff">Diff</option>
+                        <option value="full">Full</option>
+                      </select>
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Diff Base</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        placeholder="e.g. HEAD~1 or origin/main"
+                        value={form.diffBase}
+                        onChange={(e) =>
+                          setForm({ ...form, diffBase: e.target.value })
+                        }
+                        disabled={launching}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Max Budget (USD)</label>
+                      <input
+                        className={styles.input}
+                        type="number"
+                        placeholder="e.g. 10.00"
+                        value={form.maxBudget}
+                        onChange={(e) =>
+                          setForm({ ...form, maxBudget: e.target.value })
+                        }
+                        disabled={launching}
+                        step="0.1"
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Max Turns</label>
+                      <input
+                        className={styles.input}
+                        type="number"
+                        placeholder="e.g. 50"
+                        value={form.maxTurns}
+                        onChange={(e) =>
+                          setForm({ ...form, maxTurns: e.target.value })
+                        }
+                        disabled={launching}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Config File Path</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        placeholder="e.g. ./strix_config.yaml"
+                        value={form.configFile}
+                        onChange={(e) =>
+                          setForm({ ...form, configFile: e.target.value })
+                        }
+                        disabled={launching}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Resume Run Name</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        placeholder="e.g. run_12345"
+                        value={form.resumeRun}
+                        onChange={(e) =>
+                          setForm({ ...form, resumeRun: e.target.value })
+                        }
+                        disabled={launching}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {error && <div className={styles.errorBox}>{error}</div>}
 

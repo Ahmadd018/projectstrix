@@ -110,7 +110,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   log.info("POST /api/scans", "New scan request received");
   const body = await req.json();
-  const { target, llmModel, apiKey, scanMode, instruction } = body;
+  const { target, targetList, llmModel, apiKey, scanMode, instruction, scopeMode, diffBase, configFile, maxBudget, maxTurns, resumeRun } = body;
 
   log.debug("POST /api/scans", "Scan parameters", {
     target,
@@ -120,9 +120,9 @@ export async function POST(req: NextRequest) {
     apiKey: apiKey ? "(provided)" : "(MISSING)",
   });
 
-  if (!target) {
-    log.warn("POST /api/scans", "Rejected: target is required");
-    return NextResponse.json({ error: "target is required" }, { status: 400 });
+  if (!target && !targetList) {
+    log.warn("POST /api/scans", "Rejected: target or targetList is required");
+    return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
   }
   if (!apiKey && !body.simulationMode) {
     log.warn("POST /api/scans", "Rejected: apiKey is required");
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
 
   const runMeta = {
     id: scanId,
-    target,
+    target: target || "Multiple Targets",
     llmModel: llmModel || "openai/gpt-4o",
     scanMode: scanMode || "standard",
     instruction: instruction || "",
@@ -153,9 +153,26 @@ export async function POST(req: NextRequest) {
   log.info("POST /api/scans", `Scan created`, { scanId, scanDir });
 
   const strixCmd = getStrixCommand();
-  const args = ["--target", target, "--non-interactive"];
-  if (scanMode) args.push("--scan-mode", scanMode);
+  const args = ["-n"]; // non-interactive by default
+  
+  if (target) args.push("-t", target);
+  
+  if (targetList?.trim()) {
+    const targetListFile = path.join(scanDir, "targets.txt");
+    fs.writeFileSync(targetListFile, targetList.trim());
+    args.push("--target-list", targetListFile);
+  }
+
+  if (scanMode) args.push("-m", scanMode);
   if (instruction?.trim()) args.push("--instruction", instruction.trim());
+  
+  // Advanced arguments mapping
+  if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
+  if (diffBase?.trim()) args.push("--diff-base", diffBase.trim());
+  if (configFile?.trim()) args.push("--config", configFile.trim());
+  if (maxBudget?.trim()) args.push("--max-budget", maxBudget.trim());
+  if (maxTurns?.trim()) args.push("--max-turns", maxTurns.trim());
+  if (resumeRun?.trim()) args.push("--resume", resumeRun.trim());
 
   const env = {
     ...process.env,
