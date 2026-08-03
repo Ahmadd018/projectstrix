@@ -26,13 +26,13 @@ cd "$(dirname "$0")/strix"
 # Ubuntu 23+ requires --break-system-packages for system-wide pip installs
 sudo pip3 install -e . --break-system-packages || sudo pip3 install -e .
 
-echo -e "\n🌐 3/4 Installing Dashboard dependencies..."
+echo -e "\n🌐 3/4 Installing Dashboard dependencies and building..."
 cd ../strix-dashboard
 npm install
+npm run build
 
-echo -e "\n✅ 4/4 Setup complete! Starting the dashboard on Port 80..."
+echo -e "\n✅ 4/4 Setup complete!"
 echo "===================================================="
-echo "🌐 The dashboard will be available at http://your-ip-address"
-echo "👉 Make sure Port 80 (HTTP) is OPEN in your AWS Security Group!"
+echo "Strix is now installed and the dashboard is built."
+echo "To run the dashboard later, navigate to strix-dashboard and use PM2 or 'sudo npm start -p 80'"
 echo "===================================================="
-sudo npm run dev -- -H 0.0.0.0 -p 80
