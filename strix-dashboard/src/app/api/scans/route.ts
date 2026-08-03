@@ -78,7 +78,16 @@ export async function GET() {
             "GET /api/scans",
             `Scan ${e.name}: status=${data.status} vulns=${vulnCount}`,
           );
-          return { ...data, vulnCount };
+          return { 
+            id: data.id || e.name,
+            target: data.target || "Unknown Target",
+            llmModel: data.llmModel || "Unknown",
+            scanMode: data.scanMode || "standard",
+            status: data.status || "failed",
+            startedAt: data.startedAt || new Date().toISOString(),
+            ...data, 
+            vulnCount 
+          };
         } catch (e2) {
           log.error(
             "GET /api/scans",

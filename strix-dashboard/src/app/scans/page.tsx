@@ -78,7 +78,10 @@ function statusBadge(status: Scan["status"] | string) {
 }
 
 function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
+  if (!iso) return "Unknown";
+  const time = new Date(iso).getTime();
+  if (isNaN(time)) return "Unknown";
+  const diff = Date.now() - time;
   const m = Math.floor(diff / 60000);
   if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;
@@ -239,10 +242,10 @@ function ScansContent() {
               </tr>
             </thead>
             <tbody>
-              {scans.map((scan) => (
+              {scans.map((scan, i) => (
                 <tr
-                  key={scan.id}
-                  onClick={() => router.push(`/scans/${scan.id}`)}
+                  key={scan.id || `unknown-${i}`}
+                  onClick={() => router.push(`/scans/${scan.id || ""}`)}
                   className={styles.row}
                 >
                   <td>
