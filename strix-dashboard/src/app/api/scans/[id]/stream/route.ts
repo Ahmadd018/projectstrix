@@ -20,6 +20,8 @@ export async function GET(
 
   const encoder = new TextEncoder();
 
+  let watchInterval: NodeJS.Timeout;
+
   const stream = new ReadableStream({
     start(controller) {
       // Send existing log content first
@@ -82,7 +84,7 @@ export async function GET(
         `Starting file watch (initial log size: ${lastSize} bytes)`,
       );
 
-      const watchInterval = setInterval(() => {
+      watchInterval = setInterval(() => {
         tickCount++;
 
         // Heartbeat log every 30s (60 ticks * 500ms)
@@ -200,14 +202,13 @@ export async function GET(
           }
         }
       }, 500);
-
-      return () => {
-        log.info(
-          `SSE /api/scans/${id}/stream`,
-          "Client disconnected, clearing watch interval",
-        );
-        clearInterval(watchInterval);
-      };
+    },
+    cancel() {
+      log.info(
+        `SSE /api/scans/${id}/stream`,
+        "Client disconnected, clearing watch interval",
+      );
+      clearInterval(watchInterval);
     },
   });
 

@@ -248,8 +248,11 @@ export async function POST(req: NextRequest) {
     logStream.end();
     removeProcess(scanId);
     const updated = JSON.parse(fs.readFileSync(runFile, "utf-8"));
-    updated.status =
-      code === 0 ? "completed" : code === null ? "stopped" : "failed";
+    let finalStatus = code === 0 ? "completed" : code === null ? "stopped" : "failed";
+    if (code !== 0 && code !== null && (updated.status === "analyzing" || updated.status === "completed")) {
+      finalStatus = "completed"; // Agent finished but returned non-zero code (e.g. due to vulns or warnings)
+    }
+    updated.status = finalStatus;
     updated.finishedAt = new Date().toISOString();
     updated.exitCode = code;
     fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
@@ -316,7 +319,7 @@ function parseStatusFromLog(text: string, runFile: string) {
     newStatus = "crawling";
   } else if (text.includes("Testing for") || text.includes("Spawning exploitation")) {
     newStatus = "scanning";
-  } else if (text.includes("Summary:") || text.includes("Assessment complete")) {
+  } else if (text.includes("Summary:") || text.includes("Assessment complete") || text.includes("Penetration test completed")) {
     newStatus = "analyzing";
   }
 
