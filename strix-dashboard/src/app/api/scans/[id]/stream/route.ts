@@ -48,7 +48,8 @@ export async function GET(
       if (fs.existsSync(runFile)) {
         try {
           const run = JSON.parse(fs.readFileSync(runFile, "utf-8"));
-          if (run.status !== "running") {
+          const activeStatuses = ["running", "crawling", "scanning", "analyzing"];
+          if (!activeStatuses.includes(run.status)) {
             log.info(
               `SSE /api/scans/${id}/stream`,
               `Scan already finished (status=${run.status}), closing SSE immediately`,
@@ -74,6 +75,7 @@ export async function GET(
       let lastSize = fs.existsSync(logFile) ? fs.statSync(logFile).size : 0;
       let lastVulnCount = 0;
       let tickCount = 0;
+      let lastStatus = "running"; // Track last known status to send updates
 
       log.debug(
         `SSE /api/scans/${id}/stream`,
@@ -163,20 +165,28 @@ export async function GET(
           }
         }
 
-        // Check if scan is done
+        // Check if scan is done or status changed
         if (fs.existsSync(runFile)) {
           try {
             const run = JSON.parse(fs.readFileSync(runFile, "utf-8"));
-            if (run.status !== "running") {
-              log.info(
-                `SSE /api/scans/${id}/stream`,
-                `Scan finished (status=${run.status}), closing SSE stream`,
-                { exitCode: run.exitCode },
-              );
+            const activeStatuses = ["running", "crawling", "scanning", "analyzing"];
+            
+            // Send intermediate status changes
+            if (run.status && run.status !== lastStatus) {
+              lastStatus = run.status;
               controller.enqueue(
                 encoder.encode(
                   `data: ${JSON.stringify({ type: "status", status: run.status })}\n\n`,
                 ),
+              );
+            }
+
+            // End stream if finished
+            if (!activeStatuses.includes(run.status)) {
+              log.info(
+                `SSE /api/scans/${id}/stream`,
+                `Scan finished (status=${run.status}), closing SSE stream`,
+                { exitCode: run.exitCode },
               );
               clearInterval(watchInterval);
               controller.close();
