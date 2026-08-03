@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Shield, Activity, Target, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 interface Scan {
   id: string;
@@ -181,15 +181,15 @@ export default function Dashboard() {
               <CardTitle>Recent Scans</CardTitle>
               <CardDescription>Latest autonomous penetration tests.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/scans">View All <ArrowRight className="ml-2 w-4 h-4" /></Link>
-            </Button>
+            <Link href="/scans" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              View All <ArrowRight className="ml-2 w-4 h-4" />
+            </Link>
           </CardHeader>
           <CardContent>
             {scans.length === 0 ? (
               <div className="text-center py-10 border border-dashed border-border/50 rounded-lg">
                 <p className="text-muted-foreground mb-4">No scans initiated yet.</p>
-                <Button asChild><Link href="/scans?new=1">Start First Scan</Link></Button>
+                <Link href="/scans?new=1" className={buttonVariants()}>Start First Scan</Link>
               </div>
             ) : (
               <div className="space-y-4">
@@ -237,9 +237,9 @@ export default function Dashboard() {
               <CardTitle>Recent Findings</CardTitle>
               <CardDescription>Most critical vulnerabilities discovered.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/vulnerabilities">View All <ArrowRight className="ml-2 w-4 h-4" /></Link>
-            </Button>
+            <Link href="/vulnerabilities" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              View All <ArrowRight className="ml-2 w-4 h-4" />
+            </Link>
           </CardHeader>
           <CardContent>
             {recentVulns.length === 0 ? (

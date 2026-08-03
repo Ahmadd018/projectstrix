@@ -199,10 +199,8 @@ function ScansContent() {
           <p className="text-muted-foreground">Launch and monitor your security assessments.</p>
         </div>
         <Dialog open={showModal} onOpenChange={setShowModal}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-[0_0_20px_rgba(0,230,118,0.2)] hover:shadow-[0_0_30px_rgba(0,230,118,0.4)] transition-all">
-              <Plus className="w-4 h-4" /> New Scan
-            </Button>
+          <DialogTrigger render={<Button className="gap-2 shadow-[0_0_20px_rgba(0,230,118,0.2)] hover:shadow-[0_0_30px_rgba(0,230,118,0.4)] transition-all" />}>
+            <Plus className="w-4 h-4" /> New Scan
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px] bg-background/90 backdrop-blur-xl border-border/50 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
