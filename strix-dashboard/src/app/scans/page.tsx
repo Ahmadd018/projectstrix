@@ -43,14 +43,20 @@ const SCAN_MODES = [
   { value: "deep", label: "Deep", desc: "Exhaustive multi-agent pentest" },
 ];
 
-function statusBadge(status: Scan["status"]) {
+function statusBadge(status: Scan["status"] | string) {
   const map: Record<string, string> = {
+    crawling: "badge-running",
+    scanning: "badge-running",
+    analyzing: "badge-running",
     running: "badge-running",
     completed: "badge-completed",
     failed: "badge-failed",
     stopped: "badge-stopped",
   };
   const labels: Record<string, string> = {
+    crawling: " Crawling",
+    scanning: " Scanning",
+    analyzing: " Analyzing",
     running: " Running",
     completed: " Completed",
     failed: " Failed",

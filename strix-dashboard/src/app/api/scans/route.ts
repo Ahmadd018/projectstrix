@@ -205,6 +205,7 @@ export async function POST(req: NextRequest) {
       `[${scanId.slice(0, 8)}] ${text.slice(0, 200).trim()}`,
     );
     parseVulnFromLog(text, vulnFile, scanId);
+    parseStatusFromLog(text, runFile);
   });
 
   proc.stderr?.on("data", (chunk: Buffer) => {
@@ -214,6 +215,7 @@ export async function POST(req: NextRequest) {
       "PROC_STDERR",
       `[${scanId.slice(0, 8)}] ${text.slice(0, 500).trim()}`,
     );
+    parseStatusFromLog(text, runFile);
   });
 
   proc.on("close", (code: number | null) => {
@@ -279,6 +281,29 @@ function parseVulnFromLog(text: string, vulnFile: string, scanId: string) {
         err: String(e),
       });
     }
+    }
+  }
+}
+
+function parseStatusFromLog(text: string, runFile: string) {
+  let newStatus = "";
+  if (text.includes("Crawling target") || text.includes("Initial")) {
+    newStatus = "crawling";
+  } else if (text.includes("Testing for") || text.includes("Spawning exploitation")) {
+    newStatus = "scanning";
+  } else if (text.includes("Summary:") || text.includes("Assessment complete")) {
+    newStatus = "analyzing";
+  }
+
+  if (newStatus) {
+    try {
+      const data = JSON.parse(fs.readFileSync(runFile, "utf-8"));
+      // Don't overwrite if it's already completed or failed
+      if (data.status !== "completed" && data.status !== "failed" && data.status !== "stopped" && data.status !== newStatus) {
+        data.status = newStatus;
+        fs.writeFileSync(runFile, JSON.stringify(data, null, 2));
+      }
+    } catch {}
   }
 }
 
@@ -385,6 +410,15 @@ function runMockScan(
     if (i < logs.length) {
       fs.appendFileSync(logFile, logs[i] + "\n");
       log.debug("MOCK_SCAN", `[${scanId.slice(0, 8)}] ${logs[i]}`);
+      if (i === 2) {
+        parseStatusFromLog(logs[2], runFile);
+      }
+      if (i === 6) {
+        parseStatusFromLog(logs[6], runFile);
+      }
+      if (i === 16) {
+        parseStatusFromLog(logs[16], runFile);
+      }
       if (i === 7) {
         const v = [mockVulns[0]];
         fs.writeFileSync(vulnFile, JSON.stringify(v, null, 2));

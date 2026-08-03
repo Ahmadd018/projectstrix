@@ -193,12 +193,18 @@ export default function ScanDetailPage() {
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
+    crawling: styles.pillRunning,
+    scanning: styles.pillRunning,
+    analyzing: styles.pillRunning,
     running: styles.pillRunning,
     completed: styles.pillCompleted,
     failed: styles.pillFailed,
     stopped: styles.pillStopped,
   };
   const labels: Record<string, string> = {
+    crawling: "Crawling",
+    scanning: "Scanning",
+    analyzing: "Analyzing",
     running: "Running",
     completed: "Completed",
     failed: "Failed",
