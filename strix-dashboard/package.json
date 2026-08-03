@@ -9,11 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@types/swagger-ui-react": "^5.18.0",
     "next": "^16.2.12",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "swagger-ui-react": "^5.32.12"
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
