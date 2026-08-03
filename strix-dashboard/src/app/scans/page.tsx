@@ -367,7 +367,7 @@ function ScansContent() {
                   </td>
                 </tr>
               ))}
-                </Fragment>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
