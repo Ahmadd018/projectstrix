@@ -260,7 +260,7 @@ function parseVulnFromLog(text: string, vulnFile: string, scanId: string) {
       let existing: any[] = [];
       try {
         existing = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
-      } catch {}
+      } catch { }
       if (!existing.find((v: any) => v.id === vuln.id)) {
         existing.push(vuln);
         fs.writeFileSync(vulnFile, JSON.stringify(existing, null, 2));
