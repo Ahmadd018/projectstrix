@@ -51,8 +51,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch("/api/scans");
+      const res = await fetch("/api/scans", { signal: controller.signal });
+      clearTimeout(timeout);
       const data = await res.json();
       const scanList: Scan[] = data.scans ?? [];
       setScans(scanList);
@@ -68,12 +71,16 @@ export default function Dashboard() {
         } catch {}
       }
       vulns.sort((a, b) => {
-        const order = { critical: 0, high: 1, medium: 2, low: 3 };
+        const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
         return order[a.severity] - order[b.severity];
       });
       setRecentVulns(vulns.slice(0, 5));
-    } catch {}
-    setLoading(false);
+    } catch {
+      clearTimeout(timeout);
+      // On error/timeout, just show empty state instead of infinite spinner
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
