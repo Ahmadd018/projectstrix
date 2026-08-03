@@ -71,8 +71,7 @@ if [ -d "$STRIX_SRC/.git" ]; then
   (cd "$STRIX_SRC" && git pull)
 else
   info "Cloning Strix repository..."
-  # Change this URL if the original Strix repository is different
-  run git clone https://github.com/infat0x/strix.git "$STRIX_SRC" || run git clone https://github.com/strix-ai/strix.git "$STRIX_SRC"
+  run git clone https://github.com/usestrix/strix.git "$STRIX_SRC"
 fi
 
 info "Creating Python venv at: $VENV_DIR"
