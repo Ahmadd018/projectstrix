@@ -85,6 +85,7 @@ export async function GET() {
           return { 
             id: data.id || e.name,
             target: data.target || "Unknown Target",
+            projectName: data.projectName || "",
             llmModel: data.llmModel || "Unknown",
             scanMode: data.scanMode || "standard",
             status: data.status || "failed",
@@ -123,7 +124,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   log.info("POST /api/scans", "New scan request received");
   const body = await req.json();
-  const { target, targetList, llmModel, apiKey, scanMode, instruction, scopeMode, diffBase, configFile, maxBudget, maxTurns, resumeRun } = body;
+  const { target, targetList, projectName, llmModel, apiKey, scanMode, instruction, scopeMode, diffBase, configFile, maxBudget, maxTurns, resumeRun } = body;
 
   log.debug("POST /api/scans", "Scan parameters", {
     target,
@@ -152,10 +153,10 @@ export async function POST(req: NextRequest) {
 
   const runMeta = {
     id: scanId,
-    target: target || "Multiple Targets",
-    llmModel: llmModel || "openai/gpt-4o",
-    scanMode: scanMode || "standard",
-    instruction: instruction || "",
+    target,
+    projectName,
+    llmModel,
+    scanMode,
     status: "running",
     startedAt: new Date().toISOString(),
     finishedAt: null,

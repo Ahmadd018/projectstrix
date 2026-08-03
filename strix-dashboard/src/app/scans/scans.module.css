@@ -142,6 +142,30 @@
   font-size: 1rem;
 }
 
+.groupHeaderRow {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(55, 65, 81, 0.4);
+}
+
+.groupHeaderRow:hover td {
+  background: transparent;
+}
+
+.groupHeaderContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--accent-info);
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.groupIcon {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
 .targetText {
   font-weight: 500;
   max-width: 350px;

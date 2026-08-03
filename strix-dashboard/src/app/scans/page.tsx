@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, Suspense, useMemo, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import styles from "./scans.module.css";
@@ -8,6 +8,7 @@ import styles from "./scans.module.css";
 interface Scan {
   id: string;
   target: string;
+  projectName?: string;
   llmModel: string;
   scanMode: string;
   status: "running" | "completed" | "failed" | "stopped";
@@ -99,6 +100,7 @@ function ScansContent() {
   const [launching, setLaunching] = useState(false);
   const [form, setForm] = useState({
     target: "",
+    projectName: "",
     targetList: "",
     llmModel: "openai/gpt-4o",
     apiKey: "",
@@ -138,7 +140,24 @@ function ScansContent() {
     if (filter === "finished") return isFinished;
     return true;
   });
-
+  const groupedScans = useMemo(() => {
+    const groups: Record<string, Scan[]> = {};
+    for (const scan of filteredScans) {
+      let group = scan.projectName;
+      if (!group) {
+        try {
+          const urlStr = scan.target.startsWith("http") ? scan.target : `http://${scan.target}`;
+          group = new URL(urlStr).hostname;
+        } catch {
+          group = "Other";
+        }
+      }
+      if (!group) group = "Other";
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(scan);
+    }
+    return groups;
+  }, [filteredScans]);
   useEffect(() => {
     fetchScans();
     const interval = setInterval(fetchScans, 3000);
@@ -178,6 +197,7 @@ function ScansContent() {
       setLaunching(false);
       setForm({
         target: "",
+        projectName: "",
         targetList: "",
         llmModel: "openai/gpt-4o",
         apiKey: "",
@@ -282,12 +302,21 @@ function ScansContent() {
               </tr>
             </thead>
             <tbody>
-              {filteredScans.map((scan, i) => (
-                <tr
-                  key={scan.id || `unknown-${i}`}
-                  onClick={() => router.push(`/scans/${scan.id || ""}`)}
-                  className={styles.row}
-                >
+              {Object.entries(groupedScans).map(([groupName, scansInGroup]) => (
+                <React.Fragment key={groupName}>
+                  <tr className={styles.groupHeaderRow}>
+                    <td colSpan={7}>
+                      <div className={styles.groupHeaderContent}>
+                        <span className={styles.groupIcon}>📁</span> {groupName}
+                      </div>
+                    </td>
+                  </tr>
+                  {scansInGroup.map((scan, i) => (
+                    <tr
+                      key={scan.id || `unknown-${i}`}
+                      onClick={() => router.push(`/scans/${scan.id || ""}`)}
+                      className={styles.row}
+                    >
                   <td>
                     <div className={styles.targetCell}>
                       <span className={styles.targetIcon}></span>
@@ -337,7 +366,7 @@ function ScansContent() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         )}
@@ -359,19 +388,35 @@ function ScansContent() {
             </div>
 
             <form onSubmit={handleLaunch} className={styles.form}>
-              <div className={styles.field}>
-                <label className={styles.label}>Target</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  placeholder="https://app.example.com or ./local-app"
-                  value={form.target}
-                  onChange={(e) => setForm({ ...form, target: e.target.value })}
-                  disabled={launching}
-                />
-                <span className={styles.hint}>
-                  URL, GitHub repo, or local directory path
-                </span>
+              <div className={styles.fieldRow}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Target</label>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    placeholder="https://app.example.com"
+                    value={form.target}
+                    onChange={(e) => setForm({ ...form, target: e.target.value })}
+                    disabled={launching}
+                  />
+                  <span className={styles.hint}>
+                    URL, GitHub repo, or local directory path
+                  </span>
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Project / Group Name</label>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    placeholder="Auto-detected from target if empty"
+                    value={form.projectName}
+                    onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+                    disabled={launching}
+                  />
+                  <span className={styles.hint}>
+                    Leave blank to group by domain name
+                  </span>
+                </div>
               </div>
 
               <div className={styles.fieldRow}>
