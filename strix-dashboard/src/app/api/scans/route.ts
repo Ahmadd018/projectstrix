@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     log.warn("POST /api/scans", "Rejected: target is required");
     return NextResponse.json({ error: "target is required" }, { status: 400 });
   }
-  if (!apiKey) {
+  if (!apiKey && !body.simulationMode) {
     log.warn("POST /api/scans", "Rejected: apiKey is required");
     return NextResponse.json({ error: "apiKey is required" }, { status: 400 });
   }
@@ -171,6 +171,12 @@ export async function POST(req: NextRequest) {
     cmd: strixCmd,
     args,
   });
+
+  if (body.simulationMode) {
+    log.info("POST /api/scans", "Simulation Mode enabled, bypassing real agent");
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
+    return NextResponse.json({ scanId, status: "running", mode: "simulation" });
+  }
 
   let proc;
   try {

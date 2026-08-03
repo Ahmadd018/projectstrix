@@ -88,6 +88,7 @@ function ScansContent() {
     apiKey: "",
     scanMode: "standard",
     instruction: "",
+    simulationMode: false,
   });
   const [error, setError] = useState("");
 
@@ -149,6 +150,7 @@ function ScansContent() {
         apiKey: "",
         scanMode: "standard",
         instruction: "",
+        simulationMode: false,
       });
       router.push(`/scans/${data.scanId}`);
     } catch {
@@ -333,19 +335,34 @@ function ScansContent() {
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label}>LLM API Key *</label>
+                <label className={styles.label}>LLM API Key {!form.simulationMode && "*"}</label>
                 <input
                   className={styles.input}
                   type="password"
                   placeholder="sk-... or your provider API key"
                   value={form.apiKey}
                   onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                  disabled={launching}
+                  disabled={launching || form.simulationMode}
                   autoComplete="off"
                 />
                 <span className={styles.hint}>
-                  {" "}
-                  Never stored — used only for this scan session
+                  {form.simulationMode ? "Not required in Simulation Mode" : "Never stored — used only for this scan session"}
+                </span>
+              </div>
+
+              <div className={styles.field}>
+                <label className={styles.label} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.simulationMode}
+                    onChange={(e) => setForm({ ...form, simulationMode: e.target.checked })}
+                    disabled={launching}
+                    style={{ width: "16px", height: "16px", accentColor: "var(--accent-primary)" }}
+                  />
+                  Run in Simulation Mode (Mock Scan)
+                </label>
+                <span className={styles.hint}>
+                  Bypasses the real Strix agent and injects realistic mock vulnerabilities for UI demonstration.
                 </span>
               </div>
 
