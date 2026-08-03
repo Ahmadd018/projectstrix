@@ -3,32 +3,42 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import styles from "./Sidebar.module.css";
+import { 
+  LayoutDashboard, 
+  Radar, 
+  ShieldAlert, 
+  ActivitySquare, 
+  FileText, 
+  TerminalSquare, 
+  BookOpen, 
+  Settings,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  ShieldCheck,
+  ShieldX
+} from "lucide-react";
 
 const navItems = [
-  { name: "Overview", path: "/" },
-  { name: "Scans", path: "/scans" },
-  { name: "Vulnerabilities", path: "/vulnerabilities" },
-  { name: "Live Graph", path: "/graph" },
-  { name: "Reports", path: "/reports" },
-  { name: "System Logs", path: "/logs" },
-  { name: "API Docs", path: "/api-docs" },
-  { name: "Settings", path: "/settings" },
+  { name: "Overview", path: "/", icon: LayoutDashboard },
+  { name: "Scans", path: "/scans", icon: Radar },
+  { name: "Vulnerabilities", path: "/vulnerabilities", icon: ShieldAlert },
+  { name: "Live Graph", path: "/graph", icon: ActivitySquare },
+  { name: "Reports", path: "/reports", icon: FileText },
+  { name: "System Logs", path: "/logs", icon: TerminalSquare },
+  { name: "API Docs", path: "/api-docs", icon: BookOpen },
+  { name: "Settings", path: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">(
-    "loading",
-  );
+  const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">("loading");
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const check = async () => {
       try {
-        const r = await fetch("/api/health", {
-          signal: AbortSignal.timeout(3000),
-        });
+        const r = await fetch("/api/health", { signal: AbortSignal.timeout(3000) });
         setApiStatus(r.ok ? "ok" : "error");
       } catch {
         setApiStatus("error");
@@ -40,85 +50,81 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ""}`}>
-      <div className={styles.headerRow}>
-        <div className={styles.logo}>
-          <div className={styles.logoIcon}>S</div>
-          {!isCollapsed && <div className={styles.logoText}>Strix</div>}
+    <aside 
+      className={`relative flex flex-col h-full bg-background/95 backdrop-blur-xl border-r border-border transition-all duration-300 ${isCollapsed ? "w-20" : "w-64"}`}
+    >
+      <div className="flex items-center justify-between p-4 h-16 border-b border-border/50">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center justify-center min-w-8 w-8 h-8 rounded-lg bg-primary/20 border border-primary/50 text-primary font-bold">
+            S
+          </div>
+          {!isCollapsed && <span className="font-heading text-lg font-bold tracking-wide whitespace-nowrap">Strix Security</span>}
         </div>
         <button 
-          className={styles.collapseBtn} 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          className="text-muted-foreground hover:text-foreground transition-colors p-1"
         >
-          {isCollapsed ? "»" : "«"}
+          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
 
-      {/* New Scan CTA */}
-      <Link href="/scans?new=1" className={styles.newScanBtn} title="New Scan">
-        <span className={styles.plusIcon}>＋</span>
-        {!isCollapsed && <span>New Scan</span>}
-      </Link>
+      <div className="p-4">
+        <Link 
+          href="/scans?new=1" 
+          className={`flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg p-2.5 transition-all shadow-[0_0_15px_rgba(0,230,118,0.15)] hover:shadow-[0_0_25px_rgba(0,230,118,0.25)] ${isCollapsed ? "" : "w-full"}`}
+          title="New Scan"
+        >
+          <Plus size={18} className="shrink-0" />
+          {!isCollapsed && <span className="font-medium whitespace-nowrap">New Scan</span>}
+        </Link>
+      </div>
 
-      <nav className={styles.nav}>
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
         {navItems.map((item) => {
-          const isActive =
-            item.path === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.path);
+          const isActive = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+          const Icon = item.icon;
           return (
             <Link
               key={item.name}
               href={item.path}
-              className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all whitespace-nowrap ${isActive ? "bg-primary/10 text-primary border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
               title={isCollapsed ? item.name : undefined}
             >
-              <span className={styles.icon}>-</span>
-              {!isCollapsed && <span>{item.name}</span>}
+              <Icon size={18} className={`shrink-0 ${isActive ? "drop-shadow-[0_0_8px_rgba(0,230,118,0.5)]" : ""}`} />
+              {!isCollapsed && <span className="font-medium text-sm">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className={styles.footer}>
-        {/* Health indicator */}
-        <div className={styles.healthBadge} title={apiStatus === "ok" ? "API Online" : "API Offline"}>
-          <span
-            className={styles.healthDot}
-            style={{
-              background:
-                apiStatus === "ok"
-                  ? "var(--accent-primary)"
-                  : apiStatus === "error"
-                    ? "var(--accent-danger)"
-                    : "var(--text-secondary)",
-              boxShadow:
-                apiStatus === "ok" ? "0 0 6px var(--accent-primary)" : "none",
-            }}
-          />
+      <div className="p-4 border-t border-border/50">
+        <div className={`flex items-center gap-3 mb-4 ${isCollapsed ? "justify-center" : ""}`}>
+          <div className="relative flex items-center justify-center">
+            {apiStatus === "ok" ? (
+              <ShieldCheck size={20} className="text-primary drop-shadow-[0_0_8px_rgba(0,230,118,0.5)]" />
+            ) : (
+              <ShieldX size={20} className="text-destructive drop-shadow-[0_0_8px_rgba(255,76,76,0.5)]" />
+            )}
+            <span className={`absolute top-0 right-0 w-2 h-2 rounded-full ${apiStatus === "ok" ? "bg-primary animate-pulse" : "bg-destructive"}`}></span>
+          </div>
           {!isCollapsed && (
-            <>
-              <span className={styles.healthLabel}>
-                {apiStatus === "ok"
-                  ? "API Online"
-                  : apiStatus === "error"
-                    ? "API Offline"
-                    : "Checking…"}
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">API Status</span>
+              <span className={`text-sm font-medium ${apiStatus === "ok" ? "text-primary" : "text-destructive"}`}>
+                {apiStatus === "ok" ? "Online" : "Offline"}
               </span>
-              <Link href="/api-docs" className={styles.docsChip}>
-                Swagger
-              </Link>
-            </>
+            </div>
           )}
         </div>
 
-        <div className={styles.userProfile}>
-          <div className={styles.avatar}>A</div>
+        <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
+          <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-sm font-bold text-foreground shrink-0">
+            A
+          </div>
           {!isCollapsed && (
-            <div className={styles.userInfo}>
-              <span className={styles.userName}>Admin User</span>
-              <span className={styles.userRole}>Security Engineer</span>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-medium text-foreground truncate">Admin User</span>
+              <span className="text-xs text-muted-foreground truncate">Security Engineer</span>
             </div>
           )}
         </div>

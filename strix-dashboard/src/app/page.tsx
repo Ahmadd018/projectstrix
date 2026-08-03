@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import styles from "./page.module.css";
+import { Shield, Activity, Target, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface Scan {
   id: string;
@@ -60,31 +63,22 @@ export default function Dashboard() {
       const scanList: Scan[] = data.scans ?? [];
       setScans(scanList);
 
-      // Gather recent vulns from latest 3 scans
       const vulns: Vuln[] = [];
       for (const scan of scanList.slice(0, 3)) {
         try {
-          const detail = await fetch(`/api/scans/${scan.id}`).then((r) =>
-            r.json(),
-          );
+          const detail = await fetch(`/api/scans/${scan.id}`).then((r) => r.json());
           for (const v of detail.vulnerabilities ?? []) {
             vulns.push({ ...v, scanTarget: scan.target, scanId: scan.id });
           }
         } catch {}
       }
       vulns.sort((a, b) => {
-        const order: Record<string, number> = {
-          critical: 0,
-          high: 1,
-          medium: 2,
-          low: 3,
-        };
+        const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
         return order[a.severity] - order[b.severity];
       });
       setRecentVulns(vulns.slice(0, 5));
     } catch {
       clearTimeout(timeout);
-      // On error/timeout, just show empty state instead of infinite spinner
     } finally {
       setLoading(false);
     }
@@ -97,282 +91,186 @@ export default function Dashboard() {
   }, [fetchData]);
 
   const totalVulns = scans.reduce((s, sc) => s + sc.vulnCount, 0);
-  const criticalVulns = recentVulns.filter(
-    (v) => v.severity === "critical",
-  ).length;
+  const criticalVulns = recentVulns.filter((v) => v.severity === "critical").length;
   const activeScans = scans.filter((s) => s.status === "running").length;
   const score = securityScore(recentVulns);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground font-medium">Loading dashboard...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.dashboard}>
-      {loading ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "300px",
-            gap: "16px",
-            color: "var(--text-secondary)",
-          }}
-        >
-          <div className={styles.spinner} />
-          <span>Loading dashboard…</span>
-        </div>
-      ) : (
-        <>
-          <div className={styles.metricsGrid}>
-            {/* Security Score */}
-            <div className={`glass-panel ${styles.metricCard}`}>
-              <div className={styles.cardGlow} />
-              <div className={styles.metricHeader}>
-                <span>Security Score</span>
-                <span className={styles.icon}></span>
-              </div>
-              <div
-                className={styles.metricValue}
-                style={{
-                  color:
-                    score > 70
-                      ? "var(--accent-primary)"
-                      : score > 40
-                        ? "var(--accent-warning)"
-                        : "var(--accent-danger)",
-                }}
-              >
-                {score}/100
-              </div>
-              <div
-                className={`${styles.metricChange} ${score >= 70 ? styles.changePositive : styles.changeNegative}`}
-              >
-                <span>
-                  {score >= 70 ? "Good" : score >= 40 ? "Fair" : "Critical"}
-                </span>{" "}
-                security posture
-              </div>
-            </div>
+    <div className="p-8 space-y-8 h-full overflow-y-auto">
+      <div>
+        <h2 className="text-3xl font-heading font-bold tracking-tight mb-2">Overview</h2>
+        <p className="text-muted-foreground">Monitor your security posture and active scanning agents.</p>
+      </div>
 
-            {/* Critical Vulns */}
-            <div className={`glass-panel ${styles.metricCard}`}>
-              <div className={styles.cardGlow} />
-              <div className={styles.metricHeader}>
-                <span>Critical Vulns</span>
-                <span className={styles.icon}></span>
-              </div>
-              <div
-                className={styles.metricValue}
-                style={{
-                  color: criticalVulns > 0 ? "var(--accent-danger)" : "inherit",
-                }}
-              >
-                {criticalVulns}
-              </div>
-              <div
-                className={`${styles.metricChange} ${criticalVulns > 0 ? styles.changeNegative : styles.changePositive}`}
-              >
-                {criticalVulns > 0 ? (
-                  <>
-                    <span> Action required</span>
-                  </>
-                ) : (
-                  <>
-                    <span> None found</span>
-                  </>
-                )}
-              </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Security Score</CardTitle>
+            <Shield className={`w-4 h-4 ${score >= 70 ? "text-primary" : score >= 40 ? "text-warning" : "text-destructive"}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-4xl font-bold font-heading ${score >= 70 ? "text-primary drop-shadow-[0_0_10px_rgba(0,230,118,0.5)]" : score >= 40 ? "text-warning" : "text-destructive"}`}>
+              {score}/100
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {score >= 70 ? "Good" : score >= 40 ? "Fair" : "Critical"} security posture
+            </p>
+          </CardContent>
+        </Card>
 
-            {/* Active Scans */}
-            <div className={`glass-panel ${styles.metricCard}`}>
-              <div className={styles.cardGlow} />
-              <div className={styles.metricHeader}>
-                <span>Active Scans</span>
-                <span className={styles.icon}></span>
-              </div>
-              <div className={styles.metricValue}>{activeScans}</div>
-              <div className={styles.metricChange}>
-                {activeScans > 0 ? (
-                  <span>
-                    Running now ·{" "}
-                    <Link
-                      href="/scans"
-                      style={{ color: "var(--accent-primary)" }}
-                    >
-                      View
-                    </Link>
-                  </span>
-                ) : (
-                  <span>
-                    No scans running ·{" "}
-                    <Link
-                      href="/scans?new=1"
-                      style={{ color: "var(--accent-primary)" }}
-                    >
-                      Start one
-                    </Link>
-                  </span>
-                )}
-              </div>
+        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Critical Vulns</CardTitle>
+            <AlertTriangle className={`w-4 h-4 ${criticalVulns > 0 ? "text-destructive" : "text-muted-foreground"}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-4xl font-bold font-heading ${criticalVulns > 0 ? "text-destructive drop-shadow-[0_0_10px_rgba(255,76,76,0.5)]" : "text-foreground"}`}>
+              {criticalVulns}
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {criticalVulns > 0 ? "Immediate action required" : "No critical threats found"}
+            </p>
+          </CardContent>
+        </Card>
 
-            {/* Total Findings */}
-            <div className={`glass-panel ${styles.metricCard}`}>
-              <div className={styles.cardGlow} />
-              <div className={styles.metricHeader}>
-                <span>Total Findings</span>
-                <span className={styles.icon}></span>
-              </div>
-              <div className={styles.metricValue}>{totalVulns}</div>
-              <div className={styles.metricChange}>
-                <span>
-                  Across {scans.length} scan{scans.length !== 1 ? "s" : ""}
-                </span>
-              </div>
+        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-info/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Scans</CardTitle>
+            <Activity className="w-4 h-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold font-heading text-foreground">{activeScans}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {activeScans > 0 ? "Agents currently analyzing" : "All agents idle"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Findings</CardTitle>
+            <Target className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold font-heading text-foreground">{totalVulns}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Across {scans.length} historical scans
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Recent Scans */}
+        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Recent Scans</CardTitle>
+              <CardDescription>Latest autonomous penetration tests.</CardDescription>
             </div>
-          </div>
-
-          <div className={styles.chartsGrid}>
-            {/* Recent Scans */}
-            <div className={`glass-panel ${styles.chartCard}`}>
-              <div className={styles.chartHeader}>
-                <h2 className={styles.chartTitle}>Recent Scans</h2>
-                <Link
-                  href="/scans"
-                  className="btn btn-outline"
-                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
-                >
-                  View All →
-                </Link>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/scans">View All <ArrowRight className="ml-2 w-4 h-4" /></Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {scans.length === 0 ? (
+              <div className="text-center py-10 border border-dashed border-border/50 rounded-lg">
+                <p className="text-muted-foreground mb-4">No scans initiated yet.</p>
+                <Button asChild><Link href="/scans?new=1">Start First Scan</Link></Button>
               </div>
-              {scans.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <p>No scans yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {scans.slice(0, 5).map((scan) => (
                   <Link
-                    href="/scans?new=1"
-                    className="btn btn-primary"
-                    style={{ marginTop: "12px" }}
+                    key={scan.id}
+                    href={`/scans/${scan.id}`}
+                    className="flex items-center justify-between p-4 rounded-lg bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors"
                   >
-                    Start First Scan
-                  </Link>
-                </div>
-              ) : (
-                <div className={styles.scanList}>
-                  {scans.slice(0, 5).map((scan) => (
-                    <Link
-                      key={scan.id}
-                      href={`/scans/${scan.id}`}
-                      className={styles.scanItem}
-                    >
-                      <div className={styles.scanInfo}>
-                        <span className={styles.scanTarget}>{scan.target}</span>
-                        <div className={styles.scanMeta}>
-                          <span className={styles.modeTag}>
-                            {scan.scanMode}
-                          </span>
-                          <span
-                            style={{
-                              color: "var(--text-secondary)",
-                              fontSize: "0.78rem",
-                            }}
-                          >
-                            {timeAgo(scan.startedAt)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={styles.scanRight}>
-                        {scan.vulnCount > 0 && (
-                          <span className={styles.vulnBadge}>
-                            {scan.vulnCount}
-                          </span>
-                        )}
-                        <StatusDot status={scan.status} />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Recent Critical Findings */}
-            <div className={`glass-panel ${styles.chartCard}`}>
-              <div className={styles.chartHeader}>
-                <h2 className={styles.chartTitle}>Recent Findings</h2>
-                <Link
-                  href="/vulnerabilities"
-                  className="btn btn-outline"
-                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
-                >
-                  View All →
-                </Link>
-              </div>
-              {recentVulns.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <p
-                    style={{
-                      color: "var(--text-secondary)",
-                      fontSize: "0.88rem",
-                    }}
-                  >
-                    {scans.length === 0
-                      ? "Run a scan to discover vulnerabilities."
-                      : "No vulnerabilities found in recent scans."}
-                  </p>
-                </div>
-              ) : (
-                <div className={styles.vulnList}>
-                  {recentVulns.map((v, i) => (
-                    <div
-                      key={`${v.scanId}-${v.id}-${i}`}
-                      className={styles.vulnItem}
-                    >
-                      <div className={styles.vulnName}>{v.title}</div>
-                      <div className={styles.vulnMeta}>
-                        <span className={`badge badge-${v.severity}`}>
-                          {v.severity}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.78rem",
-                            color: "var(--text-secondary)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: "120px",
-                          }}
-                        >
-                          {v.endpoint}
-                        </span>
+                    <div>
+                      <p className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                        {scan.target}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <Badge variant="outline" className="text-xs font-normal bg-background/50 text-muted-foreground">
+                          {scan.scanMode}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{timeAgo(scan.startedAt)}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+                    <div className="flex items-center gap-4">
+                      {scan.vulnCount > 0 && (
+                        <Badge variant="destructive" className="px-2 py-0.5 text-xs rounded-full">
+                          {scan.vulnCount}
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium uppercase text-muted-foreground hidden sm:inline-block">
+                          {scan.status}
+                        </span>
+                        <div className={`w-2.5 h-2.5 rounded-full ${scan.status === 'running' ? 'bg-primary animate-pulse' : scan.status === 'failed' ? 'bg-destructive' : scan.status === 'completed' ? 'bg-blue-500' : 'bg-muted-foreground'}`} />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-function StatusDot({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    running: "var(--accent-primary)",
-    completed: "var(--accent-info)",
-    failed: "var(--accent-danger)",
-    stopped: "var(--text-secondary)",
-  };
-  return (
-    <span
-      style={{
-        width: "8px",
-        height: "8px",
-        borderRadius: "50%",
-        background: colors[status] ?? "var(--text-secondary)",
-        display: "inline-block",
-        flexShrink: 0,
-        ...(status === "running" ? { animation: "pulse 2s infinite" } : {}),
-      }}
-    />
+        {/* Recent Vulns */}
+        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Recent Findings</CardTitle>
+              <CardDescription>Most critical vulnerabilities discovered.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/vulnerabilities">View All <ArrowRight className="ml-2 w-4 h-4" /></Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {recentVulns.length === 0 ? (
+              <div className="text-center py-10 border border-dashed border-border/50 rounded-lg">
+                <p className="text-muted-foreground">No vulnerabilities found in recent scans.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentVulns.map((v, i) => (
+                  <div key={`${v.scanId}-${v.id}-${i}`} className="flex items-start justify-between p-4 rounded-lg bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors">
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="font-medium text-foreground truncate">{v.title}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-1">{v.endpoint}</p>
+                    </div>
+                    <Badge 
+                      className={`shrink-0 capitalize ${
+                        v.severity === 'critical' ? 'bg-destructive text-destructive-foreground hover:bg-destructive' : 
+                        v.severity === 'high' ? 'bg-orange-500 text-white hover:bg-orange-600' : 
+                        v.severity === 'medium' ? 'bg-blue-500 text-white hover:bg-blue-600' : 
+                        'bg-primary text-primary-foreground hover:bg-primary'
+                      }`}
+                    >
+                      {v.severity}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
