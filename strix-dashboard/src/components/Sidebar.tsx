@@ -9,7 +9,6 @@ const navItems = [
   { name: "Scans", path: "/scans", icon: "🎯" },
   { name: "Vulnerabilities", path: "/vulnerabilities", icon: "🛡️" },
   { name: "Live Graph", path: "/graph", icon: "🕸️" },
-  { name: "Auto-Fix PRs", path: "/remediation", icon: "🔧" },
   { name: "Reports", path: "/reports", icon: "📄" },
   { name: "Settings", path: "/settings", icon: "⚙️" },
 ];
@@ -24,9 +23,18 @@ export default function Sidebar() {
         <div className={styles.logoText}>Strix</div>
       </div>
 
+      {/* New Scan CTA */}
+      <Link href="/scans?new=1" className={styles.newScanBtn}>
+        <span>＋</span>
+        <span>New Scan</span>
+      </Link>
+
       <nav className={styles.nav}>
         {navItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isActive =
+            item.path === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.path);
           return (
             <Link
               key={item.name}

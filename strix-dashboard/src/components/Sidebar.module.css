@@ -36,6 +36,30 @@
   letter-spacing: -0.5px;
 }
 
+.newScanBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 16px 20px;
+  padding: 11px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #00bfa5 100%);
+  color: #0A0F1C;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 16px var(--accent-primary-glow);
+  letter-spacing: 0.3px;
+}
+
+.newScanBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px var(--accent-primary-glow);
+  filter: brightness(1.08);
+}
+
 .nav {
   display: flex;
   flex-direction: column;
