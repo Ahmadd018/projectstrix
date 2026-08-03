@@ -10,13 +10,19 @@ export default function LogsPage() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch("/api/logs");
+      const res = await fetch("/api/logs", {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return;
       const data = await res.json();
       if (data.logs) {
         setLogs(data.logs);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      // Ignore AbortError or standard fetch connection errors during dev recompilation
+      if (e.name !== "AbortError" && e.message !== "Failed to fetch") {
+        console.error("Error fetching logs:", e);
+      }
     } finally {
       setLoading(false);
     }
