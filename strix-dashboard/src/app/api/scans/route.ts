@@ -281,7 +281,6 @@ function parseVulnFromLog(text: string, vulnFile: string, scanId: string) {
         err: String(e),
       });
     }
-    }
   }
 }
 
