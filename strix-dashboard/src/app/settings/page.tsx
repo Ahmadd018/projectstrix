@@ -118,7 +118,7 @@ export default function Settings() {
                   </div>
                   <Slider 
                     value={[agentConfig.aggressiveness]} 
-                    onValueChange={v => setAgentConfig({...agentConfig, aggressiveness: v[0]})}
+                    onValueChange={v => setAgentConfig({...agentConfig, aggressiveness: typeof v === 'number' ? v : v[0]})}
                     max={100} step={1}
                     className="py-4"
                   />
@@ -132,7 +132,7 @@ export default function Settings() {
                   </div>
                   <Slider 
                     value={[agentConfig.maxThreads]} 
-                    onValueChange={v => setAgentConfig({...agentConfig, maxThreads: v[0]})}
+                    onValueChange={v => setAgentConfig({...agentConfig, maxThreads: typeof v === 'number' ? v : v[0]})}
                     min={1} max={16} step={1}
                     className="py-4"
                   />
