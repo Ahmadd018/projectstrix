@@ -37,6 +37,16 @@ const LLM_MODELS = [
   // DeepSeek
   { value: "deepseek/deepseek-coder", label: "DeepSeek Coder" },
   { value: "deepseek/deepseek-v3", label: "DeepSeek v3" },
+  // Groq
+  { value: "groq/llama3-70b-8192", label: "Groq Llama 3 70B" },
+  { value: "groq/mixtral-8x7b-32768", label: "Groq Mixtral 8x7B" },
+  // OpenRouter
+  { value: "openrouter/anthropic/claude-3.5-sonnet", label: "OpenRouter Claude 3.5 Sonnet" },
+  { value: "openrouter/meta-llama/llama-3.1-405b-instruct", label: "OpenRouter Llama 3.1 405B" },
+  // Mistral
+  { value: "mistral/mistral-large-latest", label: "Mistral Large" },
+  // Cohere
+  { value: "cohere/command-r-plus", label: "Cohere Command R+" },
   // Local (Ollama)
   { value: "ollama/llama3.1:70b", label: "Local: Llama 3.1 70B (Ollama)" },
   { value: "ollama/qwen2.5:72b", label: "Local: Qwen 2.5 72B (Ollama)" },
@@ -98,6 +108,10 @@ function ScansContent() {
       if (model.startsWith("anthropic/")) return savedKeys.anthropic || "";
       if (model.startsWith("google/")) return savedKeys.gemini || "";
       if (model.startsWith("deepseek/")) return savedKeys.deepseek || "";
+      if (model.startsWith("groq/")) return savedKeys.groq || "";
+      if (model.startsWith("openrouter/")) return savedKeys.openrouter || "";
+      if (model.startsWith("mistral/")) return savedKeys.mistral || "";
+      if (model.startsWith("cohere/")) return savedKeys.cohere || "";
     } catch (e) {}
     return "";
   }

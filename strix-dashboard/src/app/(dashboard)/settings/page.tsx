@@ -11,7 +11,7 @@ const TABS = [
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("api");
-  const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "" });
+  const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "" });
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
   const [saved, setSaved] = useState(false);
@@ -99,10 +99,14 @@ export default function Settings() {
               </div>
               <div style={s.cardBody}>
                 {([
-                  { key: "openai",    label: "OpenAI API Key",        placeholder: "sk-…",      hint: "Used for gpt-4o models during penetration testing." },
-                  { key: "anthropic", label: "Anthropic API Key",     placeholder: "sk-ant-…",  hint: "Used for claude-3.5-sonnet reasoning capabilities." },
-                  { key: "gemini",    label: "Google Gemini API Key", placeholder: "AIza…",     hint: "Used for gemini-2.5-pro multimodal analysis." },
-                  { key: "deepseek",  label: "DeepSeek API Key",      placeholder: "sk-…",      hint: "Used for DeepSeek v3 and DeepSeek Coder models." },
+                  { key: "openai",     label: "OpenAI API Key",        placeholder: "sk-…",      hint: "Used for gpt-4o models during penetration testing." },
+                  { key: "anthropic",  label: "Anthropic API Key",     placeholder: "sk-ant-…",  hint: "Used for claude-3.5-sonnet reasoning capabilities." },
+                  { key: "gemini",     label: "Google Gemini API Key", placeholder: "AIza…",     hint: "Used for gemini-2.5-pro multimodal analysis." },
+                  { key: "deepseek",   label: "DeepSeek API Key",      placeholder: "sk-…",      hint: "Used for DeepSeek v3 and DeepSeek Coder models." },
+                  { key: "groq",       label: "Groq API Key",          placeholder: "gsk_…",     hint: "Used for ultra-fast Llama 3 and Mixtral models." },
+                  { key: "openrouter", label: "OpenRouter API Key",    placeholder: "sk-or-…",   hint: "Used for unified access to dozens of models." },
+                  { key: "mistral",    label: "Mistral API Key",       placeholder: "…",         hint: "Used for Mistral Large and other models." },
+                  { key: "cohere",     label: "Cohere API Key",        placeholder: "…",         hint: "Used for Command R+ and other Cohere models." },
                 ] as const).map(({ key, label, placeholder, hint }) => (
                   <div key={key} style={s.field}>
                     <label style={s.label}>{label}</label>
