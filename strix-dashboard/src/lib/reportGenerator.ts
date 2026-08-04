@@ -32,7 +32,10 @@ export async function fetchScanDetails(id: string): Promise<ScanDetails | null> 
   try {
     const res = await fetch(`/api/scans/${id}`);
     if (!res.ok) return null;
-    return await res.json();
+    const data = await res.json();
+    
+    const { vulnerabilities, ...scan } = data;
+    return { scan: scan as any, vulnerabilities: vulnerabilities || [] };
   } catch {
     return null;
   }
