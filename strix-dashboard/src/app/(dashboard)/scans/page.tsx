@@ -99,6 +99,7 @@ function ScansContent() {
   
   const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string, llmModel: string } | null>(null);
   const [scheduling, setScheduling] = useState(false);
+  const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
 
   function getApiKey(model: string): string {
     if (model.startsWith("ollama/")) return ""; // Ollama doesn't need a key
@@ -135,21 +136,31 @@ function ScansContent() {
     resumeRun: "",
   });
 
-  const fetchScans = useCallback(async () => {
-    try {
-      const res = await fetch("/api/scans");
-      const data = await res.json();
-      setScans(data.scans ?? []);
-    } catch {} finally {
-      setLoading(false);
-    }
-  }, []);
+  function fetchScans() {
+    fetch("/api/scans")
+      .then((r) => r.json())
+      .then((data) => {
+        setScans(data.scans || []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.error(e);
+        setLoading(false);
+      });
+  }
 
   useEffect(() => {
     fetchScans();
-    const interval = setInterval(fetchScans, 5000);
-    return () => clearInterval(interval);
-  }, [fetchScans]);
+    const iv = setInterval(fetchScans, 2000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("strix_custom_models");
+      if (saved) setCustomModels(JSON.parse(saved));
+    } catch(e) {}
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("new") === "1") setShowModal(true);
@@ -609,12 +620,12 @@ function ScansContent() {
                   <div className="field">
                     <label className="field-label">LLM Model</label>
                     <select
-                      className="field-select"
+                      className="field-input"
                       value={form.llmModel}
                       onChange={(e) => setForm({ ...form, llmModel: e.target.value })}
                       disabled={launching}
                     >
-                      {LLM_MODELS.map((m) => (
+                      {[...LLM_MODELS, ...customModels].map((m) => (
                         <option key={m.value} value={m.value}>{m.label}</option>
                       ))}
                     </select>

@@ -12,6 +12,7 @@ const TABS = [
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("api");
   const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "" });
+  const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
   const [saved, setSaved] = useState(false);
@@ -19,6 +20,8 @@ export default function Settings() {
   useEffect(() => {
     const savedKeys = localStorage.getItem("strix_api_keys");
     if (savedKeys) setKeys(JSON.parse(savedKeys));
+    const savedModels = localStorage.getItem("strix_custom_models");
+    if (savedModels) setCustomModels(JSON.parse(savedModels));
     const savedConfig = localStorage.getItem("strix_agent_config");
     if (savedConfig) setAgentConfig(JSON.parse(savedConfig));
     const savedNotifs = localStorage.getItem("strix_notification_config");
@@ -26,7 +29,10 @@ export default function Settings() {
   }, []);
 
   const handleSave = (tab: "api" | "agent" | "notifications") => {
-    if (tab === "api") localStorage.setItem("strix_api_keys", JSON.stringify(keys));
+    if (tab === "api") {
+      localStorage.setItem("strix_api_keys", JSON.stringify(keys));
+      localStorage.setItem("strix_custom_models", JSON.stringify(customModels.filter(m => m.value.trim() && m.label.trim())));
+    }
     else if (tab === "agent") localStorage.setItem("strix_agent_config", JSON.stringify(agentConfig));
     else if (tab === "notifications") localStorage.setItem("strix_notification_config", JSON.stringify(notificationConfig));
     setSaved(true);
@@ -92,6 +98,7 @@ export default function Settings() {
         <div style={{ flex: 1 }}>
           {/* API Keys */}
           {activeTab === "api" && (
+            <>
             <div style={s.card}>
               <div style={s.cardHead}>
                 <div style={s.cardTitle}>API Keys</div>
@@ -132,6 +139,73 @@ export default function Settings() {
                 </button>
               </div>
             </div>
+
+            <div style={{ ...s.card, marginTop: 24 }}>
+              <div style={s.cardHead}>
+                <div style={s.cardTitle}>Custom Models</div>
+                <div style={s.cardDesc}>Add custom LiteLLM compatible models (e.g., fine-tunes, local Ollama endpoints).</div>
+              </div>
+              <div style={s.cardBody}>
+                {customModels.map((model, i) => (
+                  <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={s.label}>Model ID (LiteLLM Format)</label>
+                      <input
+                        style={s.input}
+                        placeholder="e.g. openai/ft:gpt-4o-my-custom-model"
+                        value={model.value}
+                        onChange={(e) => {
+                          const newModels = [...customModels];
+                          newModels[i].value = e.target.value;
+                          setCustomModels(newModels);
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <label style={s.label}>Display Name</label>
+                      <input
+                        style={s.input}
+                        placeholder="e.g. My Custom GPT-4o"
+                        value={model.label}
+                        onChange={(e) => {
+                          const newModels = [...customModels];
+                          newModels[i].label = e.target.value;
+                          setCustomModels(newModels);
+                        }}
+                      />
+                    </div>
+                    <button
+                      className="btn-ghost"
+                      style={{ marginTop: 22, color: "var(--sev-critical)", borderColor: "var(--sev-critical-bd)" }}
+                      onClick={() => {
+                        const newModels = customModels.filter((_, idx) => idx !== i);
+                        setCustomModels(newModels);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  className="btn-ghost"
+                  style={{ alignSelf: "flex-start" }}
+                  onClick={() => setCustomModels([...customModels, { value: "", label: "" }])}
+                >
+                  + Add Custom Model
+                </button>
+              </div>
+              <div style={s.cardFoot}>
+                {saved && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
+                    <CheckCircle2 size={13} /> Saved
+                  </div>
+                )}
+                <button className="btn-primary" onClick={() => handleSave("api")}>
+                  <Save size={13} /> Save Configuration
+                </button>
+              </div>
+            </div>
+          </>
           )}
 
           {/* Agent Behavior */}
