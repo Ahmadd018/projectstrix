@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, X } from "lucide-react";
 
 interface Scan {
   id: string;
@@ -22,11 +18,10 @@ export default function Reports() {
 
   useEffect(() => {
     fetch("/api/scans")
-      .then(r => r.json())
-      .then(d => {
+      .then((r) => r.json())
+      .then((d) => {
         if (d.scans) {
-          const completed = d.scans.filter((s: Scan) => ["completed", "stopped"].includes(s.status));
-          setScans(completed);
+          setScans(d.scans.filter((s: Scan) => ["completed", "stopped"].includes(s.status)));
         }
       });
   }, []);
@@ -34,144 +29,159 @@ export default function Reports() {
   const handleDownload = () => {
     if (!selectedScan) return;
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedScan, null, 2));
-    const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `report-${selectedScan.id}.json`);
-    dlAnchorElem.click();
+    const a = document.createElement("a");
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", `report-${selectedScan.id}.json`);
+    a.click();
   };
 
   return (
-    <div className="p-8 h-full flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Scan Reports</h1>
-          <p className="text-muted-foreground">
-            Generate and download executive summaries for completed scans.
-          </p>
+    <div className="page" style={{ maxWidth: "none", height: "100%" }}>
+      <div className="page-intro">
+        <h1 className="page-heading">Reports</h1>
+        <p className="page-desc">Generate and download executive summaries for completed scans.</p>
+      </div>
+
+      <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+        {/* Table header */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "1.5fr 2fr 1fr 80px 100px",
+          gap: 12, padding: "10px 20px", borderBottom: "1px solid var(--border)",
+          fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--fg-3)",
+          background: "var(--bg-1)",
+        }}>
+          <div>Project</div>
+          <div>Target</div>
+          <div>Date</div>
+          <div>Issues</div>
+          <div></div>
+        </div>
+
+        {/* Rows */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {scans.length === 0 ? (
+            <div className="empty-state">
+              <FileText size={36} style={{ opacity: 0.12 }} />
+              <p>No completed scans found</p>
+              <p style={{ fontSize: 12 }}>Run a scan to completion to generate a report.</p>
+            </div>
+          ) : (
+            scans.map((scan) => (
+              <div
+                key={scan.id}
+                style={{
+                  display: "grid", gridTemplateColumns: "1.5fr 2fr 1fr 80px 100px",
+                  gap: 12, padding: "13px 20px", borderBottom: "1px solid var(--border)",
+                  alignItems: "center", transition: "background var(--dur)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+              >
+                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {scan.projectName || "Default"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--fg-3)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {scan.target}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--fg-3)" }}>
+                  <Calendar size={12} />
+                  {new Date(scan.startedAt).toLocaleDateString()}
+                </div>
+                <div>
+                  {scan.vulnCount > 0 ? (
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", background: "var(--sev-critical-bg)", color: "var(--sev-critical)", border: "1px solid var(--sev-critical-bd)", borderRadius: "var(--r-sm)" }}>
+                      {scan.vulnCount}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "var(--fg-3)" }}>—</span>
+                  )}
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button className="btn-secondary" onClick={() => setSelectedScan(scan)}>
+                    <FileText size={12} /> Report
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      <Card className="flex-1 overflow-hidden bg-background/40 backdrop-blur-md border-border/50 shadow-xl flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto">
-          {scans.length > 0 ? (
-            <div className="w-full text-sm">
-              <div className="grid grid-cols-12 gap-4 p-4 border-b border-border/50 text-muted-foreground font-medium uppercase text-xs tracking-wider sticky top-0 bg-background/95 backdrop-blur z-10">
-                <div className="col-span-3">Project</div>
-                <div className="col-span-4">Target</div>
-                <div className="col-span-2">Date</div>
-                <div className="col-span-1">Issues</div>
-                <div className="col-span-2 text-right">Action</div>
+      {/* Report Modal */}
+      {selectedScan && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setSelectedScan(null)}>
+          <div className="modal" style={{ maxWidth: 640 }}>
+            <div className="modal-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <FileText size={16} style={{ color: "var(--fg-2)" }} />
+                <span className="modal-title">Executive Summary</span>
               </div>
-              
-              <div className="divide-y divide-border/20">
-                {scans.map(scan => (
-                  <div key={scan.id} className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-secondary/20 transition-colors">
-                    <div className="col-span-3 font-medium text-foreground truncate">{scan.projectName || "Default"}</div>
-                    <div className="col-span-4 text-muted-foreground truncate font-mono text-xs">{scan.target}</div>
-                    <div className="col-span-2 text-muted-foreground flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {new Date(scan.startedAt).toLocaleDateString()}
+              <button
+                onClick={() => setSelectedScan(null)}
+                style={{ background: "none", border: "none", color: "var(--fg-3)", cursor: "pointer", display: "flex", padding: 4, borderRadius: "var(--r-sm)" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {/* 3 stat mini cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                {[
+                  {
+                    label: "Total Issues",
+                    icon: <AlertCircle size={12} />,
+                    value: <span style={{ fontSize: 28, fontWeight: 700, color: selectedScan.vulnCount > 0 ? "var(--sev-critical)" : "var(--fg)", letterSpacing: -1 }}>{selectedScan.vulnCount}</span>,
+                  },
+                  {
+                    label: "Target",
+                    value: <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--fg-2)", wordBreak: "break-all" }}>{selectedScan.target}</span>,
+                  },
+                  {
+                    label: "Status",
+                    value: selectedScan.status === "completed" ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--sev-low)", fontSize: 13, fontWeight: 600 }}>
+                        <CheckCircle2 size={14} /> Completed
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--fg-3)", fontSize: 13, fontWeight: 600 }}>
+                        <XCircle size={14} /> {selectedScan.status}
+                      </div>
+                    ),
+                  },
+                ].map(({ label, icon, value }) => (
+                  <div key={label} style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "12px 14px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
+                      {icon} {label}
                     </div>
-                    <div className="col-span-1">
-                      {scan.vulnCount > 0 ? (
-                        <Badge variant="destructive" className="rounded-full px-2">{scan.vulnCount}</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground border-border/50">0</Badge>
-                      )}
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <Button variant="outline" size="sm" className="gap-2 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground" onClick={() => setSelectedScan(scan)}>
-                        <FileText className="w-4 h-4" /> Report
-                      </Button>
-                    </div>
+                    {value}
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-20">
-              <FileText className="w-12 h-12 mb-4 opacity-20" />
-              <h3 className="text-lg font-medium text-foreground">No Completed Scans Found</h3>
-              <p className="text-sm">Run a scan to completion to generate a report.</p>
-            </div>
-          )}
-        </div>
-      </Card>
 
-      <Dialog open={!!selectedScan} onOpenChange={(open) => !open && setSelectedScan(null)}>
-        <DialogContent className="sm:max-w-[700px] bg-background/90 backdrop-blur-xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-heading flex items-center gap-2">
-              <FileText className="w-6 h-6 text-primary" /> Executive Summary
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedScan && (
-            <div className="space-y-6 mt-4">
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="bg-secondary/20 border-border/30 shadow-none">
-                  <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" /> Total Issues
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className={`text-3xl font-bold font-heading ${selectedScan.vulnCount > 0 ? 'text-destructive' : 'text-primary'}`}>
-                      {selectedScan.vulnCount}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-secondary/20 border-border/30 shadow-none">
-                  <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-sm text-muted-foreground font-medium">Target</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 flex items-center h-12">
-                    <div className="text-sm font-medium text-foreground truncate" title={selectedScan.target}>
-                      {selectedScan.target}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-secondary/20 border-border/30 shadow-none">
-                  <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-sm text-muted-foreground font-medium">Status</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 flex items-center h-12">
-                    {selectedScan.status === 'completed' ? (
-                      <div className="flex items-center gap-2 text-primary font-semibold capitalize">
-                        <CheckCircle2 className="w-5 h-5" /> {selectedScan.status}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground font-semibold capitalize">
-                        <XCircle className="w-5 h-5" /> {selectedScan.status}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="bg-secondary/10 border border-border/30 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-foreground mb-3">AI Analysis Summary</h3>
-                <p className="text-muted-foreground leading-relaxed text-sm">
-                  Strix Autonomous AI has successfully completed the penetration testing phase for the target environment. 
-                  During the execution, the agent explored the exposed attack surface and identified <strong className="text-foreground">{selectedScan.vulnCount}</strong> potential security vulnerabilities. 
-                  It is recommended to review the individual findings in the Vulnerabilities tab for detailed reproduction steps and mitigation strategies.
+              {/* Summary text */}
+              <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "16px" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", marginBottom: 8 }}>AI Analysis Summary</div>
+                <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>
+                  Strix Autonomous AI has successfully completed the penetration testing phase for the target environment.
+                  During execution, the agent explored the exposed attack surface and identified{" "}
+                  <strong style={{ color: "var(--fg)" }}>{selectedScan.vulnCount}</strong> potential security vulnerabilities.
+                  Review individual findings in the Vulnerabilities tab for reproduction steps and mitigation strategies.
                 </p>
               </div>
             </div>
-          )}
 
-          <DialogFooter className="mt-6 border-t border-border/30 pt-4">
-            <Button variant="outline" onClick={handleDownload} className="gap-2">
-              <Download className="w-4 h-4" /> Download JSON
-            </Button>
-            <Button onClick={() => alert("PDF Export is a mock feature.")} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
-              Export PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="modal-footer">
+              <button className="btn-ghost" onClick={handleDownload}>
+                <Download size={13} /> Download JSON
+              </button>
+              <button className="btn-primary" onClick={() => alert("PDF Export is a mock feature.")}>
+                Export PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
