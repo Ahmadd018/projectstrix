@@ -443,12 +443,20 @@ function ScansContent() {
               <div className="modal-body">
                 <div className="field-grid">
                   <div className="field">
-                    <label className="field-label">Target URL *</label>
-                    <input
+                    <label className="field-label">Target(s) *</label>
+                    <textarea
                       className="field-input"
-                      placeholder="https://app.example.com"
-                      value={form.target}
-                      onChange={(e) => setForm({ ...form, target: e.target.value })}
+                      style={{ minHeight: 60, resize: "vertical" }}
+                      placeholder="https://app.example.com&#10;192.168.1.42&#10;./my-project"
+                      value={form.targetList || form.target}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.includes('\n')) {
+                          setForm({ ...form, target: "", targetList: val });
+                        } else {
+                          setForm({ ...form, target: val, targetList: "" });
+                        }
+                      }}
                       disabled={launching}
                     />
                   </div>
@@ -569,15 +577,87 @@ function ScansContent() {
                 </button>
 
                 {showAdvanced && (
-                  <div className="field">
-                    <label className="field-label">Scheduled Time</label>
-                    <input
-                      className="field-input"
-                      type="datetime-local"
-                      value={form.scheduledAt}
-                      onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                    />
-                  </div>
+                  <>
+                    <div className="field">
+                      <label className="field-label">Scheduled Time</label>
+                      <input
+                        className="field-input"
+                        type="datetime-local"
+                        value={form.scheduledAt}
+                        onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div className="field-grid">
+                      <div className="field">
+                        <label className="field-label">Scope Mode</label>
+                        <select
+                          className="field-select"
+                          value={form.scopeMode}
+                          onChange={(e) => setForm({ ...form, scopeMode: e.target.value })}
+                        >
+                          <option value="auto">Auto (PR diff-scope if available)</option>
+                          <option value="diff">Diff (force changed-files only)</option>
+                          <option value="full">Full (disable diff-scope)</option>
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label className="field-label">Diff Base Branch/Commit</label>
+                        <input
+                          className="field-input"
+                          placeholder="e.g. origin/main"
+                          value={form.diffBase}
+                          onChange={(e) => setForm({ ...form, diffBase: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label">Custom Config File Path</label>
+                      <input
+                        className="field-input"
+                        placeholder="/path/to/custom/cli-config.json"
+                        value={form.configFile}
+                        onChange={(e) => setForm({ ...form, configFile: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="field-grid">
+                      <div className="field">
+                        <label className="field-label">Max Budget (USD)</label>
+                        <input
+                          className="field-input"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g. 50.00"
+                          value={form.maxBudget}
+                          onChange={(e) => setForm({ ...form, maxBudget: e.target.value })}
+                        />
+                      </div>
+                      <div className="field">
+                        <label className="field-label">Max Turns per Agent</label>
+                        <input
+                          className="field-input"
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 500"
+                          value={form.maxTurns}
+                          onChange={(e) => setForm({ ...form, maxTurns: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="field">
+                      <label className="field-label">Resume Previous Scan (Run Name/UUID)</label>
+                      <input
+                        className="field-input"
+                        placeholder="e.g. 3a9e3..."
+                        value={form.resumeRun}
+                        onChange={(e) => setForm({ ...form, resumeRun: e.target.value })}
+                      />
+                    </div>
+                  </>
                 )}
 
                 {error && (
