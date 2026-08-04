@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Shield, Activity, Target, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Shield,
+  Activity,
+  Target,
+  AlertTriangle,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
 
 interface Scan {
   id: string;
@@ -48,6 +52,17 @@ function securityScore(vulns: Vuln[]) {
   return Math.max(0, 100 - deduction);
 }
 
+function statusLedClass(status: string) {
+  if (status === "running") return "status-led running";
+  if (status === "completed") return "status-led completed";
+  if (status === "failed") return "status-led failed";
+  return "status-led stopped";
+}
+
+function sevClass(s: string) {
+  return `sev sev-${s}`;
+}
+
 export default function Dashboard() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [recentVulns, setRecentVulns] = useState<Vuln[]>([]);
@@ -76,7 +91,7 @@ export default function Dashboard() {
         const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
         return order[a.severity] - order[b.severity];
       });
-      setRecentVulns(vulns.slice(0, 5));
+      setRecentVulns(vulns.slice(0, 6));
     } catch {
       clearTimeout(timeout);
     } finally {
@@ -97,179 +112,189 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-medium">Loading dashboard...</span>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          minHeight: 400,
+          gap: 12,
+          color: "rgba(255,255,255,0.35)",
+          fontSize: 13,
+        }}
+      >
+        <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+        Loading dashboard…
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8 h-full overflow-y-auto">
-      <div>
-        <h2 className="text-3xl font-heading font-bold tracking-tight mb-2">Overview</h2>
-        <p className="text-muted-foreground">Monitor your security posture and active scanning agents.</p>
+    <div className="page">
+      {/* Intro */}
+      <div className="page-intro">
+        <h1 className="page-heading">Security Overview</h1>
+        <p className="page-desc">
+          Monitor your security posture and active scanning agents.
+        </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Security Score</CardTitle>
-            <Shield className={`w-4 h-4 ${score >= 70 ? "text-primary" : score >= 40 ? "text-warning" : "text-destructive"}`} />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-4xl font-bold font-heading ${score >= 70 ? "text-primary drop-shadow-[0_0_10px_rgba(0,230,118,0.5)]" : score >= 40 ? "text-warning" : "text-destructive"}`}>
-              {score}/100
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {score >= 70 ? "Good" : score >= 40 ? "Fair" : "Critical"} security posture
-            </p>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="stats-grid">
+        {/* Score */}
+        <div className="stat-card">
+          <div className="stat-label">
+            <span className="stat-label-text">Security Score</span>
+            <Shield size={14} className="stat-label-icon" />
+          </div>
+          <div
+            className={`stat-value${
+              score >= 70 ? " success" : score >= 40 ? " warning" : " danger"
+            }`}
+          >
+            {score}
+            <span style={{ fontSize: 14, fontWeight: 400, opacity: 0.5 }}>/100</span>
+          </div>
+          <div className="stat-sub">
+            {score >= 70 ? "Good posture" : score >= 40 ? "Fair posture" : "Critical risk"}
+          </div>
+        </div>
 
-        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Critical Vulns</CardTitle>
-            <AlertTriangle className={`w-4 h-4 ${criticalVulns > 0 ? "text-destructive" : "text-muted-foreground"}`} />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-4xl font-bold font-heading ${criticalVulns > 0 ? "text-destructive drop-shadow-[0_0_10px_rgba(255,76,76,0.5)]" : "text-foreground"}`}>
-              {criticalVulns}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {criticalVulns > 0 ? "Immediate action required" : "No critical threats found"}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Critical */}
+        <div className="stat-card">
+          <div className="stat-label">
+            <span className="stat-label-text">Critical Vulns</span>
+            <AlertTriangle size={14} className="stat-label-icon" />
+          </div>
+          <div className={`stat-value${criticalVulns > 0 ? " danger" : ""}`}>
+            {criticalVulns}
+          </div>
+          <div className="stat-sub">
+            {criticalVulns > 0 ? "Immediate action required" : "No critical threats"}
+          </div>
+        </div>
 
-        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-info/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Scans</CardTitle>
-            <Activity className="w-4 h-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold font-heading text-foreground">{activeScans}</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {activeScans > 0 ? "Agents currently analyzing" : "All agents idle"}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Active */}
+        <div className="stat-card">
+          <div className="stat-label">
+            <span className="stat-label-text">Active Scans</span>
+            <Activity size={14} className="stat-label-icon" />
+          </div>
+          <div className="stat-value">{activeScans}</div>
+          <div className="stat-sub">
+            {activeScans > 0 ? "Agents currently analyzing" : "All agents idle"}
+          </div>
+        </div>
 
-        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Findings</CardTitle>
-            <Target className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold font-heading text-foreground">{totalVulns}</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Across {scans.length} historical scans
-            </p>
-          </CardContent>
-        </Card>
+        {/* Total */}
+        <div className="stat-card">
+          <div className="stat-label">
+            <span className="stat-label-text">Total Findings</span>
+            <Target size={14} className="stat-label-icon" />
+          </div>
+          <div className="stat-value">{totalVulns}</div>
+          <div className="stat-sub">Across {scans.length} historical scans</div>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Content grid */}
+      <div className="content-grid">
         {/* Recent Scans */}
-        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Scans</CardTitle>
-              <CardDescription>Latest autonomous penetration tests.</CardDescription>
+        <div className="card">
+          <div className="section-head">
+            <div className="section-head-left">
+              <div className="section-title">Recent Scans</div>
+              <div className="section-sub">Latest autonomous penetration tests</div>
             </div>
-            <Link href="/scans" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              View All <ArrowRight className="ml-2 w-4 h-4" />
+            <Link href="/scans" className="btn-secondary">
+              View all <ArrowRight size={12} />
             </Link>
-          </CardHeader>
-          <CardContent>
-            {scans.length === 0 ? (
-              <div className="text-center py-10 border border-dashed border-border/50 rounded-lg">
-                <p className="text-muted-foreground mb-4">No scans initiated yet.</p>
-                <Link href="/scans?new=1" className={buttonVariants()}>Start First Scan</Link>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {scans.slice(0, 5).map((scan) => (
-                  <Link
-                    key={scan.id}
-                    href={`/scans/${scan.id}`}
-                    className="flex items-center justify-between p-4 rounded-lg bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
-                        {scan.target}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <Badge variant="outline" className="text-xs font-normal bg-background/50 text-muted-foreground">
-                          {scan.scanMode}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{timeAgo(scan.startedAt)}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {scan.vulnCount > 0 && (
-                        <Badge variant="destructive" className="px-2 py-0.5 text-xs rounded-full">
-                          {scan.vulnCount}
-                        </Badge>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium uppercase text-muted-foreground hidden sm:inline-block">
-                          {scan.status}
-                        </span>
-                        <div className={`w-2.5 h-2.5 rounded-full ${scan.status === 'running' ? 'bg-primary animate-pulse' : scan.status === 'failed' ? 'bg-destructive' : scan.status === 'completed' ? 'bg-blue-500' : 'bg-muted-foreground'}`} />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Recent Vulns */}
-        <Card className="bg-background/40 backdrop-blur-md border-border/50 shadow-lg col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Findings</CardTitle>
-              <CardDescription>Most critical vulnerabilities discovered.</CardDescription>
+          {scans.length === 0 ? (
+            <div className="empty-state">
+              <p>No scans initiated yet.</p>
+              <Link href="/scans?new=1" className="btn-primary" style={{ marginTop: 4 }}>
+                <Shield size={14} /> Start First Scan
+              </Link>
             </div>
-            <Link href="/vulnerabilities" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              View All <ArrowRight className="ml-2 w-4 h-4" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {recentVulns.length === 0 ? (
-              <div className="text-center py-10 border border-dashed border-border/50 rounded-lg">
-                <p className="text-muted-foreground">No vulnerabilities found in recent scans.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentVulns.map((v, i) => (
-                  <div key={`${v.scanId}-${v.id}-${i}`} className="flex items-start justify-between p-4 rounded-lg bg-secondary/20 border border-border/30 hover:bg-secondary/40 transition-colors">
-                    <div className="flex-1 min-w-0 pr-4">
-                      <p className="font-medium text-foreground truncate">{v.title}</p>
-                      <p className="text-xs text-muted-foreground truncate mt-1">{v.endpoint}</p>
+          ) : (
+            <div>
+              {scans.slice(0, 5).map((scan) => (
+                <Link key={scan.id} href={`/scans/${scan.id}`} className="trow">
+                  <div className="trow-main">
+                    <div className="trow-title">{scan.target}</div>
+                    <div className="trow-sub">
+                      <span className="tag">{scan.scanMode}</span>
+                      <span>{timeAgo(scan.startedAt)}</span>
                     </div>
-                    <Badge 
-                      className={`shrink-0 capitalize ${
-                        v.severity === 'critical' ? 'bg-destructive text-destructive-foreground hover:bg-destructive' : 
-                        v.severity === 'high' ? 'bg-orange-500 text-white hover:bg-orange-600' : 
-                        v.severity === 'medium' ? 'bg-blue-500 text-white hover:bg-blue-600' : 
-                        'bg-primary text-primary-foreground hover:bg-primary'
-                      }`}
-                    >
-                      {v.severity}
-                    </Badge>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <div className="trow-right">
+                    {scan.vulnCount > 0 && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "2px 6px",
+                          background: "var(--sev-critical-bg)",
+                          color: "var(--sev-critical)",
+                          border: "1px solid var(--sev-critical-bd)",
+                          borderRadius: "var(--r-sm)",
+                        }}
+                      >
+                        {scan.vulnCount}
+                      </span>
+                    )}
+                    <div className="status-badge">
+                      <span className={statusLedClass(scan.status)} />
+                      <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                        {scan.status}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Findings */}
+        <div className="card">
+          <div className="section-head">
+            <div className="section-head-left">
+              <div className="section-title">Recent Findings</div>
+              <div className="section-sub">Most critical vulnerabilities discovered</div>
+            </div>
+            <Link href="/vulnerabilities" className="btn-secondary">
+              View all <ArrowRight size={12} />
+            </Link>
+          </div>
+
+          {recentVulns.length === 0 ? (
+            <div className="empty-state">
+              <p>No vulnerabilities found in recent scans.</p>
+            </div>
+          ) : (
+            <div>
+              {recentVulns.map((v, i) => (
+                <div key={`${v.scanId}-${v.id}-${i}`} className="trow" style={{ cursor: "default" }}>
+                  <div className="trow-main">
+                    <div className="trow-title">{v.title}</div>
+                    <div className="trow-sub">
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                        {v.endpoint}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="trow-right">
+                    <span className={sevClass(v.severity)}>{v.severity}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

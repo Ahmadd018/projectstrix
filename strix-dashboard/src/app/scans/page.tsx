@@ -2,29 +2,10 @@
 
 import React, { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { 
-  Play, 
-  Trash2, 
-  Square, 
-  Folder, 
-  FolderOpen, 
-  Search, 
-  Plus, 
-  Loader2, 
-  Settings2,
-  ChevronDown,
-  ChevronRight
+import {
+  Play, Trash2, Square, Folder, FolderOpen,
+  Search, Plus, Loader2, Settings2, ChevronDown, ChevronRight
 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface Scan {
   id: string;
@@ -48,9 +29,9 @@ const LLM_MODELS = [
 ];
 
 const SCAN_MODES = [
-  { value: "quick", label: "Quick - Fast scan" },
-  { value: "standard", label: "Standard - Full assessment" },
-  { value: "deep", label: "Deep - Exhaustive pentest" },
+  { value: "quick", label: "Quick" },
+  { value: "standard", label: "Standard" },
+  { value: "deep", label: "Deep" },
 ];
 
 function timeAgo(iso: string) {
@@ -66,12 +47,12 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function StatusBadge({ status }: { status: Scan["status"] | string }) {
-  const isRunning = ["crawling", "scanning", "analyzing", "running"].includes(status);
-  if (isRunning) return <Badge variant="outline" className="border-primary text-primary bg-primary/10 animate-pulse capitalize">{status}</Badge>;
-  if (status === "completed") return <Badge variant="outline" className="border-blue-500 text-blue-500 bg-blue-500/10 capitalize">{status}</Badge>;
-  if (status === "failed") return <Badge variant="destructive" className="capitalize">{status}</Badge>;
-  return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+function statusLedClass(status: string) {
+  const isActive = ["crawling", "scanning", "analyzing", "running"].includes(status);
+  if (isActive) return "status-led running";
+  if (status === "completed") return "status-led completed";
+  if (status === "failed") return "status-led failed";
+  return "status-led stopped";
 }
 
 function ScansContent() {
@@ -95,12 +76,6 @@ function ScansContent() {
     scanMode: "standard",
     instruction: "",
     simulationMode: false,
-    scopeMode: "auto",
-    diffBase: "",
-    configFile: "",
-    maxBudget: "",
-    maxTurns: "",
-    resumeRun: "",
     scheduledAt: "",
   });
 
@@ -148,16 +123,14 @@ function ScansContent() {
     return groups;
   }, [filteredScans]);
 
-  const toggleGroup = (groupName: string) => {
-    setCollapsedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }));
-  };
+  const toggleGroup = (g: string) =>
+    setCollapsedGroups((prev) => ({ ...prev, [g]: !prev[g] }));
 
   async function handleLaunch(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!form.target.trim() && !form.targetList.trim()) return setError("Target is required");
     if (!form.apiKey.trim() && !form.simulationMode) return setError("LLM API Key is required");
-    
     setLaunching(true);
     try {
       const res = await fetch("/api/scans", {
@@ -167,7 +140,6 @@ function ScansContent() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to start scan");
-      
       setShowModal(false);
       router.push(`/scans/${data.scanId}`);
     } catch (err: any) {
@@ -192,203 +164,332 @@ function ScansContent() {
   }
 
   return (
-    <div className="p-8 h-full flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page" style={{ height: "100%", maxWidth: "none", gap: 16 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Scans</h1>
-          <p className="text-muted-foreground">Launch and monitor your security assessments.</p>
+          <h1 className="page-heading">Scans</h1>
+          <p className="page-desc">Launch and monitor your security assessments.</p>
         </div>
-        <Dialog open={showModal} onOpenChange={setShowModal}>
-          <DialogTrigger render={<Button className="gap-2 shadow-[0_0_20px_rgba(0,230,118,0.2)] hover:shadow-[0_0_30px_rgba(0,230,118,0.4)] transition-all" />}>
-            <Plus className="w-4 h-4" /> New Scan
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] bg-background/90 backdrop-blur-xl border-border/50 max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-heading">Launch New Scan</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleLaunch} className="space-y-6 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Target URL / Path</Label>
-                  <Input 
-                    placeholder="https://app.example.com" 
-                    value={form.target} onChange={e => setForm({...form, target: e.target.value})}
-                    disabled={launching}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Project Group</Label>
-                  <Input 
-                    list="groups" placeholder="Auto-detected if empty"
-                    value={form.projectName} onChange={e => setForm({...form, projectName: e.target.value})}
-                    disabled={launching}
-                  />
-                  <datalist id="groups">{Object.keys(groupedScans).map(g => <option key={g} value={g}/>)}</datalist>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>LLM Model</Label>
-                  <Select value={form.llmModel} onValueChange={v => setForm({...form, llmModel: v || ""})} disabled={launching}>
-                    <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
-                    <SelectContent>
-                      {LLM_MODELS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Scan Mode</Label>
-                  <Select value={form.scanMode} onValueChange={v => setForm({...form, scanMode: v || ""})} disabled={launching}>
-                    <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
-                    <SelectContent>
-                      {SCAN_MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>API Key {!form.simulationMode && <span className="text-destructive">*</span>}</Label>
-                <Input 
-                  type="password" placeholder="sk-..." 
-                  value={form.apiKey} onChange={e => setForm({...form, apiKey: e.target.value})}
-                  disabled={launching || form.simulationMode}
-                />
-              </div>
-
-              <label className="flex items-center gap-3 cursor-pointer p-3 border border-border/50 rounded-lg hover:bg-secondary/20 transition-colors">
-                <input 
-                  type="checkbox" className="w-5 h-5 accent-primary"
-                  checked={form.simulationMode} onChange={e => setForm({...form, simulationMode: e.target.checked})}
-                  disabled={launching}
-                />
-                <div>
-                  <p className="font-medium text-sm">Simulation Mode</p>
-                  <p className="text-xs text-muted-foreground">Inject mock vulnerabilities for UI demonstration.</p>
-                </div>
-              </label>
-
-              <Button type="button" variant="ghost" className="w-full flex justify-between" onClick={() => setShowAdvanced(!showAdvanced)}>
-                <span className="flex items-center gap-2"><Settings2 className="w-4 h-4"/> Advanced Configuration</span>
-                {showAdvanced ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </Button>
-
-              {showAdvanced && (
-                <div className="space-y-4 border-l-2 border-border/50 pl-4">
-                  <div className="space-y-2">
-                    <Label>Scheduled Time</Label>
-                    <Input 
-                      type="datetime-local" 
-                      value={form.scheduledAt} onChange={e => setForm({...form, scheduledAt: e.target.value})}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {error && <div className="p-3 rounded bg-destructive/20 text-destructive text-sm font-medium border border-destructive/50">{error}</div>}
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowModal(false)} disabled={launching}>Cancel</Button>
-                <Button type="submit" disabled={launching} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  {launching ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Launching...</> : <><Play className="w-4 h-4 mr-2"/> Launch Scan</>}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <button className="btn-primary" onClick={() => setShowModal(true)}>
+          <Plus size={14} /> New Scan
+        </button>
       </div>
 
-      <Card className="flex-1 flex flex-col min-h-0 bg-background/40 backdrop-blur-md border-border/50 shadow-xl overflow-hidden">
-        <div className="p-4 border-b border-border/50 bg-secondary/10">
-          <Tabs value={filter} onValueChange={(v: any) => setFilter(v)} className="w-[400px]">
-            <TabsList className="grid w-full grid-cols-3 bg-background/50">
-              <TabsTrigger value="all">All Scans</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="finished">Finished</TabsTrigger>
-            </TabsList>
-          </Tabs>
+      {/* Main card */}
+      <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+        {/* Filter bar */}
+        <div className="scan-filter-bar">
+          <div className="filter-tabs">
+            {(["all", "active", "finished"] as const).map((t) => (
+              <button key={t} className={`filter-tab${filter === t ? " active" : ""}`} onClick={() => setFilter(t)}>
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+          <span style={{ fontSize: 12, color: "var(--fg-3)", marginLeft: "auto" }}>
+            {filteredScans.length} scan{filteredScans.length !== 1 ? "s" : ""}
+          </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-0">
+        {/* Table header */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr 1.5fr 1fr 60px 80px",
+          gap: 12,
+          padding: "10px 20px",
+          borderBottom: "1px solid var(--border)",
+          fontSize: 11,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+          color: "var(--fg-3)",
+          position: "sticky",
+          top: 0,
+          background: "var(--bg-1)",
+          zIndex: 10,
+        }}>
+          <div>Target</div>
+          <div>Mode</div>
+          <div>Model</div>
+          <div>Status</div>
+          <div>Vulns</div>
+          <div></div>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
           {loading ? (
-            <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+            <div className="empty-state">
+              <Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} />
+            </div>
           ) : filteredScans.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <Search className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-lg font-medium">No scans found</p>
-              <p className="text-sm">Start a new scan to see results here.</p>
+            <div className="empty-state">
+              <Search size={32} style={{ opacity: 0.15 }} />
+              <p>No scans found</p>
+              <button className="btn-primary" onClick={() => setShowModal(true)} style={{ marginTop: 4 }}>
+                <Plus size={14} /> New Scan
+              </button>
             </div>
           ) : (
-            <div className="w-full text-sm">
-              <div className="grid grid-cols-12 gap-4 p-4 border-b border-border/50 text-muted-foreground font-medium uppercase text-xs tracking-wider sticky top-0 bg-background/95 backdrop-blur z-10">
-                <div className="col-span-3">Target</div>
-                <div className="col-span-2">Mode</div>
-                <div className="col-span-2">Model</div>
-                <div className="col-span-2">Status</div>
-                <div className="col-span-1">Vulns</div>
-                <div className="col-span-2 text-right">Actions</div>
-              </div>
-              
-              {Object.entries(groupedScans).map(([group, groupScans]) => {
-                const isCollapsed = collapsedGroups[group];
-                return (
-                  <div key={group} className="border-b border-border/20 last:border-0">
-                    <div 
-                      className="flex items-center gap-3 p-3 bg-secondary/5 hover:bg-secondary/10 cursor-pointer transition-colors border-y border-border/30"
-                      onClick={() => toggleGroup(group)}
-                    >
-                      {isCollapsed ? <Folder className="w-4 h-4 text-primary" /> : <FolderOpen className="w-4 h-4 text-primary" />}
-                      <span className="font-semibold text-foreground tracking-wide">{group}</span>
-                      <Badge variant="secondary" className="ml-auto bg-background/50">{groupScans.length}</Badge>
-                    </div>
-
-                    {!isCollapsed && (
-                      <div className="divide-y divide-border/20">
-                        {groupScans.map(scan => (
-                          <div 
-                            key={scan.id} 
-                            onClick={() => router.push(`/scans/${scan.id}`)}
-                            className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-secondary/20 cursor-pointer transition-colors group"
-                          >
-                            <div className="col-span-3 font-medium text-foreground truncate pr-4">{scan.target}</div>
-                            <div className="col-span-2 text-muted-foreground capitalize">{scan.scanMode}</div>
-                            <div className="col-span-2 text-muted-foreground text-xs truncate">{scan.llmModel}</div>
-                            <div className="col-span-2"><StatusBadge status={scan.status} /></div>
-                            <div className="col-span-1">
-                              {scan.vulnCount > 0 ? (
-                                <Badge variant="destructive" className="rounded-full px-2">{scan.vulnCount}</Badge>
-                              ) : <span className="text-muted-foreground opacity-50">—</span>}
-                            </div>
-                            <div className="col-span-2 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                              {scan.status === "running" ? (
-                                <Button size="icon" variant="outline" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => handleStop(scan.id, e)} title="Stop">
-                                  <Square className="w-4 h-4" />
-                                </Button>
-                              ) : (
-                                <Button size="icon" variant="outline" className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={(e) => handleDelete(scan.id, e)} title="Delete">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+            Object.entries(groupedScans).map(([group, groupScans]) => {
+              const isCollapsed = collapsedGroups[group];
+              return (
+                <div key={group}>
+                  {/* Group header */}
+                  <div
+                    onClick={() => toggleGroup(group)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 20px",
+                      background: "var(--bg-2)",
+                      borderBottom: "1px solid var(--border)",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                  >
+                    {isCollapsed
+                      ? <Folder size={13} style={{ color: "var(--fg-3)" }} />
+                      : <FolderOpen size={13} style={{ color: "var(--fg-3)" }} />}
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-2)" }}>{group}</span>
+                    <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--fg-3)" }}>
+                      {groupScans.length}
+                    </span>
+                    {isCollapsed
+                      ? <ChevronRight size={12} style={{ color: "var(--fg-3)" }} />
+                      : <ChevronDown size={12} style={{ color: "var(--fg-3)" }} />}
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Group rows */}
+                  {!isCollapsed && groupScans.map((scan) => (
+                    <div
+                      key={scan.id}
+                      onClick={() => router.push(`/scans/${scan.id}`)}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "2fr 1fr 1.5fr 1fr 60px 80px",
+                        gap: 12,
+                        padding: "12px 20px",
+                        borderBottom: "1px solid var(--border)",
+                        cursor: "pointer",
+                        alignItems: "center",
+                        transition: "background var(--dur)",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-2)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                      className="scan-row"
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {scan.target}
+                      </div>
+                      <div>
+                        <span className="tag" style={{ textTransform: "capitalize" }}>{scan.scanMode}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--fg-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {scan.llmModel}
+                      </div>
+                      <div>
+                        <div className="status-badge">
+                          <span className={statusLedClass(scan.status)} />
+                          <span style={{ fontSize: 11, textTransform: "capitalize", letterSpacing: "0.3px" }}>{scan.status}</span>
+                        </div>
+                      </div>
+                      <div>
+                        {scan.vulnCount > 0 ? (
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 6px", background: "var(--sev-critical-bg)", color: "var(--sev-critical)", border: "1px solid var(--sev-critical-bd)", borderRadius: "var(--r-sm)" }}>
+                            {scan.vulnCount}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--fg-3)", fontSize: 13 }}>—</span>
+                        )}
+                      </div>
+                      <div
+                        style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {["running", "crawling", "scanning", "analyzing"].includes(scan.status) ? (
+                          <button
+                            className="btn-ghost"
+                            style={{ padding: "4px 8px", fontSize: 11, color: "var(--sev-critical)", borderColor: "var(--sev-critical-bd)" }}
+                            onClick={(e) => handleStop(scan.id, e)}
+                            title="Stop"
+                          >
+                            <Square size={11} />
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-ghost"
+                            style={{ padding: "4px 8px", fontSize: 11 }}
+                            onClick={(e) => handleDelete(scan.id, e)}
+                            title="Delete"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })
           )}
         </div>
-      </Card>
+      </div>
+
+      {/* New Scan Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <div className="modal-title">Launch New Scan</div>
+            </div>
+            <form onSubmit={handleLaunch}>
+              <div className="modal-body">
+                <div className="field-grid">
+                  <div className="field">
+                    <label className="field-label">Target URL *</label>
+                    <input
+                      className="field-input"
+                      placeholder="https://app.example.com"
+                      value={form.target}
+                      onChange={(e) => setForm({ ...form, target: e.target.value })}
+                      disabled={launching}
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Project Group</label>
+                    <input
+                      className="field-input"
+                      list="groups"
+                      placeholder="Auto-detected"
+                      value={form.projectName}
+                      onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+                      disabled={launching}
+                    />
+                    <datalist id="groups">
+                      {Object.keys(groupedScans).map((g) => <option key={g} value={g} />)}
+                    </datalist>
+                  </div>
+                </div>
+
+                <div className="field-grid">
+                  <div className="field">
+                    <label className="field-label">LLM Model</label>
+                    <select
+                      className="field-select"
+                      value={form.llmModel}
+                      onChange={(e) => setForm({ ...form, llmModel: e.target.value })}
+                      disabled={launching}
+                    >
+                      {LLM_MODELS.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Scan Mode</label>
+                    <select
+                      className="field-select"
+                      value={form.scanMode}
+                      onChange={(e) => setForm({ ...form, scanMode: e.target.value })}
+                      disabled={launching}
+                    >
+                      {SCAN_MODES.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label className="field-label">API Key{!form.simulationMode && " *"}</label>
+                  <input
+                    className="field-input"
+                    type="password"
+                    placeholder="sk-…"
+                    value={form.apiKey}
+                    onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
+                    disabled={launching || form.simulationMode}
+                  />
+                </div>
+
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
+                  <input
+                    type="checkbox"
+                    style={{ marginTop: 2, accentColor: "var(--fg)", flexShrink: 0 }}
+                    checked={form.simulationMode}
+                    onChange={(e) => setForm({ ...form, simulationMode: e.target.checked })}
+                    disabled={launching}
+                  />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>Simulation Mode</div>
+                    <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 2 }}>
+                      Inject mock vulnerabilities for UI demonstration.
+                    </div>
+                  </div>
+                </label>
+
+                {/* Advanced */}
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ width: "100%", justifyContent: "space-between" }}
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Settings2 size={13} /> Advanced
+                  </span>
+                  {showAdvanced ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                </button>
+
+                {showAdvanced && (
+                  <div className="field">
+                    <label className="field-label">Scheduled Time</label>
+                    <input
+                      className="field-input"
+                      type="datetime-local"
+                      value={form.scheduledAt}
+                      onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+                    />
+                  </div>
+                )}
+
+                {error && (
+                  <div style={{ padding: "10px 12px", background: "var(--sev-critical-bg)", border: "1px solid var(--sev-critical-bd)", borderRadius: "var(--r)", fontSize: 13, color: "var(--sev-critical)" }}>
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-ghost" onClick={() => setShowModal(false)} disabled={launching}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={launching}>
+                  {launching ? (
+                    <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Launching…</>
+                  ) : (
+                    <><Play size={13} /> Launch Scan</>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function ScansPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--fg-3)" }}>
+        <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+      </div>
+    }>
       <ScansContent />
     </Suspense>
   );

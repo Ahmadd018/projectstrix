@@ -2,9 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 interface Vulnerability {
   id: string;
@@ -33,14 +30,8 @@ interface VulnWithScan extends Vulnerability {
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const SEVERITIES = ["all", "critical", "high", "medium", "low"] as const;
 
-function SeverityBadge({ s, className }: { s: string, className?: string }) {
-  const cls: Record<string, string> = {
-    critical: "bg-destructive text-destructive-foreground border-destructive/20",
-    high: "bg-orange-500 text-white border-orange-500/20",
-    medium: "bg-blue-500 text-white border-blue-500/20",
-    low: "bg-primary text-primary-foreground border-primary/20",
-  };
-  return <Badge variant="outline" className={`capitalize ${cls[s] ?? cls.low} ${className}`}>{s}</Badge>;
+function sevClass(s: string) {
+  return `sev sev-${s}`;
 }
 
 export default function VulnerabilitiesPage() {
@@ -97,171 +88,259 @@ export default function VulnerabilitiesPage() {
   };
 
   return (
-    <div className="p-8 h-full flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Vulnerabilities</h1>
-          <p className="text-muted-foreground">All findings across your security assessments.</p>
-        </div>
+    <div className="page" style={{ height: "100%", maxWidth: "none" }}>
+      {/* Header */}
+      <div className="page-intro">
+        <h1 className="page-heading">Vulnerabilities</h1>
+        <p className="page-desc">All findings across your security assessments.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Severity stat cards */}
+      <div className="stats-grid">
         {(["critical", "high", "medium", "low"] as const).map((s) => (
           <button
             key={s}
-            className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-              filter === s 
-                ? "bg-secondary/40 border-primary shadow-[0_0_15px_rgba(0,230,118,0.15)]" 
-                : "bg-background/40 border-border/50 hover:bg-secondary/20"
-            }`}
             onClick={() => setFilter(filter === s ? "all" : s)}
+            className="stat-card"
+            style={{
+              cursor: "pointer",
+              border: filter === s ? "1px solid var(--border-hi)" : undefined,
+              background: filter === s ? "var(--bg-2)" : undefined,
+              textAlign: "left",
+            }}
           >
-            <div className="flex flex-col items-start">
-              <span className="text-sm font-medium text-muted-foreground capitalize">{s} Severity</span>
-              <span className={`text-2xl font-bold ${
-                s === 'critical' ? 'text-destructive' : 
-                s === 'high' ? 'text-orange-500' : 
-                s === 'medium' ? 'text-blue-500' : 
-                'text-primary'
-              }`}>{counts[s]}</span>
+            <div className="stat-label">
+              <span className="stat-label-text">{s}</span>
+              <span className={sevClass(s)} style={{ fontSize: 10 }}>{counts[s]}</span>
             </div>
-            <ShieldAlert className={`w-8 h-8 opacity-20 ${
-                s === 'critical' ? 'text-destructive' : 
-                s === 'high' ? 'text-orange-500' : 
-                s === 'medium' ? 'text-blue-500' : 
-                'text-primary'
-              }`} />
+            <div
+              className="stat-value"
+              style={{
+                color:
+                  s === "critical" ? "var(--sev-critical)" :
+                  s === "high"     ? "var(--sev-high)" :
+                  s === "medium"   ? "var(--sev-medium)" :
+                  "var(--sev-low)",
+              }}
+            >
+              {counts[s]}
+            </div>
+            <div className="stat-sub">{s.charAt(0).toUpperCase() + s.slice(1)} severity</div>
           </button>
         ))}
       </div>
 
-      <div className="flex-1 flex gap-6 min-h-0">
-        <div className="w-1/2 flex flex-col bg-background/40 backdrop-blur-md border border-border/50 rounded-xl overflow-hidden shadow-lg">
-          <div className="p-4 border-b border-border/50 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                className="pl-9 bg-secondary/30 border-border/50" 
-                placeholder="Search by title, endpoint, target..." 
-                value={search} 
+      {/* Main content */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        {/* List */}
+        <div className="card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Filters */}
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="search-input-wrap" style={{ maxWidth: "100%" }}>
+              <Search size={13} className="search-input-icon" />
+              <input
+                className="search-input"
+                placeholder="Search by title, endpoint, target…"
+                value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {SEVERITIES.map((s) => (
-                <Badge
+                <button
                   key={s}
-                  variant={filter === s ? "default" : "outline"}
-                  className={`cursor-pointer capitalize px-3 py-1 ${filter === s ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-secondary"}`}
                   onClick={() => setFilter(s)}
+                  style={{
+                    padding: "3px 10px",
+                    borderRadius: "var(--r-sm)",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textTransform: "capitalize",
+                    cursor: "pointer",
+                    border: "1px solid",
+                    borderColor: filter === s ? "var(--border-hi)" : "var(--border)",
+                    background: filter === s ? "var(--bg-4)" : "var(--bg-2)",
+                    color: filter === s ? "var(--fg)" : "var(--fg-3)",
+                    fontFamily: "var(--font-sans)",
+                  }}
                 >
-                  {s} {s !== "all" ? `(${counts[s]})` : `(${counts.all})`}
-                </Badge>
+                  {s} ({counts[s as keyof typeof counts] ?? counts.all})
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Items */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
             {loading ? (
-              <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+              <div className="empty-state">
+                <Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} />
+              </div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <ShieldAlert className="w-12 h-12 mb-4 opacity-20" />
-                <p className="text-lg font-medium">No vulnerabilities found</p>
-                <p className="text-sm">Try changing the filter or search term.</p>
+              <div className="empty-state">
+                <ShieldAlert size={32} style={{ opacity: 0.2 }} />
+                <p>No vulnerabilities found</p>
               </div>
             ) : (
               filtered.map((v) => (
                 <div
                   key={`${v.scanId}-${v.id}`}
-                  onClick={() => setSelected(selected?.id === v.id && selected.scanId === v.scanId ? null : v)}
-                  className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                    selected?.id === v.id && selected.scanId === v.scanId 
-                      ? "bg-secondary/40 border-primary/50 shadow-[0_0_10px_rgba(0,230,118,0.1)]" 
-                      : "bg-background border-border/30 hover:bg-secondary/20"
-                  }`}
+                  onClick={() =>
+                    setSelected(
+                      selected?.id === v.id && selected.scanId === v.scanId ? null : v
+                    )
+                  }
+                  className="trow"
+                  style={{
+                    cursor: "pointer",
+                    background:
+                      selected?.id === v.id && selected.scanId === v.scanId
+                        ? "var(--bg-3)"
+                        : undefined,
+                    borderBottom: "1px solid var(--border)",
+                  }}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <SeverityBadge s={v.severity} />
-                      {v.cvss && <span className="text-xs font-semibold text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded">CVSS {v.cvss}</span>}
+                  <div className="trow-main">
+                    <div className="trow-title">{v.title}</div>
+                    <div className="trow-sub">
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                        {v.method ?? "GET"} {v.endpoint}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 11, color: "var(--fg-3)" }}>
+                      {v.scanTarget}
                     </div>
                   </div>
-                  <h3 className="font-medium text-foreground mb-2 line-clamp-2">{v.title}</h3>
-                  <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground bg-secondary/20 p-2 rounded">
-                    <span className="font-bold text-primary">{v.method ?? "GET"}</span>
-                    <span className="truncate">{v.endpoint}</span>
+                  <div className="trow-right" style={{ flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <span className={sevClass(v.severity)}>{v.severity}</span>
+                    {v.cvss && (
+                      <span style={{ fontSize: 10, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
+                        CVSS {v.cvss}
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-3 text-xs text-muted-foreground">Target: <span className="font-medium text-foreground">{v.scanTarget}</span></div>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        <div className={`w-1/2 flex flex-col bg-background/40 backdrop-blur-md border border-border/50 rounded-xl overflow-hidden shadow-lg transition-opacity duration-300 ${selected ? "opacity-100" : "opacity-50 pointer-events-none"}`}>
+        {/* Detail pane */}
+        <div
+          className="card"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            opacity: selected ? 1 : 0.4,
+            transition: "opacity 0.2s",
+            pointerEvents: selected ? "auto" : "none",
+          }}
+        >
           {selected ? (
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between p-6 border-b border-border/50 bg-secondary/10">
-                <div className="flex items-center gap-3">
-                  <SeverityBadge s={selected.severity} className="text-sm px-3 py-1" />
-                  {selected.cvss && <span className="text-sm font-semibold text-muted-foreground">CVSS {selected.cvss}</span>}
+            <>
+              {/* Detail header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px 20px",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className={sevClass(selected.severity)}>{selected.severity}</span>
+                  {selected.cvss && (
+                    <span style={{ fontSize: 11, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
+                      CVSS {selected.cvss}
+                    </span>
+                  )}
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground rounded-full">
-                  <X className="w-5 h-5" />
-                </Button>
+                <button
+                  onClick={() => setSelected(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--fg-3)",
+                    cursor: "pointer",
+                    display: "flex",
+                    padding: 4,
+                    borderRadius: "var(--r-sm)",
+                  }}
+                >
+                  <X size={16} />
+                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground mb-4 leading-tight">{selected.title}</h2>
-                  <div className="flex flex-col gap-3 p-4 rounded-lg bg-secondary/20 border border-border/30">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground w-16">Target:</span>
-                      <a href={`/scans/${selected.scanId}`} className="text-primary hover:underline font-medium">{selected.scanTarget}</a>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-mono">
-                      <span className="text-muted-foreground w-16 font-sans">Endpoint:</span>
-                      <span className="font-bold text-primary">{selected.method ?? "GET"}</span>
-                      <span className="text-foreground break-all">{selected.endpoint}</span>
-                    </div>
+              {/* Detail body */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--fg)", marginBottom: 16, lineHeight: 1.4 }}>
+                  {selected.title}
+                </h2>
+
+                {/* Meta */}
+                <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "12px 14px", marginBottom: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
+                    <span style={{ color: "var(--fg-3)", width: 64 }}>Target</span>
+                    <a href={`/scans/${selected.scanId}`} style={{ color: "var(--fg)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border-hi)" }}>{selected.scanTarget}</a>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, fontSize: 12, fontFamily: "var(--font-mono)" }}>
+                    <span style={{ color: "var(--fg-3)", fontFamily: "var(--font-sans)", width: 64 }}>Endpoint</span>
+                    <span style={{ color: "var(--fg-2)" }}>
+                      <span style={{ fontWeight: 700, color: "var(--fg)", marginRight: 6 }}>{selected.method ?? "GET"}</span>
+                      {selected.endpoint}
+                    </span>
                   </div>
                 </div>
 
-                <section className="space-y-3">
-                  <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
-                    <Info className="w-5 h-5 text-primary" /> Description
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">{selected.description}</p>
-                </section>
+                {/* Description */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--fg-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                    <Info size={12} /> Description
+                  </div>
+                  <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>{selected.description}</p>
+                </div>
 
+                {/* PoC */}
                 {selected.poc && (
-                  <section className="space-y-3">
-                    <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
-                      <Terminal className="w-5 h-5 text-primary" /> Proof of Concept
-                    </h3>
-                    <div className="p-4 rounded-lg bg-black border border-border/50 overflow-x-auto">
-                      <pre className="text-sm font-mono text-green-400"><code>{selected.poc}</code></pre>
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--fg-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                      <Terminal size={12} /> Proof of Concept
                     </div>
-                  </section>
+                    <pre style={{ background: "#000", border: "1px solid var(--border-md)", borderRadius: "var(--r)", padding: "14px", fontSize: 12, fontFamily: "var(--font-mono)", color: "#4ade80", overflowX: "auto", lineHeight: 1.6 }}>
+                      <code>{selected.poc}</code>
+                    </pre>
+                  </div>
                 )}
 
+                {/* Remediation */}
                 {selected.remediation && (
-                  <section className="space-y-3">
-                    <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
-                      <Lightbulb className="w-5 h-5 text-primary" /> Remediation
-                    </h3>
-                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/30 text-primary-foreground leading-relaxed">
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--fg-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                      <Lightbulb size={12} /> Remediation
+                    </div>
+                    <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "14px", fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>
                       {selected.remediation}
                     </div>
-                  </section>
+                  </div>
                 )}
               </div>
-            </div>
+            </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <ShieldAlert className="w-16 h-16 mb-6 opacity-10" />
-              <p className="text-lg font-medium text-center max-w-[250px]">Select a vulnerability to view details & Proof of Concept</p>
+            <div className="empty-state">
+              <ShieldAlert size={36} style={{ opacity: 0.12 }} />
+              <p style={{ maxWidth: 200, textAlign: "center" }}>
+                Select a vulnerability to view details
+              </p>
             </div>
           )}
         </div>
