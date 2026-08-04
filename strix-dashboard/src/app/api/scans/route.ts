@@ -97,18 +97,15 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
 
 // GET /api/scans — list all scans
 export async function GET() {
-  log.debug("GET /api/scans", "Listing all scans", { runsDir: RUNS_DIR });
   ensureRunsDir();
   try {
     const entries = fs.readdirSync(RUNS_DIR, { withFileTypes: true });
     const dirs = entries.filter((e) => e.isDirectory());
-    log.debug("GET /api/scans", `Found ${dirs.length} scan directories`);
 
     const scans = dirs
       .map((e) => {
         const runFile = path.join(RUNS_DIR, e.name, "run.json");
         if (!fs.existsSync(runFile)) {
-          log.debug("GET /api/scans", `Skipping ${e.name} — no run.json`);
           return null;
         }
         try {
@@ -131,10 +128,6 @@ export async function GET() {
               );
             }
           }
-          log.debug(
-            "GET /api/scans",
-            `Scan ${e.name}: status=${data.status} vulns=${vulnCount}`,
-          );
           return { 
             id: data.id || e.name,
             target: data.target || "Unknown Target",
@@ -161,7 +154,6 @@ export async function GET() {
           new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
       );
 
-    log.info("GET /api/scans", `Returning ${scans.length} scans`);
     return NextResponse.json({ scans });
   } catch (err) {
     log.error("GET /api/scans", "Failed to list scans directory", err);

@@ -117,7 +117,7 @@ function ScansContent() {
 
   useEffect(() => {
     fetchScans();
-    const interval = setInterval(fetchScans, 3000);
+    const interval = setInterval(fetchScans, 5000);
     return () => clearInterval(interval);
   }, [fetchScans]);
 
