@@ -11,7 +11,7 @@ const TABS = [
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("api");
-  const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "" });
+  const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "" });
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
   const [saved, setSaved] = useState(false);
@@ -102,6 +102,7 @@ export default function Settings() {
                   { key: "openai",    label: "OpenAI API Key",        placeholder: "sk-…",      hint: "Used for gpt-4o models during penetration testing." },
                   { key: "anthropic", label: "Anthropic API Key",     placeholder: "sk-ant-…",  hint: "Used for claude-3.5-sonnet reasoning capabilities." },
                   { key: "gemini",    label: "Google Gemini API Key", placeholder: "AIza…",     hint: "Used for gemini-2.5-pro multimodal analysis." },
+                  { key: "deepseek",  label: "DeepSeek API Key",      placeholder: "sk-…",      hint: "Used for DeepSeek v3 and DeepSeek Coder models." },
                 ] as const).map(({ key, label, placeholder, hint }) => (
                   <div key={key} style={s.field}>
                     <label style={s.label}>{label}</label>

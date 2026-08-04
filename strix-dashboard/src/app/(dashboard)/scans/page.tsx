@@ -87,9 +87,20 @@ function ScansContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   
-  const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string } | null>(null);
-  const [scheduleApiKey, setScheduleApiKey] = useState("");
+  const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string, llmModel: string } | null>(null);
   const [scheduling, setScheduling] = useState(false);
+
+  function getApiKey(model: string): string {
+    if (model.startsWith("ollama/")) return ""; // Ollama doesn't need a key
+    try {
+      const savedKeys = JSON.parse(localStorage.getItem("strix_api_keys") || "{}");
+      if (model.startsWith("openai/")) return savedKeys.openai || "";
+      if (model.startsWith("anthropic/")) return savedKeys.anthropic || "";
+      if (model.startsWith("google/")) return savedKeys.gemini || "";
+      if (model.startsWith("deepseek/")) return savedKeys.deepseek || "";
+    } catch (e) {}
+    return "";
+  }
 
   const [form, setForm] = useState({
     target: "",
@@ -100,7 +111,6 @@ function ScansContent() {
     scanMode: "standard",
     instruction: "",
     simulationMode: false,
-    apiKey: "",
     scheduledAt: "",
     // Advanced
     scopeMode: "auto",
@@ -167,7 +177,12 @@ function ScansContent() {
     e.preventDefault();
     setError("");
     if (!form.target.trim() && !form.targetList.trim()) return setError("Target is required");
-    if (!form.apiKey.trim() && !form.simulationMode) return setError("LLM API Key is required");
+    
+    const apiKey = getApiKey(form.llmModel);
+    if (!apiKey && !form.simulationMode && !form.llmModel.startsWith("ollama/")) {
+      return setError(`Please configure your API Key in Settings first.`);
+    }
+
     setLaunching(true);
     try {
       let notificationConfig = null;
@@ -176,7 +191,7 @@ function ScansContent() {
         if (savedNotifs) notificationConfig = JSON.parse(savedNotifs);
       } catch (e) {}
 
-      const payload = { ...form, notificationConfig };
+      const payload = { ...form, apiKey, notificationConfig };
       if (payload.scheduledAt) {
         payload.scheduledAt = new Date(payload.scheduledAt).toISOString();
       }
@@ -226,19 +241,23 @@ function ScansContent() {
       fetchScans();
       return;
     }
-    // Need API key for new periods
-    setScheduleApiKey("");
-    setScheduleModal({ scanId: scan.id, period });
+    // For new periods, just show confirm dialog
+    setScheduleModal({ scanId: scan.id, period, llmModel: scan.llmModel });
   }
 
   async function confirmSchedule() {
     if (!scheduleModal) return;
     setScheduling(true);
     try {
+      const apiKey = getApiKey(scheduleModal.llmModel);
+      if (!apiKey && !scheduleModal.llmModel.startsWith("ollama/")) {
+         throw new Error(`Please configure your API Key for ${scheduleModal.llmModel} in Settings first.`);
+      }
+
       const res = await fetch(`/api/scans/${scheduleModal.scanId}/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ period: scheduleModal.period, apiKey: scheduleApiKey })
+        body: JSON.stringify({ period: scheduleModal.period, apiKey })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to schedule");
@@ -602,18 +621,6 @@ function ScansContent() {
                 </div>
 
                 <div className="field">
-                  <label className="field-label">API Key{!form.simulationMode && " *"}</label>
-                  <input
-                    className="field-input"
-                    type="password"
-                    placeholder="sk-…"
-                    value={form.apiKey}
-                    onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                    disabled={launching || form.simulationMode}
-                  />
-                </div>
-
-                <div className="field">
                   <label className="field-label">Custom Instructions (Optional)</label>
                   <textarea
                     className="field-input"
@@ -791,19 +798,8 @@ function ScansContent() {
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 16 }}>
-                You selected <strong>{scheduleModal.period}</strong>. To allow Strix to run autonomously in the background, please provide an API Key.
+                You selected <strong>{scheduleModal.period}</strong>. Strix will automatically use the saved API Key for <strong>{scheduleModal.llmModel}</strong> to run this scan in the background.
               </p>
-              <div className="field">
-                <label className="field-label">API Key</label>
-                <input
-                  className="field-input"
-                  type="password"
-                  placeholder="sk-..."
-                  value={scheduleApiKey}
-                  onChange={e => setScheduleApiKey(e.target.value)}
-                  disabled={scheduling}
-                />
-              </div>
               {error && (
                 <div style={{ marginTop: 12, padding: "8px", background: "var(--sev-critical-bg)", border: "1px solid var(--sev-critical-bd)", borderRadius: "var(--r)", fontSize: 12, color: "var(--sev-critical)" }}>
                   {error}
@@ -812,7 +808,7 @@ function ScansContent() {
             </div>
             <div className="modal-footer">
               <button className="btn-ghost" onClick={() => { setScheduleModal(null); setError(""); }} disabled={scheduling}>Cancel</button>
-              <button className="btn-primary" onClick={confirmSchedule} disabled={scheduling || !scheduleApiKey}>
+              <button className="btn-primary" onClick={confirmSchedule} disabled={scheduling}>
                 {scheduling ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Play size={13} />} Confirm Schedule
               </button>
             </div>
