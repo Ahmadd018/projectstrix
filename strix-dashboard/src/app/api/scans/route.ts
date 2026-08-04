@@ -311,6 +311,7 @@ export async function POST(req: NextRequest) {
     OPENAI_API_KEY: apiKey,
     ANTHROPIC_API_KEY: apiKey,
     GEMINI_API_KEY: apiKey,
+    DEEPSEEK_API_KEY: apiKey,
   };
 
   log.info("POST /api/scans", `Spawning strix process`, {
