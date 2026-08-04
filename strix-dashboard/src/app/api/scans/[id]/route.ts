@@ -99,6 +99,18 @@ export async function DELETE(
       fs.rmSync(scanDir, { recursive: true, force: true });
       log.info(`DELETE /api/scans/${id}`, "Scan directory deleted from disk");
     }
+    const scheduledFile = path.join(RUNS_DIR, "scheduled.json");
+    if (fs.existsSync(scheduledFile)) {
+      try {
+        let schedules = JSON.parse(fs.readFileSync(scheduledFile, "utf-8"));
+        const originalLength = schedules.length;
+        schedules = schedules.filter((s: any) => s.scanId !== id);
+        if (schedules.length !== originalLength) {
+          fs.writeFileSync(scheduledFile, JSON.stringify(schedules, null, 2));
+          log.info(`DELETE /api/scans/${id}`, "Scan removed from scheduled.json");
+        }
+      } catch (e) {}
+    }
     return NextResponse.json({ success: true, deleted: true });
   }
 

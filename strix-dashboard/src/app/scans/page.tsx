@@ -75,6 +75,7 @@ function ScansContent() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [scanToDelete, setScanToDelete] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
@@ -198,10 +199,14 @@ function ScansContent() {
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    if (confirm("Permanently delete this scan?")) {
-      await fetch(`/api/scans/${id}?purge=true`, { method: "DELETE" });
-      fetchScans();
-    }
+    setScanToDelete(id);
+  }
+
+  async function confirmDelete() {
+    if (!scanToDelete) return;
+    await fetch(`/api/scans/${scanToDelete}?purge=true`, { method: "DELETE" });
+    setScanToDelete(null);
+    fetchScans();
   }
 
   return (
@@ -595,6 +600,26 @@ function ScansContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {scanToDelete && (
+        <div className="modal-backdrop animate-fade-in" onClick={() => setScanToDelete(null)}>
+          <div className="modal-content animate-slide-up" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ color: "var(--sev-critical)" }}>Delete Scan</h2>
+            </div>
+            <div className="modal-body" style={{ color: "var(--fg-2)" }}>
+              Are you sure you want to permanently delete this scan? All associated data and vulnerabilities will be removed from the system. This action cannot be undone.
+            </div>
+            <div className="modal-footer">
+              <button className="btn-ghost" onClick={() => setScanToDelete(null)}>Cancel</button>
+              <button className="btn-primary" style={{ background: "var(--sev-critical)", borderColor: "var(--sev-critical-bd)", color: "#fff" }} onClick={confirmDelete}>
+                <Trash2 size={13} /> Delete Permanently
+              </button>
+            </div>
           </div>
         </div>
       )}
