@@ -18,6 +18,7 @@ interface Scan {
   startedAt: string;
   finishedAt: string | null;
   vulnCount: number;
+  period?: "none" | "daily" | "weekly" | "monthly";
 }
 
 const LLM_MODELS = [
@@ -84,6 +85,10 @@ function ScansContent() {
   const [filterModel, setFilterModel] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  
+  const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string } | null>(null);
+  const [scheduleApiKey, setScheduleApiKey] = useState("");
+  const [scheduling, setScheduling] = useState(false);
 
   const [form, setForm] = useState({
     target: "",
@@ -209,6 +214,42 @@ function ScansContent() {
     fetchScans();
   }
 
+  async function handleSchedulePeriod(scan: Scan, period: string) {
+    if (period === "none") {
+      // Clear period immediately
+      await fetch(`/api/scans/${scan.id}/schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ period: "none" })
+      });
+      fetchScans();
+      return;
+    }
+    // Need API key for new periods
+    setScheduleApiKey("");
+    setScheduleModal({ scanId: scan.id, period });
+  }
+
+  async function confirmSchedule() {
+    if (!scheduleModal) return;
+    setScheduling(true);
+    try {
+      const res = await fetch(`/api/scans/${scheduleModal.scanId}/schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ period: scheduleModal.period, apiKey: scheduleApiKey })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to schedule");
+      setScheduleModal(null);
+      fetchScans();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setScheduling(false);
+    }
+  }
+
   return (
     <div className="page" style={{ height: "100%", maxWidth: "none", gap: 16 }}>
       {/* Header row */}
@@ -285,7 +326,7 @@ function ScansContent() {
         {/* Table header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 60px 80px",
+          gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
           gap: 12,
           padding: "10px 20px",
           borderBottom: "1px solid var(--border)",
@@ -304,6 +345,7 @@ function ScansContent() {
           <div>Model</div>
           <div>Status</div>
           <div>Date</div>
+          <div>Period</div>
           <div>Vulns</div>
           <div></div>
         </div>
@@ -360,7 +402,7 @@ function ScansContent() {
                       onClick={() => router.push(`/scans/${scan.id}`)}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 60px 80px",
+                        gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
                         gap: 12,
                         padding: "12px 20px",
                         borderBottom: "1px solid var(--border)",
@@ -389,6 +431,27 @@ function ScansContent() {
                       </div>
                       <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
                         {new Date(scan.startedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                      </div>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={scan.period || "none"}
+                          onChange={(e) => handleSchedulePeriod(scan, e.target.value)}
+                          style={{
+                            background: "var(--bg-1)",
+                            border: "1px solid var(--border)",
+                            color: "var(--fg)",
+                            fontSize: 11,
+                            padding: "2px 6px",
+                            borderRadius: "var(--r)",
+                            cursor: "pointer",
+                            width: "100%",
+                          }}
+                        >
+                          <option value="none">None</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
                       </div>
                       <div>
                         {scan.vulnCount > 0 ? (
@@ -710,6 +773,44 @@ function ScansContent() {
               <button className="btn-ghost" onClick={() => setScanToDelete(null)}>Cancel</button>
               <button className="btn-primary" style={{ background: "var(--sev-critical)", borderColor: "var(--sev-critical-bd)", color: "#fff" }} onClick={confirmDelete}>
                 <Trash2 size={13} /> Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule API Key Modal */}
+      {scheduleModal && (
+        <div className="modal-overlay" onClick={() => { setScheduleModal(null); setError(""); }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <div className="modal-title">Schedule Recurring Scan</div>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 16 }}>
+                You selected <strong>{scheduleModal.period}</strong>. To allow Strix to run autonomously in the background, please provide an API Key.
+              </p>
+              <div className="field">
+                <label className="field-label">API Key</label>
+                <input
+                  className="field-input"
+                  type="password"
+                  placeholder="sk-..."
+                  value={scheduleApiKey}
+                  onChange={e => setScheduleApiKey(e.target.value)}
+                  disabled={scheduling}
+                />
+              </div>
+              {error && (
+                <div style={{ marginTop: 12, padding: "8px", background: "var(--sev-critical-bg)", border: "1px solid var(--sev-critical-bd)", borderRadius: "var(--r)", fontSize: 12, color: "var(--sev-critical)" }}>
+                  {error}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-ghost" onClick={() => { setScheduleModal(null); setError(""); }} disabled={scheduling}>Cancel</button>
+              <button className="btn-primary" onClick={confirmSchedule} disabled={scheduling || !scheduleApiKey}>
+                {scheduling ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Play size={13} />} Confirm Schedule
               </button>
             </div>
           </div>
