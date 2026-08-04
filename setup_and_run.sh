@@ -71,8 +71,8 @@ if command -v pm2 &>/dev/null; then
     info "Restarting existing PM2 process: strix-dashboard"
     run sudo pm2 restart strix-dashboard
   else
-    info "Starting PM2 process: strix-dashboard on port 80"
-    run sudo pm2 start npm --name strix-dashboard -- start -- -p 80
+    info "Starting PM2 process: strix-dashboard on default port (3000)"
+    run sudo pm2 start npm --name strix-dashboard -- start
   fi
 
   # Restart scheduler if exists
@@ -86,7 +86,7 @@ if command -v pm2 &>/dev/null; then
 else
   warn "PM2 not installed. Start manually:"
   echo "  cd $DASH_DIR"
-  echo "  sudo pm2 start npm --name strix-dashboard -- start -- -p 80"
+  echo "  sudo pm2 start npm --name strix-dashboard -- start"
   echo "  sudo npm install -g pm2"
 fi
 
