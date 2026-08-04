@@ -15,6 +15,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -32,8 +33,22 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">("loading");
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<{ id: string, username: string } | null>(null);
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated) {
+            setUser(data.user);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchUser();
+
     const check = async () => {
       try {
         const r = await fetch("/api/health", { signal: AbortSignal.timeout(3000) });
@@ -107,13 +122,26 @@ export default function Sidebar() {
         </div>
 
         {/* User */}
-        <div className="sidebar-user">
-          <div className="sidebar-avatar">A</div>
+        <div className="sidebar-user" style={{ position: "relative" }}>
+          <div className="sidebar-avatar">{user ? user.username.charAt(0).toUpperCase() : "U"}</div>
           {!collapsed && (
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">Admin User</div>
+            <div className="sidebar-user-info" style={{ flex: 1 }}>
+              <div className="sidebar-user-name" style={{ textTransform: "capitalize" }}>{user ? user.username : "Loading..."}</div>
               <div className="sidebar-user-role">Security Engineer</div>
             </div>
+          )}
+          {!collapsed && user && (
+            <button
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                window.location.href = "/login";
+              }}
+              className="btn-ghost"
+              style={{ padding: 6, minHeight: 0, color: "var(--fg-3)" }}
+              title="Log Out"
+            >
+              <LogOut size={14} />
+            </button>
           )}
         </div>
       </div>
