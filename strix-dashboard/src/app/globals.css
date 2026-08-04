@@ -149,6 +149,13 @@ code, pre { font-family: var(--font-mono); }
   overflow-x: hidden;
 }
 
+.page {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 /* ═══════════════════════════════════════════
    SIDEBAR
 ═══════════════════════════════════════════ */
