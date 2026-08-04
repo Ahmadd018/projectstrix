@@ -177,7 +177,22 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   log.info("POST /api/scans", "New scan request received");
   const body = await req.json();
-  const { target, targetList, projectName, llmModel, apiKey, scanMode, instruction, scopeMode, diffBase, configFile, maxBudget, maxTurns, resumeRun } = body;
+  const {
+    target,
+    scanName,
+    projectName,
+    llmModel,
+    scanMode,
+    instruction,
+    apiKey,
+    targetList,
+    scopeMode,
+    diffBase,
+    configFile,
+    maxBudget,
+    maxTurns,
+    resumeRun,
+  } = body;
 
   log.debug("POST /api/scans", "Scan parameters", {
     target,
@@ -226,6 +241,7 @@ export async function POST(req: NextRequest) {
       const runMeta = {
         id: scanId,
         target,
+        scanName,
         projectName,
         llmModel,
         scanMode,
@@ -249,6 +265,7 @@ export async function POST(req: NextRequest) {
   const runMeta = {
     id: scanId,
     target,
+    scanName,
     projectName,
     llmModel,
     scanMode,

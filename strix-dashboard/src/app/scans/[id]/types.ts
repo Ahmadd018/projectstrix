@@ -13,6 +13,7 @@ export interface Vulnerability {
 export interface ScanDetail {
   id: string;
   target: string;
+  scanName?: string;
   llmModel: string;
   scanMode: string;
   status: "running" | "completed" | "failed" | "stopped";

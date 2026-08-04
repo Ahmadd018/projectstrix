@@ -129,7 +129,7 @@ export default function ScanDetailPage() {
 
         <div className={styles.titleRow}>
           <div>
-            <h1 className={styles.title}>{scan.target}</h1>
+            <h1 className={styles.title}>{scan.scanName ? `${scan.scanName} (${scan.target})` : scan.target}</h1>
             <div className={styles.meta}>
               <span className={styles.metaTag}>{scan.scanMode}</span>
               <span className={styles.metaTag}>{scan.llmModel}</span>

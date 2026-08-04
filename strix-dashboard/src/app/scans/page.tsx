@@ -10,6 +10,7 @@ import {
 interface Scan {
   id: string;
   target: string;
+  scanName?: string;
   projectName?: string;
   llmModel: string;
   scanMode: string;
@@ -85,14 +86,22 @@ function ScansContent() {
 
   const [form, setForm] = useState({
     target: "",
-    projectName: "",
+    scanName: "",
     targetList: "",
+    projectName: "",
     llmModel: "openai/gpt-4o",
-    apiKey: "",
     scanMode: "standard",
     instruction: "",
     simulationMode: false,
+    apiKey: "",
     scheduledAt: "",
+    // Advanced
+    scopeMode: "auto",
+    diffBase: "",
+    configFile: "",
+    maxBudget: "",
+    maxTurns: "",
+    resumeRun: "",
   });
 
   const fetchScans = useCallback(async () => {
@@ -356,7 +365,7 @@ function ScansContent() {
                       className="scan-row"
                     >
                       <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {scan.target}
+                        {scan.scanName ? <span style={{ fontWeight: 600 }}>{scan.scanName} <span style={{ fontWeight: 400, color: "var(--fg-3)" }}>({scan.target})</span></span> : scan.target}
                       </div>
                       <div>
                         <span className="tag" style={{ textTransform: "capitalize" }}>{scan.scanMode}</span>
@@ -435,6 +444,18 @@ function ScansContent() {
                       disabled={launching}
                     />
                   </div>
+                  <div className="field">
+                    <label className="field-label">Scan Name (Optional)</label>
+                    <input
+                      className="field-input"
+                      placeholder="e.g. Weekly Payment Test"
+                      value={form.scanName}
+                      onChange={(e) => setForm({ ...form, scanName: e.target.value })}
+                      disabled={launching}
+                    />
+                  </div>
+                </div>
+                <div className="field-grid">
                   <div className="field">
                     <label className="field-label">Project Group</label>
                     <input
