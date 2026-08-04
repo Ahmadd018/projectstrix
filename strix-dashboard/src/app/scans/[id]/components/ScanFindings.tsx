@@ -23,10 +23,18 @@ export default function ScanFindings({ vulns }: { vulns: Vulnerability[] }) {
               </tr>
             </thead>
             <tbody>
-              {vulns.map((v) => (
+              {vulns.map((v) => {
+                const rowClass = {
+                  critical: styles.rowCritical,
+                  high: styles.rowHigh,
+                  medium: styles.rowMedium,
+                  low: styles.rowLow,
+                }[v.severity] || styles.rowLow;
+                
+                return (
                 <tr
                   key={v.id}
-                  className={`${styles.findingsRow} ${selectedVuln?.id === v.id ? styles.findingsRowActive : ""}`}
+                  className={`${styles.findingsRow} ${rowClass} ${selectedVuln?.id === v.id ? styles.findingsRowActive : ""}`}
                   onClick={() =>
                     setSelectedVuln(selectedVuln?.id === v.id ? null : v)
                   }
@@ -58,6 +66,7 @@ export default function ScanFindings({ vulns }: { vulns: Vulnerability[] }) {
       {/* Right Drawer for PoC details */}
       <div
         className={`glass-panel ${styles.pocDrawer} ${selectedVuln ? styles.pocDrawerOpen : ""}`}
+        style={selectedVuln ? { borderLeft: `2px solid var(--sev-${selectedVuln.severity})` } : {}}
       >
         {selectedVuln ? (
           <div className={styles.pocContent}>

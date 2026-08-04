@@ -245,12 +245,26 @@
   line-height: 1;
 }
 
-.statCritical .statValue {
-  color: var(--accent-danger);
+.statCritical {
+  background: var(--sev-critical-bg);
+  border: 1px solid var(--sev-critical-bd);
 }
-.statHigh .statValue {
-  color: var(--accent-warning);
+.statCritical .statValue { color: var(--sev-critical); }
+.statCritical .statLabel { color: var(--sev-critical); opacity: 0.8; }
+
+.statHigh {
+  background: var(--sev-high-bg);
+  border: 1px solid var(--sev-high-bd);
 }
+.statHigh .statValue { color: var(--sev-high); }
+.statHigh .statLabel { color: var(--sev-high); opacity: 0.8; }
+
+.statMedium {
+  background: var(--sev-medium-bg);
+  border: 1px solid var(--sev-medium-bd);
+}
+.statMedium .statValue { color: var(--sev-medium); }
+.statMedium .statLabel { color: var(--sev-medium); opacity: 0.8; }
 
 .textDanger {
   color: var(--accent-danger);
@@ -397,7 +411,7 @@
 
 .findingsRow {
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.2s, border-color 0.2s;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
@@ -408,6 +422,23 @@
 .findingsRowActive {
   background: rgba(255, 255, 255, 0.06) !important;
 }
+
+/* Colorful rows */
+.rowCritical { background: var(--sev-critical-bg); border-left: 2px solid var(--sev-critical); }
+.rowCritical:hover { background: rgba(255, 59, 59, 0.12); }
+.rowCritical.findingsRowActive { background: rgba(255, 59, 59, 0.16) !important; }
+
+.rowHigh { background: var(--sev-high-bg); border-left: 2px solid var(--sev-high); }
+.rowHigh:hover { background: rgba(255, 124, 31, 0.12); }
+.rowHigh.findingsRowActive { background: rgba(255, 124, 31, 0.16) !important; }
+
+.rowMedium { background: var(--sev-medium-bg); border-left: 2px solid var(--sev-medium); }
+.rowMedium:hover { background: rgba(245, 197, 24, 0.12); }
+.rowMedium.findingsRowActive { background: rgba(245, 197, 24, 0.16) !important; }
+
+.rowLow { background: var(--sev-low-bg); border-left: 2px solid var(--sev-low); }
+.rowLow:hover { background: rgba(74, 222, 128, 0.12); }
+.rowLow.findingsRowActive { background: rgba(74, 222, 128, 0.16) !important; }
 
 .findingsTable td {
   padding: 16px 20px;

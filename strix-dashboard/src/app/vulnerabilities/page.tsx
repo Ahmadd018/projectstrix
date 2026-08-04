@@ -190,22 +190,25 @@ export default function VulnerabilitiesPage() {
                 <p>No vulnerabilities found</p>
               </div>
             ) : (
-              filtered.map((v) => (
+              filtered.map((v) => {
+                const isSelected = selected?.id === v.id && selected.scanId === v.scanId;
+                return (
                 <div
                   key={`${v.scanId}-${v.id}`}
-                  onClick={() =>
-                    setSelected(
-                      selected?.id === v.id && selected.scanId === v.scanId ? null : v
-                    )
-                  }
+                  onClick={() => setSelected(isSelected ? null : v)}
                   className="trow"
                   style={{
                     cursor: "pointer",
-                    background:
-                      selected?.id === v.id && selected.scanId === v.scanId
-                        ? "var(--bg-3)"
-                        : undefined,
-                    borderBottom: "1px solid var(--border)",
+                    background: isSelected ? "var(--bg-3)" : `var(--sev-${v.severity}-bg)`,
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
+                    borderLeft: `2px solid var(--sev-${v.severity})`,
+                    transition: "background 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) e.currentTarget.style.background = "var(--bg-3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) e.currentTarget.style.background = `var(--sev-${v.severity}-bg)`;
                   }}
                 >
                   <div className="trow-main">
@@ -228,7 +231,7 @@ export default function VulnerabilitiesPage() {
                     )}
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
         </div>
@@ -254,7 +257,8 @@ export default function VulnerabilitiesPage() {
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: "16px 20px",
-                  borderBottom: "1px solid var(--border)",
+                  background: `var(--sev-${selected.severity}-bg)`,
+                  borderBottom: `1px solid var(--sev-${selected.severity}-bd)`,
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
