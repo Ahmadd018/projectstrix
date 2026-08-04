@@ -8,9 +8,21 @@ export interface Vulnerability {
   endpoint: string;
   method?: string;
   description: string;
-  poc?: string;
+  impact?: string;
+  target?: string;
+  technical_analysis?: string;
+  poc_description?: string;
+  poc_script_code?: string;
+  remediation_steps?: string;
+  evidence?: string;
+  assumptions?: string;
+  fix_effort?: string;
   cvss?: number;
-  remediation?: string;
+  cvss_breakdown?: any;
+  cwe?: string;
+  finding_class?: string;
+  agent_id?: string;
+  agent_name?: string;
 }
 
 export interface ScanDetails {
@@ -104,13 +116,16 @@ export function generateMarkdown(details: ScanDetails) {
     md += `### ${idx + 1}. [${v.severity.toUpperCase()}] ${v.title}\n\n`;
     md += `**Endpoint:** \`${v.method || "GET"} ${v.endpoint}\`\n`;
     if (v.cvss) md += `**CVSS Score:** ${v.cvss}\n`;
+    if (v.cwe) md += `**CWE:** ${v.cwe}\n`;
+    if (v.fix_effort) md += `**Fix Effort:** ${v.fix_effort}\n`;
     md += `\n**Description:**\n${v.description}\n\n`;
-    if (v.remediation) {
-      md += `**Remediation:**\n${v.remediation}\n\n`;
-    }
-    if (v.poc) {
-      md += `**Proof of Concept:**\n\`\`\`text\n${v.poc}\n\`\`\`\n\n`;
-    }
+    if (v.impact) md += `**Impact:**\n${v.impact}\n\n`;
+    if (v.technical_analysis) md += `**Technical Analysis:**\n${v.technical_analysis}\n\n`;
+    if (v.poc_description) md += `**PoC Description:**\n${v.poc_description}\n\n`;
+    if (v.poc_script_code) md += `**PoC Script / Code:**\n${v.poc_script_code}\n\n`;
+    if (v.evidence) md += `**Evidence:**\n${v.evidence}\n\n`;
+    if (v.remediation_steps) md += `**Remediation Steps:**\n${v.remediation_steps}\n\n`;
+    if (v.assumptions) md += `**Assumptions:**\n${v.assumptions}\n\n`;
     md += `---\n\n`;
   });
 
@@ -132,10 +147,17 @@ export function generateHTML(details: ScanDetails) {
       </div>
       <p><strong>Endpoint:</strong> <code>${v.method || 'GET'} ${v.endpoint}</code></p>
       ${v.cvss ? `<p><strong>CVSS:</strong> ${v.cvss}</p>` : ''}
+      ${v.cwe ? `<p><strong>CWE:</strong> ${v.cwe}</p>` : ''}
+      ${v.fix_effort ? `<p><strong>Fix Effort:</strong> ${v.fix_effort}</p>` : ''}
       <h4>Description</h4>
       <p>${v.description.replace(/\\n/g, '<br>')}</p>
-      ${v.remediation ? `<h4>Remediation</h4><p>${v.remediation.replace(/\\n/g, '<br>')}</p>` : ''}
-      ${v.poc ? `<h4>Proof of Concept</h4><pre><code>${v.poc.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>` : ''}
+      ${v.impact ? `<h4>Impact</h4><p>${v.impact.replace(/\\n/g, '<br>')}</p>` : ''}
+      ${v.technical_analysis ? `<h4>Technical Analysis</h4><p>${v.technical_analysis.replace(/\\n/g, '<br>')}</p>` : ''}
+      ${v.poc_description ? `<h4>PoC Description</h4><p>${v.poc_description.replace(/\\n/g, '<br>')}</p>` : ''}
+      ${v.poc_script_code ? `<h4>PoC Script / Code</h4><pre><code>${v.poc_script_code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>` : ''}
+      ${v.evidence ? `<h4>Evidence</h4><pre><code>${v.evidence.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>` : ''}
+      ${v.remediation_steps ? `<h4>Remediation Steps</h4><p>${v.remediation_steps.replace(/\\n/g, '<br>')}</p>` : ''}
+      ${v.assumptions ? `<h4>Assumptions</h4><p>${v.assumptions.replace(/\\n/g, '<br>')}</p>` : ''}
     </div>
   `).join('');
 
@@ -262,23 +284,51 @@ export function generatePDF(details: ScanDetails) {
       
       doc.setFontSize(14);
       doc.setTextColor(0);
+      doc.setFont("helvetica", "bold");
       doc.text(`${i + 1}. [${v.severity.toUpperCase()}] ${v.title}`, 14, y);
       y += 8;
       
       doc.setFontSize(10);
       doc.setTextColor(80);
+      doc.setFont("helvetica", "normal");
       doc.text(`Endpoint: ${v.method || 'GET'} ${v.endpoint}`, 14, y);
       y += 6;
-      if (v.cvss) {
-        doc.text(`CVSS: ${v.cvss}`, 14, y);
-        y += 6;
-      }
+      if (v.cvss) { doc.text(`CVSS: ${v.cvss}`, 14, y); y += 6; }
+      if (v.cwe) { doc.text(`CWE: ${v.cwe}`, 14, y); y += 6; }
+      if (v.fix_effort) { doc.text(`Fix Effort: ${v.fix_effort}`, 14, y); y += 6; }
+      y += 2;
       
-      doc.setTextColor(40);
-      y += 4;
-      const descLines = doc.splitTextToSize(`Description: ${v.description.substring(0, 300)}${v.description.length > 300 ? '...' : ''}`, 180);
-      doc.text(descLines, 14, y);
-      y += descLines.length * 5 + 10;
+      const addSection = (title: string, content: string | undefined) => {
+        if (!content) return;
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, 14, y);
+        y += 5;
+        
+        doc.setFontSize(9);
+        doc.setTextColor(40);
+        doc.setFont("helvetica", "normal");
+        const textToSplit = content.substring(0, 10000); // safety bound
+        const lines = doc.splitTextToSize(textToSplit, 180);
+        
+        lines.forEach((line: string) => {
+            if (y > 280) { doc.addPage(); y = 20; }
+            doc.text(line, 14, y);
+            y += 4;
+        });
+        y += 4;
+      };
+
+      addSection("Description:", v.description);
+      addSection("Impact:", v.impact);
+      addSection("Technical Analysis:", v.technical_analysis);
+      addSection("PoC Description:", v.poc_description);
+      addSection("PoC Script / Code:", v.poc_script_code);
+      addSection("Remediation Steps:", v.remediation_steps);
+      addSection("Evidence:", v.evidence);
+      addSection("Assumptions:", v.assumptions);
     });
   }
   
