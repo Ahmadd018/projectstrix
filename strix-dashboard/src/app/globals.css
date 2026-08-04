@@ -1033,3 +1033,31 @@ code, pre { font-family: var(--font-mono); }
 /* ─── Base defaults ─── */
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); }
+
+/* ─── PC/Tablet Responsiveness (Max 1024px) ─── */
+@media (max-width: 1024px) {
+  .dashboard-grid, .field-grid, .statsRow, .overviewGrid {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .card, .glass-panel {
+    overflow-x: auto;
+  }
+  
+  .page {
+    padding: 16px;
+  }
+  
+  /* Ensure grids inside lists or tables don't collapse too much */
+  .grid[style*="grid-template-columns"] {
+    min-width: 600px; /* Force scroll instead of breaking layout */
+  }
+}
+
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

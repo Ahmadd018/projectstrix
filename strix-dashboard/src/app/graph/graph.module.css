@@ -1,4 +1,4 @@
-/* SVG Animations Only */
+/* SVG Animations & Styles */
 
 @keyframes dash {
   to {
@@ -7,13 +7,13 @@
 }
 
 .edgePath {
-  stroke: rgba(59, 130, 246, 0.3);
+  stroke: rgba(255, 255, 255, 0.08);
   stroke-width: 2;
   fill: none;
 }
 
 .edgePathActive {
-  stroke: var(--primary, #00e676);
+  stroke: var(--sev-low);
   stroke-width: 3;
   fill: none;
   stroke-dasharray: 10, 10;
@@ -37,28 +37,34 @@
 }
 
 .nodeCircle {
-  fill: hsl(var(--card));
-  stroke: hsl(var(--border));
+  fill: var(--bg-1);
+  stroke: var(--border-md);
   stroke-width: 2;
   transition: all 0.3s;
 }
 
-.nodeCircleActive {
-  fill: rgba(0, 230, 118, 0.1);
-  stroke: var(--primary, #00e676);
+.nodeCircleSelected {
+  stroke: var(--fg);
   stroke-width: 3;
-  filter: drop-shadow(0 0 12px rgba(0, 230, 118, 0.5));
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+}
+
+.nodeCircleActive {
+  fill: rgba(0, 230, 118, 0.05);
+  stroke: var(--sev-low);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 12px rgba(0, 230, 118, 0.4));
 }
 
 .nodeIcon {
-  fill: hsl(var(--foreground));
+  fill: var(--fg);
   font-size: 24px;
   text-anchor: middle;
   dominant-baseline: central;
 }
 
 .nodeLabel {
-  fill: hsl(var(--muted-foreground));
+  fill: var(--fg-3);
   font-size: 14px;
   font-weight: 500;
   text-anchor: middle;
@@ -66,5 +72,5 @@
 }
 
 .nodeGroup:hover .nodeLabel {
-  fill: hsl(var(--foreground));
+  fill: var(--fg);
 }

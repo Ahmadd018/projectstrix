@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, X } from "lucide-react";
+import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, X, Search, FileSpreadsheet } from "lucide-react";
 
 interface Scan {
   id: string;
@@ -14,6 +14,7 @@ interface Scan {
 
 export default function Reports() {
   const [scans, setScans] = useState<Scan[]>([]);
+  const [search, setSearch] = useState("");
   const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
 
   useEffect(() => {
@@ -26,7 +27,15 @@ export default function Reports() {
       });
   }, []);
 
-  const handleDownload = () => {
+  const filteredScans = scans.filter((s) => {
+    const q = search.toLowerCase();
+    const targetMatch = s.target?.toLowerCase().includes(q);
+    const projectMatch = s.projectName?.toLowerCase().includes(q);
+    const defaultProjectMatch = "default".includes(q);
+    return targetMatch || projectMatch || (!s.projectName && defaultProjectMatch);
+  });
+
+  const handleDownloadJSON = () => {
     if (!selectedScan) return;
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedScan, null, 2));
     const a = document.createElement("a");
@@ -35,11 +44,51 @@ export default function Reports() {
     a.click();
   };
 
+  const handleDownloadCSV = () => {
+    if (!selectedScan) return;
+    const headers = ["Project", "Target", "Date", "Status", "Total Issues", "Scan ID"];
+    const row = [
+      selectedScan.projectName || "Default",
+      selectedScan.target,
+      new Date(selectedScan.startedAt).toLocaleDateString(),
+      selectedScan.status,
+      selectedScan.vulnCount.toString(),
+      selectedScan.id
+    ];
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n"
+      + row.map(v => `"${v}"`).join(",");
+      
+    const a = document.createElement("a");
+    a.setAttribute("href", encodeURI(csvContent));
+    a.setAttribute("download", `report-${selectedScan.id}.csv`);
+    a.click();
+  };
+
   return (
     <div className="page" style={{ maxWidth: "none", height: "100%" }}>
-      <div className="page-intro">
-        <h1 className="page-heading">Reports</h1>
-        <p className="page-desc">Generate and download executive summaries for completed scans.</p>
+      <div className="page-intro" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1 className="page-heading">Reports</h1>
+          <p className="page-desc">Generate and download executive summaries for completed scans.</p>
+        </div>
+        
+        {/* Search Input */}
+        <div style={{ position: "relative", width: 280 }}>
+          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)" }} />
+          <input 
+            type="text" 
+            placeholder="Search by project or target..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%", padding: "9px 12px 9px 34px", background: "var(--bg-1)",
+              border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)",
+              fontSize: 13, fontFamily: "var(--font-sans)", outline: "none"
+            }}
+          />
+        </div>
       </div>
 
       <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
@@ -59,14 +108,14 @@ export default function Reports() {
 
         {/* Rows */}
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {scans.length === 0 ? (
+          {filteredScans.length === 0 ? (
             <div className="empty-state">
               <FileText size={36} style={{ opacity: 0.12 }} />
               <p>No completed scans found</p>
-              <p style={{ fontSize: 12 }}>Run a scan to completion to generate a report.</p>
+              <p style={{ fontSize: 12 }}>{search ? "No scans matched your search." : "Run a scan to completion to generate a report."}</p>
             </div>
           ) : (
-            scans.map((scan) => (
+            filteredScans.map((scan) => (
               <div
                 key={scan.id}
                 style={{
@@ -171,12 +220,12 @@ export default function Reports() {
               </div>
             </div>
 
-            <div className="modal-footer">
-              <button className="btn-ghost" onClick={handleDownload}>
-                <Download size={13} /> Download JSON
+            <div className="modal-footer" style={{ gap: 8, justifyContent: "flex-end" }}>
+              <button className="btn-ghost" onClick={handleDownloadJSON}>
+                <Download size={13} /> JSON
               </button>
-              <button className="btn-primary" onClick={() => alert("PDF Export is a mock feature.")}>
-                Export PDF
+              <button className="btn-primary" onClick={handleDownloadCSV} style={{ gap: 6 }}>
+                <FileSpreadsheet size={13} /> Export CSV
               </button>
             </div>
           </div>
