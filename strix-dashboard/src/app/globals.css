@@ -1030,8 +1030,7 @@ code, pre { font-family: var(--font-mono); }
 /* Grid for 2-col form */
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-/* ─── Shadcn overrides (ensure dark everywhere) ─── */
-@layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
-}
+
+/* ─── Base defaults ─── */
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); }
