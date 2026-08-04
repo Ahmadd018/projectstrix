@@ -547,6 +547,18 @@ function ScansContent() {
                   />
                 </div>
 
+                <div className="field">
+                  <label className="field-label">Custom Instructions (Optional)</label>
+                  <textarea
+                    className="field-input"
+                    style={{ minHeight: 60, resize: "vertical" }}
+                    placeholder="e.g. Focus on authentication vulnerabilities, use admin:password123"
+                    value={form.instruction}
+                    onChange={(e) => setForm({ ...form, instruction: e.target.value })}
+                    disabled={launching}
+                  />
+                </div>
+
                 <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
                   <input
                     type="checkbox"
