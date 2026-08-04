@@ -75,11 +75,13 @@ if command -v pm2 &>/dev/null; then
     run sudo pm2 start npm --name strix-dashboard -- start
   fi
 
-  # Restart scheduler if exists
+  # Restart scheduler if exists, otherwise start it
   if pm2 show strix-scheduler &>/dev/null; then
-    info "Restarting existing PM2 process: strix-scheduler"
-    run sudo pm2 restart strix-scheduler
+    info "Recreating existing PM2 process: strix-scheduler (path update)"
+    run sudo pm2 delete strix-scheduler
   fi
+  info "Starting PM2 process: strix-scheduler"
+  run sudo pm2 start $DASH_DIR/scripts/scheduler.js --name strix-scheduler
 
   run sudo pm2 save
   ok "Services restarted ✓"

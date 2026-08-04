@@ -170,6 +170,9 @@ function ScansContent() {
       } catch (e) {}
 
       const payload = { ...form, notificationConfig };
+      if (payload.scheduledAt) {
+        payload.scheduledAt = new Date(payload.scheduledAt).toISOString();
+      }
 
       const res = await fetch("/api/scans", {
         method: "POST",
