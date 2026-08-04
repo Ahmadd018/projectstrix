@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense, useMemo } from "reac
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Play, Trash2, Square, Folder, FolderOpen,
-  Search, Plus, Loader2, Settings2, ChevronDown, ChevronRight
+  Search, Plus, Loader2, Settings2, ChevronDown, ChevronRight, Clock
 } from "lucide-react";
 
 interface Scan {
@@ -19,6 +19,7 @@ interface Scan {
   finishedAt: string | null;
   vulnCount: number;
   period?: "none" | "daily" | "weekly" | "monthly";
+  nextRunAt?: string;
 }
 
 const LLM_MODELS = [
@@ -70,6 +71,20 @@ function timeAgo(iso: string) {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+function timeUntil(iso: string) {
+  if (!iso) return "Unknown";
+  const time = new Date(iso).getTime();
+  if (isNaN(time)) return "Unknown";
+  const diff = time - Date.now();
+  if (diff < 0) return "soon";
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "in < 1m";
+  if (m < 60) return `in ${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `in ${h}h`;
+  return `in ${Math.floor(h / 24)}d`;
 }
 
 function statusLedClass(status: string) {
@@ -477,7 +492,13 @@ function ScansContent() {
                         </div>
                       </div>
                       <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
-                        {new Date(scan.startedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                        <div>{new Date(scan.startedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                        {scan.period && scan.period !== "none" && scan.nextRunAt && (
+                          <div style={{ color: "var(--sev-info)", marginTop: 4, fontWeight: 500, fontSize: 10, display: "flex", alignItems: "center", gap: 3 }}>
+                            <Clock size={10} />
+                            Next: {timeUntil(scan.nextRunAt)}
+                          </div>
+                        )}
                       </div>
                       <div onClick={(e) => e.stopPropagation()}>
                         <select

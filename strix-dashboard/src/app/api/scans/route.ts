@@ -102,13 +102,13 @@ export async function GET() {
     const entries = fs.readdirSync(RUNS_DIR, { withFileTypes: true });
     const dirs = entries.filter((e) => e.isDirectory());
 
-    let recurringMap: Record<string, string> = {};
+    let recurringMap: Record<string, { period: string, nextRunAt: string }> = {};
     const recurringFile = path.join(RUNS_DIR, "recurring.json");
     if (fs.existsSync(recurringFile)) {
       try {
         const recurring = JSON.parse(fs.readFileSync(recurringFile, "utf-8"));
         for (const r of recurring) {
-          recurringMap[r.originalScanId] = r.period;
+          recurringMap[r.originalScanId] = { period: r.period, nextRunAt: r.nextRunAt };
         }
       } catch (e) {}
     }
@@ -150,7 +150,8 @@ export async function GET() {
             startedAt: data.startedAt || new Date().toISOString(),
             ...data, 
             vulnCount,
-            period: recurringMap[scanId] || "none"
+            period: recurringMap[scanId]?.period || "none",
+            nextRunAt: recurringMap[scanId]?.nextRunAt || null
           };
         } catch (e2) {
           log.error(
