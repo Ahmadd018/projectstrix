@@ -20,12 +20,25 @@ interface Scan {
 }
 
 const LLM_MODELS = [
+  // OpenAI
   { value: "openai/gpt-4o", label: "OpenAI GPT-4o" },
   { value: "openai/gpt-4o-mini", label: "OpenAI GPT-4o Mini" },
   { value: "openai/o1-preview", label: "OpenAI o1-Preview" },
+  { value: "openai/gpt-5", label: "OpenAI GPT-5" },
+  // Anthropic
   { value: "anthropic/claude-3-5-sonnet-latest", label: "Anthropic Claude 3.5 Sonnet" },
+  { value: "anthropic/claude-3-5-haiku-latest", label: "Anthropic Claude 3.5 Haiku" },
+  { value: "anthropic/claude-3-opus-latest", label: "Anthropic Claude 3 Opus" },
+  // Google
   { value: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
+  { value: "google/gemini-3-pro", label: "Google Gemini 3 Pro" },
+  // DeepSeek
   { value: "deepseek/deepseek-coder", label: "DeepSeek Coder" },
+  { value: "deepseek/deepseek-v3", label: "DeepSeek v3" },
+  // Local (Ollama)
+  { value: "ollama/llama3.1:70b", label: "Local: Llama 3.1 70B (Ollama)" },
+  { value: "ollama/qwen2.5:72b", label: "Local: Qwen 2.5 72B (Ollama)" },
+  { value: "ollama/deepseek-v3", label: "Local: DeepSeek v3 (Ollama)" },
 ];
 
 const SCAN_MODES = [

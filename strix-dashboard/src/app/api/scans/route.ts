@@ -6,7 +6,9 @@ import path from "path";
 import { registerProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
 
-const RUNS_DIR = path.join(process.cwd(), "strix_runs");
+import os from "os";
+
+const RUNS_DIR = path.join(os.tmpdir(), "strix_runs");
 
 function getStrixCommand(): string {
   if (process.env.STRIX_PATH && fs.existsSync(process.env.STRIX_PATH)) {

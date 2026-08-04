@@ -4,7 +4,9 @@ import path from "path";
 import { getProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
 
-const RUNS_DIR = path.join(process.cwd(), "strix_runs");
+import os from "os";
+
+const RUNS_DIR = path.join(os.tmpdir(), "strix_runs");
 
 function getScanDir(id: string) {
   return path.join(RUNS_DIR, id);

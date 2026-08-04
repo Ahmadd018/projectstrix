@@ -3,7 +3,9 @@ import fs from "fs";
 import path from "path";
 import { log } from "@/lib/logger";
 
-const RUNS_DIR = path.join(process.cwd(), "strix_runs");
+import os from "os";
+
+const RUNS_DIR = path.join(os.tmpdir(), "strix_runs");
 
 export const dynamic = "force-dynamic";
 
