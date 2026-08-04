@@ -65,6 +65,9 @@ function ScansContent() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "finished">("all");
+  const [filterMode, setFilterMode] = useState("all");
+  const [filterModel, setFilterModel] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const [form, setForm] = useState({
@@ -100,9 +103,14 @@ function ScansContent() {
   }, [searchParams]);
 
   const filteredScans = scans.filter((scan) => {
-    if (filter === "all") return true;
-    const isFinished = ["completed", "failed", "stopped"].includes(scan.status);
-    return filter === "active" ? !isFinished : isFinished;
+    if (filter !== "all") {
+      const isFinished = ["completed", "failed", "stopped"].includes(scan.status);
+      if (filter === "active" && isFinished) return false;
+      if (filter === "finished" && !isFinished) return false;
+    }
+    if (filterMode !== "all" && scan.scanMode !== filterMode) return false;
+    if (filterModel !== "all" && scan.llmModel !== filterModel) return false;
+    return true;
   });
 
   const groupedScans = useMemo(() => {
@@ -187,7 +195,7 @@ function ScansContent() {
       {/* Main card */}
       <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
         {/* Filter bar */}
-        <div className="scan-filter-bar">
+        <div className="scan-filter-bar" style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <div className="filter-tabs">
             {(["all", "active", "finished"] as const).map((t) => (
               <button key={t} className={`filter-tab${filter === t ? " active" : ""}`} onClick={() => setFilter(t)}>
@@ -195,6 +203,50 @@ function ScansContent() {
               </button>
             ))}
           </div>
+
+          <div style={{ position: "relative" }}>
+            <button 
+              className={`btn-secondary ${showFilters ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: "0 12px", background: showFilters || filterMode !== "all" || filterModel !== "all" ? "var(--bg-3)" : "transparent", border: "1px solid var(--border)", borderRadius: "var(--r)", fontSize: 13, color: "var(--fg-2)", cursor: "pointer" }}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Settings2 size={14} /> Filters
+              {(filterMode !== "all" || filterModel !== "all") && (
+                <span style={{ width: 6, height: 6, background: "var(--fg)", borderRadius: "50%" }} />
+              )}
+            </button>
+            
+            {showFilters && (
+              <>
+                <div style={{ position: "fixed", inset: 0, zIndex: 90 }} onClick={() => setShowFilters(false)} />
+                <div className="glass-panel animate-fade-in" style={{ position: "absolute", top: "110%", left: 0, width: 260, zIndex: 100, padding: 16, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--fg-3)", textTransform: "uppercase", marginBottom: 6 }}>Scan Mode</label>
+                    <select value={filterMode} onChange={e => setFilterMode(e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13 }}>
+                      <option value="all">All Modes</option>
+                      {SCAN_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--fg-3)", textTransform: "uppercase", marginBottom: 6 }}>LLM Model</label>
+                    <select value={filterModel} onChange={e => setFilterModel(e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13 }}>
+                      <option value="all">All Models</option>
+                      {LLM_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
+                  {(filterMode !== "all" || filterModel !== "all") && (
+                    <button 
+                      onClick={() => { setFilterMode("all"); setFilterModel("all"); }}
+                      style={{ background: "none", border: "none", color: "var(--fg-3)", fontSize: 12, cursor: "pointer", textAlign: "left", padding: 0 }}
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           <span style={{ fontSize: 12, color: "var(--fg-3)", marginLeft: "auto" }}>
             {filteredScans.length} scan{filteredScans.length !== 1 ? "s" : ""}
           </span>
@@ -203,7 +255,7 @@ function ScansContent() {
         {/* Table header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "2fr 1fr 1.5fr 1fr 60px 80px",
+          gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 60px 80px",
           gap: 12,
           padding: "10px 20px",
           borderBottom: "1px solid var(--border)",
@@ -221,6 +273,7 @@ function ScansContent() {
           <div>Mode</div>
           <div>Model</div>
           <div>Status</div>
+          <div>Date</div>
           <div>Vulns</div>
           <div></div>
         </div>
@@ -277,7 +330,7 @@ function ScansContent() {
                       onClick={() => router.push(`/scans/${scan.id}`)}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "2fr 1fr 1.5fr 1fr 60px 80px",
+                        gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 60px 80px",
                         gap: 12,
                         padding: "12px 20px",
                         borderBottom: "1px solid var(--border)",
@@ -303,6 +356,9 @@ function ScansContent() {
                           <span className={statusLedClass(scan.status)} />
                           <span style={{ fontSize: 11, textTransform: "capitalize", letterSpacing: "0.3px" }}>{scan.status}</span>
                         </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
+                        {new Date(scan.startedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
                       <div>
                         {scan.vulnCount > 0 ? (
