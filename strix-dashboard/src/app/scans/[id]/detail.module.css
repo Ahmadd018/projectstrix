@@ -224,14 +224,20 @@
 }
 
 .statCard {
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  text-align: center;
 }
 
 .statLabel {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -239,7 +245,7 @@
 }
 
 .statValue {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-family: var(--font-heading);
   font-weight: 700;
   line-height: 1;
@@ -286,6 +292,9 @@
   padding: 24px;
   display: flex;
   flex-direction: column;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
 }
 
 .cardTitle {
@@ -328,18 +337,10 @@
   transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.bgCritical {
-  background: var(--accent-danger);
-}
-.bgHigh {
-  background: var(--accent-warning);
-}
-.bgMedium {
-  background: var(--accent-info);
-}
-.bgLow {
-  background: var(--accent-primary);
-}
+.bgCritical { background: var(--sev-critical); }
+.bgHigh { background: var(--sev-high); }
+.bgMedium { background: var(--sev-medium); }
+.bgLow { background: var(--sev-low); }
 
 .distCount {
   width: 24px;
