@@ -57,7 +57,8 @@ export default function ScanFindings({ vulns }: { vulns: Vulnerability[] }) {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
