@@ -606,10 +606,10 @@ function ScansContent() {
 
       {/* Delete Confirmation Modal */}
       {scanToDelete && (
-        <div className="modal-backdrop animate-fade-in" onClick={() => setScanToDelete(null)}>
-          <div className="modal-content animate-slide-up" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+        <div className="modal-overlay" onClick={() => setScanToDelete(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
             <div className="modal-header">
-              <h2 className="modal-title" style={{ color: "var(--sev-critical)" }}>Delete Scan</h2>
+              <div className="modal-title" style={{ color: "var(--sev-critical)" }}>Delete Scan</div>
             </div>
             <div className="modal-body" style={{ color: "var(--fg-2)" }}>
               Are you sure you want to permanently delete this scan? All associated data and vulnerabilities will be removed from the system. This action cannot be undone.
