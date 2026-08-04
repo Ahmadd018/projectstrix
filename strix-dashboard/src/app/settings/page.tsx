@@ -29,7 +29,7 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const s: Record<string, React.CSSProperties> = {
+  const s: any = {
     page: { padding: 28, display: "flex", flexDirection: "column", gap: 24, height: "100%", overflowY: "auto" },
     layout: { display: "flex", gap: 20, flex: 1 },
     nav: { width: 200, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 },
