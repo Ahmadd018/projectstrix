@@ -67,6 +67,7 @@ function statusLedClass(status: string) {
   if (isActive) return "status-led running";
   if (status === "completed") return "status-led completed";
   if (status === "failed") return "status-led failed";
+  if (status === "scheduled") return "status-led running";
   return "status-led stopped";
 }
 
@@ -425,8 +426,10 @@ function ScansContent() {
                       </div>
                       <div>
                         <div className="status-badge">
-                          <span className={statusLedClass(scan.status)} />
-                          <span style={{ fontSize: 11, textTransform: "capitalize", letterSpacing: "0.3px" }}>{scan.status}</span>
+                          <span className={statusLedClass(scan.period && scan.period !== "none" && !["running", "crawling", "scanning", "analyzing"].includes(scan.status) ? "scheduled" : scan.status)} />
+                          <span style={{ fontSize: 11, textTransform: "capitalize", letterSpacing: "0.3px" }}>
+                            {scan.period && scan.period !== "none" && !["running", "crawling", "scanning", "analyzing"].includes(scan.status) ? "scheduled" : scan.status}
+                          </span>
                         </div>
                       </div>
                       <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
