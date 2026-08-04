@@ -133,10 +133,18 @@ function ScansContent() {
     if (!form.apiKey.trim() && !form.simulationMode) return setError("LLM API Key is required");
     setLaunching(true);
     try {
+      let notificationConfig = null;
+      try {
+        const savedNotifs = localStorage.getItem("strix_notification_config");
+        if (savedNotifs) notificationConfig = JSON.parse(savedNotifs);
+      } catch (e) {}
+
+      const payload = { ...form, notificationConfig };
+
       const res = await fetch("/api/scans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to start scan");

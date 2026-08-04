@@ -42,6 +42,57 @@ function ensureRunsDir() {
   }
 }
 
+async function sendWebhookNotification(config: any, event: "start" | "finish", scanMeta: any, vulnCount: number = 0) {
+  if (!config || !config.webhookUrl) return;
+  
+  if (event === "start" && !config.notifyOnStart) return;
+  if (event === "finish" && !config.notifyOnFinish) return;
+
+  let message = "";
+  let color = "#36a64f"; // default green
+
+  if (event === "start") {
+    message = `🚀 *Scan Started*\n*Target:* ${scanMeta.target}\n*Mode:* ${scanMeta.scanMode}\n*Model:* ${scanMeta.llmModel}\n*ID:* ${scanMeta.id}`;
+    color = "#3498db";
+  } else {
+    message = `🏁 *Scan Finished*\n*Target:* ${scanMeta.target}\n*Status:* ${scanMeta.status}\n*Vulnerabilities Found:* ${vulnCount}\n*ID:* ${scanMeta.id}`;
+    color = scanMeta.status === "failed" ? "#e74c3c" : vulnCount > 0 ? "#f39c12" : "#2ecc71";
+  }
+
+  const payload = {
+    text: message, // For basic Slack/Discord compatibility
+    attachments: [
+      {
+        color: color,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: message
+            }
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    const res = await fetch(config.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      log.warn("WEBHOOK", `Failed to send webhook: ${res.status} ${res.statusText}`);
+    } else {
+      log.info("WEBHOOK", `Successfully sent ${event} notification to webhook`);
+    }
+  } catch (err: any) {
+    log.error("WEBHOOK", `Error sending webhook`, err);
+  }
+}
+
 // GET /api/scans — list all scans
 export async function GET() {
   log.debug("GET /api/scans", "Listing all scans", { runsDir: RUNS_DIR });
@@ -208,6 +259,9 @@ export async function POST(req: NextRequest) {
   fs.writeFileSync(vulnFile, JSON.stringify([], null, 2));
   log.info("POST /api/scans", `Scan created`, { scanId, scanDir });
 
+  // Send start notification
+  sendWebhookNotification(body.notificationConfig, "start", runMeta);
+
   const strixCmd = getStrixCommand();
   const args = ["-n"]; // non-interactive by default
   
@@ -247,7 +301,7 @@ export async function POST(req: NextRequest) {
 
   if (body.simulationMode) {
     log.info("POST /api/scans", "Simulation Mode enabled, bypassing real agent");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
     return NextResponse.json({ scanId, status: "running", mode: "simulation" });
   }
 
@@ -262,7 +316,7 @@ export async function POST(req: NextRequest) {
       err,
     );
     log.warn("POST /api/scans", "Falling back to DEMO mode");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
     return NextResponse.json({ scanId, status: "running", mode: "demo" });
   }
 
@@ -331,6 +385,17 @@ export async function POST(req: NextRequest) {
     updated.finishedAt = new Date().toISOString();
     updated.exitCode = code;
     fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
+    
+    // Read vulns for notification
+    let vulnCount = 0;
+    try {
+      const vulns = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
+      vulnCount = Array.isArray(vulns) ? vulns.length : 0;
+    } catch {}
+    
+    // Send finish notification
+    sendWebhookNotification(body.notificationConfig, "finish", updated, vulnCount);
+    
     log.info("PROC_CLOSE", `Scan ${scanId.slice(0, 8)} finished`, {
       exitCode: code,
       status: updated.status,
@@ -352,7 +417,7 @@ export async function POST(req: NextRequest) {
     updated.finishedAt = new Date().toISOString();
     fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
     log.warn("PROC_ERROR", "Falling back to DEMO mode after process error");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
   });
 
   return NextResponse.json({ scanId, status: "running" });
@@ -418,6 +483,7 @@ function runMockScan(
   vulnFile: string,
   logFile: string,
   target: string,
+  notificationConfig?: any
 ) {
   log.info("MOCK_SCAN", `Starting mock scan for ${target}`, {
     scanId: scanId.slice(0, 8),
@@ -555,6 +621,10 @@ function runMockScan(
       updated.finishedAt = new Date().toISOString();
       updated.exitCode = 0;
       fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
+      
+      // Send finish notification for mock
+      sendWebhookNotification(notificationConfig, "finish", updated, mockVulns.length);
+      
       log.info("MOCK_SCAN", `Mock scan ${scanId.slice(0, 8)} completed`, {
         totalVulns: mockVulns.length,
       });

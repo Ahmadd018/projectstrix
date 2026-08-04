@@ -13,6 +13,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("api");
   const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "" });
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
+  const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -20,11 +21,14 @@ export default function Settings() {
     if (savedKeys) setKeys(JSON.parse(savedKeys));
     const savedConfig = localStorage.getItem("strix_agent_config");
     if (savedConfig) setAgentConfig(JSON.parse(savedConfig));
+    const savedNotifs = localStorage.getItem("strix_notification_config");
+    if (savedNotifs) setNotificationConfig(JSON.parse(savedNotifs));
   }, []);
 
-  const handleSave = (tab: "api" | "agent") => {
+  const handleSave = (tab: "api" | "agent" | "notifications") => {
     if (tab === "api") localStorage.setItem("strix_api_keys", JSON.stringify(keys));
-    else localStorage.setItem("strix_agent_config", JSON.stringify(agentConfig));
+    else if (tab === "agent") localStorage.setItem("strix_agent_config", JSON.stringify(agentConfig));
+    else if (tab === "notifications") localStorage.setItem("strix_notification_config", JSON.stringify(notificationConfig));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -181,12 +185,60 @@ export default function Settings() {
           {/* Notifications */}
           {activeTab === "notifications" && (
             <div style={s.card}>
-              <div style={{ ...s.cardBody as React.CSSProperties, alignItems: "center", justifyContent: "center", padding: "60px 24px", minHeight: 300 }}>
-                <BellRing size={40} style={{ opacity: 0.12, marginBottom: 16 }} />
-                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", marginBottom: 6 }}>Integrations Coming Soon</div>
-                <div style={{ fontSize: 13, color: "var(--fg-3)", textAlign: "center", maxWidth: 280 }}>
-                  Slack, Microsoft Teams, and Webhook integrations are on the roadmap.
+              <div style={s.cardHead}>
+                <div style={s.cardTitle}>Webhook Notifications</div>
+                <div style={s.cardDesc}>Configure webhook URLs to receive scan updates in Slack, Discord, or other services.</div>
+              </div>
+              <div style={s.cardBody}>
+                <div style={s.field}>
+                  <label style={s.label}>Webhook URL</label>
+                  <input
+                    style={s.input}
+                    type="url"
+                    placeholder="https://hooks.slack.com/... or Discord webhook"
+                    value={notificationConfig.webhookUrl}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, webhookUrl: e.target.value })}
+                  />
+                  <span style={s.hint}>Standard JSON payload is sent via POST. For Discord, append /slack to the webhook URL.</span>
                 </div>
+                
+                <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
+                  <input
+                    type="checkbox"
+                    id="notifyStart"
+                    checked={notificationConfig.notifyOnStart}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, notifyOnStart: e.target.checked })}
+                    style={{ width: 16, height: 16, accentColor: "var(--fg)", cursor: "pointer" }}
+                  />
+                  <div>
+                    <label htmlFor="notifyStart" style={{ ...s.label, marginBottom: 2, cursor: "pointer" }}>Notify on Scan Start</label>
+                    <div style={s.hint}>Sends an alert when a scan begins execution.</div>
+                  </div>
+                </div>
+
+                <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
+                  <input
+                    type="checkbox"
+                    id="notifyFinish"
+                    checked={notificationConfig.notifyOnFinish}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, notifyOnFinish: e.target.checked })}
+                    style={{ width: 16, height: 16, accentColor: "var(--fg)", cursor: "pointer" }}
+                  />
+                  <div>
+                    <label htmlFor="notifyFinish" style={{ ...s.label, marginBottom: 2, cursor: "pointer" }}>Notify on Scan Finish</label>
+                    <div style={s.hint}>Sends an alert containing vulnerability counts and final status when a scan completes.</div>
+                  </div>
+                </div>
+              </div>
+              <div style={s.cardFoot}>
+                {saved && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
+                    <CheckCircle2 size={13} /> Saved
+                  </div>
+                )}
+                <button className="btn-primary" onClick={() => handleSave("notifications")}>
+                  <Save size={13} /> Save Configuration
+                </button>
               </div>
             </div>
           )}
