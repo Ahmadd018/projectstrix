@@ -66,14 +66,13 @@ fi
 echo -e "\n${BOLD}${CYAN}══════ 3/3 Restart Services ══════${NC}"
 
 if command -v pm2 &>/dev/null; then
-  # Restart dashboard if already running, else start it
+  # Restart dashboard on port 80
   if pm2 show strix-dashboard &>/dev/null; then
-    info "Restarting existing PM2 process: strix-dashboard"
-    run sudo pm2 restart strix-dashboard
-  else
-    info "Starting PM2 process: strix-dashboard on default port (3000)"
-    run sudo pm2 start npm --name strix-dashboard -- start
+    info "Recreating existing PM2 process: strix-dashboard"
+    run sudo pm2 delete strix-dashboard
   fi
+  info "Starting PM2 process: strix-dashboard on port 80"
+  run sudo pm2 start npm --name strix-dashboard -- run start -- -p 80
 
   # Restart scheduler if exists, otherwise start it
   if pm2 show strix-scheduler &>/dev/null; then

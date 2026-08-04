@@ -27,7 +27,7 @@ function checkScheduledScans() {
         // Inject the pre-generated scanId
         scan.body.preGeneratedScanId = scan.scanId;
         
-        fetch('http://127.0.0.1:3000/api/scans', {
+        fetch('http://127.0.0.1:80/api/scans', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(scan.body)

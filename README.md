@@ -45,7 +45,7 @@ npm run dev
 bash setup_and_run.sh --start
 ```
 
-The dashboard will be available at **`http://localhost:3000`**.
+The dashboard will be available at **`http://localhost`** (port 80).
 
 ---
 
