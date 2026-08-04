@@ -6,9 +6,9 @@ const os = require('os');
 const RUNS_DIR = path.join(os.tmpdir(), "strix_runs");
 const SCHEDULED_FILE = path.join(RUNS_DIR, "scheduled.json");
 
-console.log(`[Scheduler] Starting cron loop. Checking ${SCHEDULED_FILE} every 60s`);
+console.log(`[Scheduler] Starting cron loop. Checking ${SCHEDULED_FILE} every 10s`);
 
-setInterval(() => {
+function checkScheduledScans() {
   if (!fs.existsSync(SCHEDULED_FILE)) return;
   
   try {
@@ -27,7 +27,7 @@ setInterval(() => {
         // Inject the pre-generated scanId
         scan.body.preGeneratedScanId = scan.scanId;
         
-        fetch('http://localhost:3000/api/scans', {
+        fetch('http://127.0.0.1:3000/api/scans', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(scan.body)
@@ -49,4 +49,9 @@ setInterval(() => {
   } catch (err) {
     console.error("[Scheduler] Error parsing scheduled.json:", err.message);
   }
-}, 60000);
+}
+
+// Run immediately on start
+checkScheduledScans();
+// Then run every 10 seconds
+setInterval(checkScheduledScans, 10000);
