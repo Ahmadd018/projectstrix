@@ -458,17 +458,35 @@ function ScansContent() {
                 <div className="field-grid">
                   <div className="field">
                     <label className="field-label">Project Group</label>
-                    <input
-                      className="field-input"
-                      list="groups"
-                      placeholder="Auto-detected"
-                      value={form.projectName}
-                      onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+                    <select
+                      className="field-select"
+                      value={Object.keys(groupedScans).includes(form.projectName) ? form.projectName : (form.projectName ? "custom" : "")}
+                      onChange={(e) => {
+                        if (e.target.value === "custom") {
+                          setForm({ ...form, projectName: "New Project" });
+                        } else {
+                          setForm({ ...form, projectName: e.target.value });
+                        }
+                      }}
                       disabled={launching}
-                    />
-                    <datalist id="groups">
-                      {Object.keys(groupedScans).map((g) => <option key={g} value={g} />)}
-                    </datalist>
+                    >
+                      <option value="">Auto-detected / Default</option>
+                      {Object.keys(groupedScans).map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                      <option value="custom">+ Custom Project...</option>
+                    </select>
+                    {!Object.keys(groupedScans).includes(form.projectName) && form.projectName !== "" && (
+                      <input
+                        style={{ marginTop: 8 }}
+                        className="field-input animate-fade-in"
+                        placeholder="Enter project name"
+                        value={form.projectName}
+                        onChange={(e) => setForm({ ...form, projectName: e.target.value })}
+                        disabled={launching}
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
 
