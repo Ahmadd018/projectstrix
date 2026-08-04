@@ -63,5 +63,9 @@ strix --target https://example.com --scan-mode standard
 
 * `strix/` — Core Python-based AI agent pentesting framework & CLI.
 * `strix-dashboard/` — Modern Next.js web application dashboard.
+  * `strix-dashboard/scripts/` — Auxiliary background scripts (e.g., `scheduler.js`).
+* `docs/` — Documentation and examples (e.g., sample report outputs).
 * `setup_and_run.sh` — Automatic setup script for cloned repositories.
 * `package.json` — Root scripts for building and launching.
+
+> **Note on Background Services**: The Strix deployment utilizes PM2 to keep both the Next.js dashboard (`strix-dashboard`) and the scheduled scans process (`strix-scheduler`) running in the background continuously.

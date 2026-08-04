@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const RUNS_DIR = path.join(__dirname, "strix_runs");
+const RUNS_DIR = path.join(__dirname, "..", "strix_runs");
 const SCHEDULED_FILE = path.join(RUNS_DIR, "scheduled.json");
 
 console.log(`[Scheduler] Starting cron loop. Checking ${SCHEDULED_FILE} every 60s`);
