@@ -224,12 +224,12 @@
 }
 
 .statCard {
-  padding: 20px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -289,7 +289,7 @@
 }
 
 .card {
-  padding: 24px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
   background: var(--bg-1);
@@ -314,12 +314,12 @@
 .distRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .distLabel {
-  width: 60px;
-  font-size: 0.85rem;
+  width: 80px;
+  font-size: 0.9rem;
   color: var(--text-secondary);
 }
 
