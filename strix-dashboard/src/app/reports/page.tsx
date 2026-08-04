@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, X, Search, FileSpreadsheet } from "lucide-react";
+import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, X, Search, FileSpreadsheet, Loader2, FileJson, FileCode, Code, File } from "lucide-react";
+import { fetchScanDetails, generateJSON, generateCSV, generateMarkdown, generateHTML, generatePDF } from "@/lib/reportGenerator";
 
 interface Scan {
   id: string;
@@ -35,35 +36,24 @@ export default function Reports() {
     return targetMatch || projectMatch || (!s.projectName && defaultProjectMatch);
   });
 
-  const handleDownloadJSON = () => {
-    if (!selectedScan) return;
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedScan, null, 2));
-    const a = document.createElement("a");
-    a.setAttribute("href", dataStr);
-    a.setAttribute("download", `report-${selectedScan.id}.json`);
-    a.click();
-  };
+  const [generating, setGenerating] = useState(false);
 
-  const handleDownloadCSV = () => {
+  const handleDownload = async (format: "json" | "csv" | "md" | "html" | "pdf") => {
     if (!selectedScan) return;
-    const headers = ["Project", "Target", "Date", "Status", "Total Issues", "Scan ID"];
-    const row = [
-      selectedScan.projectName || "Default",
-      selectedScan.target,
-      new Date(selectedScan.startedAt).toLocaleDateString(),
-      selectedScan.status,
-      selectedScan.vulnCount.toString(),
-      selectedScan.id
-    ];
+    setGenerating(true);
+    const details = await fetchScanDetails(selectedScan.id);
+    setGenerating(false);
     
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + row.map(v => `"${v}"`).join(",");
-      
-    const a = document.createElement("a");
-    a.setAttribute("href", encodeURI(csvContent));
-    a.setAttribute("download", `report-${selectedScan.id}.csv`);
-    a.click();
+    if (!details) {
+      alert("Failed to fetch scan details for report generation.");
+      return;
+    }
+
+    if (format === "json") generateJSON(details);
+    else if (format === "csv") generateCSV(details);
+    else if (format === "md") generateMarkdown(details);
+    else if (format === "html") generateHTML(details);
+    else if (format === "pdf") generatePDF(details);
   };
 
   return (
@@ -220,12 +210,26 @@ export default function Reports() {
               </div>
             </div>
 
-            <div className="modal-footer" style={{ gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn-ghost" onClick={handleDownloadJSON}>
-                <Download size={13} /> JSON
+            <div className="modal-footer" style={{ gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              {generating && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-3)", marginRight: "auto" }}>
+                  <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> Generating...
+                </div>
+              )}
+              <button className="btn-ghost" onClick={() => handleDownload("json")} disabled={generating}>
+                <FileJson size={13} /> JSON
               </button>
-              <button className="btn-primary" onClick={handleDownloadCSV} style={{ gap: 6 }}>
-                <FileSpreadsheet size={13} /> Export CSV
+              <button className="btn-ghost" onClick={() => handleDownload("csv")} disabled={generating}>
+                <FileSpreadsheet size={13} /> CSV
+              </button>
+              <button className="btn-ghost" onClick={() => handleDownload("md")} disabled={generating}>
+                <FileCode size={13} /> Markdown
+              </button>
+              <button className="btn-ghost" onClick={() => handleDownload("html")} disabled={generating}>
+                <Code size={13} /> HTML
+              </button>
+              <button className="btn-primary" onClick={() => handleDownload("pdf")} disabled={generating} style={{ gap: 6 }}>
+                <File size={13} /> Export PDF
               </button>
             </div>
           </div>
