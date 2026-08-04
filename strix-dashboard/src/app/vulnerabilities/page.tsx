@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2 } from "lucide-react";
+import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2 } from "lucide-react";
 
 interface Vulnerability {
   id: string;
@@ -39,7 +39,11 @@ export default function VulnerabilitiesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof SEVERITIES)[number]>("all");
   const [search, setSearch] = useState("");
+  const [filterProject, setFilterProject] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<VulnWithScan | null>(null);
+
+  const projects = Array.from(new Set(allVulns.map(v => v.scanTarget)));
 
   const fetchAll = useCallback(async () => {
     try {
@@ -69,6 +73,7 @@ export default function VulnerabilitiesPage() {
 
   const filtered = allVulns.filter((v) => {
     if (filter !== "all" && v.severity !== filter) return false;
+    if (filterProject !== "all" && v.scanTarget !== filterProject) return false;
     if (
       search &&
       !v.title.toLowerCase().includes(search.toLowerCase()) &&
@@ -144,14 +149,52 @@ export default function VulnerabilitiesPage() {
         <div className="card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {/* Filters */}
           <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
-            <div className="search-input-wrap" style={{ maxWidth: "100%" }}>
-              <Search size={13} className="search-input-icon" />
-              <input
-                className="search-input"
-                placeholder="Search by title, endpoint, target…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div className="search-input-wrap" style={{ flex: 1, maxWidth: "100%" }}>
+                <Search size={13} className="search-input-icon" />
+                <input
+                  className="search-input"
+                  placeholder="Search by title, endpoint, target…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div style={{ position: "relative" }}>
+                <button 
+                  className={`btn-secondary ${showFilters ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: "0 12px", background: showFilters || filterProject !== "all" ? "var(--bg-3)" : "transparent", border: "1px solid var(--border)", borderRadius: "var(--r)", fontSize: 13, color: "var(--fg-2)", cursor: "pointer" }}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Settings2 size={14} /> Filters
+                  {filterProject !== "all" && (
+                    <span style={{ width: 6, height: 6, background: "var(--fg)", borderRadius: "50%" }} />
+                  )}
+                </button>
+                
+                {showFilters && (
+                  <>
+                    <div style={{ position: "fixed", inset: 0, zIndex: 90 }} onClick={() => setShowFilters(false)} />
+                    <div className="glass-panel animate-fade-in" style={{ position: "absolute", top: "110%", right: 0, width: 260, zIndex: 100, padding: 16, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--fg-3)", textTransform: "uppercase", marginBottom: 6 }}>Target Project</label>
+                        <select value={filterProject} onChange={e => setFilterProject(e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13 }}>
+                          <option value="all">All Projects</option>
+                          {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      {filterProject !== "all" && (
+                        <button 
+                          onClick={() => setFilterProject("all")}
+                          style={{ background: "none", border: "none", color: "var(--fg-3)", fontSize: 12, cursor: "pointer", textAlign: "left", padding: 0 }}
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               {SEVERITIES.map((s) => (
