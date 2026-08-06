@@ -14,27 +14,13 @@ async function triggerScan(scan) {
     delete payload.scheduledAt;
     payload.preGeneratedScanId = scan.id; // Tell API to use the existing scan ID
     
-    // Fetch the user to impersonate them
-    const user = await prisma.user.findUnique({ where: { id: scan.userId }});
-    if (!user) {
-       console.error(`[Scheduler] Cannot run scan ${scan.id}: User not found`);
-       return;
-    }
-
-    // Create a temporary JWT for this user
-    const token = await new SignJWT({ userId: user.id, username: user.username, role: user.role })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("1h")
-      .sign(encodedKey);
-
-    console.log(`[Scheduler] Triggering API for scan ${scan.id} (User: ${user.username})`);
+    console.log(`[Scheduler] Triggering API for scan ${scan.id} (User: ${scan.userId})`);
     
     const res = await fetch('http://127.0.0.1:80/api/scans', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Cookie': `strix_session=${token}`
+        'x-scheduler-secret': 'internal_scheduler_secret'
       },
       body: JSON.stringify(payload)
     });
