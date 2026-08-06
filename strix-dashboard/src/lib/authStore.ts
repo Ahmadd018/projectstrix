@@ -12,7 +12,7 @@ export interface User {
 
 export async function findUserByUsername(username: string): Promise<User | null> {
   const user = await prisma.user.findUnique({
-    where: { username: username.toLowerCase() }
+    where: { username: username }
   });
   return user;
 }
@@ -23,15 +23,17 @@ export async function createUser(username: string, passwordPlain: string): Promi
     throw new Error("Username already exists");
   }
 
+  if (username.toLowerCase() === "admin" && username !== "admin") {
+    throw new Error("Variations of 'admin' are not allowed");
+  }
+
   const passwordHash = await bcrypt.hash(passwordPlain, 10);
   
-  // First user created becomes ADMIN, others are USER
-  const userCount = await prisma.user.count();
-  const role = userCount === 0 ? "ADMIN" : "USER";
+  const role = (username === "admin") ? "ADMIN" : "USER";
 
   const newUser = await prisma.user.create({
     data: {
-      username: username.toLowerCase(),
+      username: username,
       passwordHash,
       role,
     }

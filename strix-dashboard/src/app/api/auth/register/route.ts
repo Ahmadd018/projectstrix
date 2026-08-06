@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
     if (err.message === "Username already exists") {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
+    if (err.message === "Variations of 'admin' are not allowed") {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
