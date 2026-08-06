@@ -99,7 +99,7 @@ function statusLedClass(status: string) {
   if (isActive) return "status-led running";
   if (status === "completed") return "status-led completed";
   if (status === "failed") return "status-led failed";
-  if (status === "scheduled") return "status-led running";
+  if (status === "scheduled") return "status-led scheduled";
   return "status-led stopped";
 }
 
@@ -177,11 +177,16 @@ function ScansContent() {
       });
   }
 
+  // Adaptive polling: 2s when scans are active, 8s when idle
   useEffect(() => {
     fetchScans();
-    const iv = setInterval(fetchScans, 2000);
-    return () => clearInterval(iv);
-  }, []);
+    const hasActive = scans.some(s =>
+      ["running", "crawling", "scanning", "analyzing"].includes(s.status)
+    );
+    const interval = setInterval(fetchScans, hasActive ? 2000 : 8000);
+    return () => clearInterval(interval);
+  }, [scans.some(s => ["running", "crawling", "scanning", "analyzing"].includes(s.status))]);
+
 
   useEffect(() => {
     try {
@@ -498,9 +503,9 @@ function ScansContent() {
                       </div>
                       <div>
                         <div className="status-badge">
-                          <span className={statusLedClass(scan.period && scan.period !== "none" && !["running", "crawling", "scanning", "analyzing"].includes(scan.status) ? "scheduled" : scan.status)} />
+                          <span className={statusLedClass(scan.status)} />
                           <span style={{ fontSize: 11, textTransform: "capitalize", letterSpacing: "0.3px" }}>
-                            {scan.period && scan.period !== "none" && !["running", "crawling", "scanning", "analyzing"].includes(scan.status) ? "scheduled" : scan.status}
+                            {scan.status}
                           </span>
                         </div>
                       </div>

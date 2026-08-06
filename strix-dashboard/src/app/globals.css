@@ -746,10 +746,16 @@ code, pre { font-family: var(--font-mono); }
   flex-shrink: 0;
 }
 
-.status-led.running   { background: var(--status-running); box-shadow: 0 0 6px rgba(74,222,128,0.6); }
+.status-led.running   { background: var(--status-running); box-shadow: 0 0 6px rgba(74,222,128,0.6); animation: led-pulse 1.4s ease-in-out infinite; }
 .status-led.completed { background: var(--status-completed); }
 .status-led.failed    { background: var(--status-failed); }
 .status-led.stopped   { background: var(--status-stopped); }
+.status-led.scheduled { background: #a855f7; box-shadow: 0 0 5px rgba(168,85,247,0.5); }
+
+@keyframes led-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(74,222,128,0.4); }
+  50%       { box-shadow: 0 0 10px rgba(74,222,128,0.9); }
+}
 
 /* Empty state */
 .empty-state {

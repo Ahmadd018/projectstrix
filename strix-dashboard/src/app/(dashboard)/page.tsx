@@ -68,7 +68,8 @@ export default function Dashboard() {
   const [recentVulns, setRecentVulns] = useState<Vuln[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
+  // Fetch scan list + vulnerability details
+  const fetchData = useCallback(async (includeVulns = true) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
@@ -78,20 +79,23 @@ export default function Dashboard() {
       const scanList: Scan[] = data.scans ?? [];
       setScans(scanList);
 
-      const vulns: Vuln[] = [];
-      for (const scan of scanList.slice(0, 3)) {
-        try {
-          const detail = await fetch(`/api/scans/${scan.id}`).then((r) => r.json());
-          for (const v of detail.vulnerabilities ?? []) {
-            vulns.push({ ...v, scanTarget: scan.target, scanId: scan.id });
-          }
-        } catch {}
+      // Only fetch individual vuln details on initial load or explicit refresh
+      if (includeVulns) {
+        const vulns: Vuln[] = [];
+        for (const scan of scanList.slice(0, 3)) {
+          try {
+            const detail = await fetch(`/api/scans/${scan.id}`).then((r) => r.json());
+            for (const v of detail.vulnerabilities ?? []) {
+              vulns.push({ ...v, scanTarget: scan.target, scanId: scan.id });
+            }
+          } catch {}
+        }
+        vulns.sort((a, b) => {
+          const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+          return order[a.severity] - order[b.severity];
+        });
+        setRecentVulns(vulns.slice(0, 6));
       }
-      vulns.sort((a, b) => {
-        const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-        return order[a.severity] - order[b.severity];
-      });
-      setRecentVulns(vulns.slice(0, 6));
     } catch {
       clearTimeout(timeout);
     } finally {
@@ -100,10 +104,13 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
+    // Initial load: fetch everything including vuln details
+    fetchData(true);
+    // Periodic poll: only refresh scan statuses (no per-scan detail fetches)
+    const interval = setInterval(() => fetchData(false), 8000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
 
   const totalVulns = scans.reduce((s, sc) => s + sc.vulnCount, 0);
   const criticalVulns = recentVulns.filter((v) => v.severity === "critical").length;
