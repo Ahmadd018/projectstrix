@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, User, ShieldPlus } from "lucide-react";
+import { Loader2, Lock, User } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -65,7 +65,7 @@ export default function RegisterPage() {
           color: "var(--sev-high)",
           boxShadow: "0 8px 16px rgba(255,124,31,0.1)"
         }}>
-          <ShieldPlus size={28} />
+          <User size={28} strokeWidth={2.5} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Create Account</h1>

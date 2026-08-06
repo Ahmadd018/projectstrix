@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, User, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -65,7 +65,7 @@ export default function LoginPage() {
           color: "var(--sev-low)",
           boxShadow: "0 8px 16px rgba(74,222,128,0.1)"
         }}>
-          <ShieldCheck size={28} />
+          <User size={28} strokeWidth={2.5} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Welcome to Strix</h1>
