@@ -1,6 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
 const { SignJWT } = require('jose');
-const prisma = new PrismaClient();
+
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const secretKey = process.env.JWT_SECRET || "strix-super-secret-key-change-in-prod";
 const encodedKey = new TextEncoder().encode(secretKey);

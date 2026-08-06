@@ -193,7 +193,17 @@ export async function POST(req: NextRequest) {
     apiKey: apiKey ? "(provided)" : "(MISSING)",
   });
 
-  const session = await getSession();
+  const schedulerKey = req.headers.get('x-scheduler-secret');
+  let session = null;
+  let isScheduler = false;
+
+  if (schedulerKey === "internal_scheduler_secret") {
+    isScheduler = true;
+    session = { userId: "scheduler", role: "ADMIN" };
+  } else {
+    session = await getSession();
+  }
+
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!target && !targetList) {
@@ -225,6 +235,16 @@ export async function POST(req: NextRequest) {
            payload: isScheduled ? (body as any) : null,
          }
        });
+    } else if (isScheduler) {
+      // If triggered by scheduler, we don't want to change the userId to "scheduler",
+      // we keep the existing one. We just update the status.
+      await prisma.scan.update({
+        where: { id: scanId },
+        data: {
+          status: "running",
+          startedAt: new Date()
+        }
+      });
     }
   } catch (e) {
     log.error("POST /api/scans", "DB Create Error", e);
