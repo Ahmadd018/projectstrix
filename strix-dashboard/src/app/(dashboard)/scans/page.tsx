@@ -73,18 +73,25 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function timeUntil(iso: string) {
+function timeUntil(iso: string, nowMs?: number) {
   if (!iso) return "Unknown";
   const time = new Date(iso).getTime();
   if (isNaN(time)) return "Unknown";
-  const diff = time - Date.now();
+  const now = nowMs || Date.now();
+  const diff = time - now;
   if (diff < 0) return "soon";
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "in < 1m";
-  if (m < 60) return `in ${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `in ${h}h`;
-  return `in ${Math.floor(h / 24)}d`;
+  
+  if (diff >= 86400000) {
+    const d = Math.floor(diff / 86400000);
+    return `in ${d}d`;
+  }
+  
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  
+  return `in ${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
 function statusLedClass(status: string) {
@@ -115,6 +122,12 @@ function ScansContent() {
   const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string, llmModel: string } | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
 
   function getApiKey(model: string): string {
     if (model.startsWith("ollama/")) return ""; // Ollama doesn't need a key
@@ -496,7 +509,7 @@ function ScansContent() {
                         {scan.period && scan.period !== "none" && scan.nextRunAt && (
                           <div style={{ color: "var(--sev-info)", marginTop: 4, fontWeight: 500, fontSize: 10, display: "flex", alignItems: "center", gap: 3 }}>
                             <Clock size={10} />
-                            Next: {timeUntil(scan.nextRunAt)}
+                            Next: {timeUntil(scan.nextRunAt, now)}
                           </div>
                         )}
                       </div>
