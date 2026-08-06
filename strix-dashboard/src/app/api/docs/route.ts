@@ -15,7 +15,9 @@ const spec = {
   servers: [{ url: "/api", description: "Current server" }],
   tags: [
     { name: "Health", description: "API health and system status" },
+    { name: "Auth", description: "Authentication and User Registration" },
     { name: "Scans", description: "Security scan management" },
+    { name: "Logs", description: "System audit logs" },
     {
       name: "Streaming",
       description: "Real-time scan output via Server-Sent Events",
@@ -60,6 +62,73 @@ const spec = {
             },
           },
           "503": { description: "System is unhealthy" },
+        },
+      },
+    },
+    "/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Login user",
+        description: "Authenticates a user and sets a session cookie.",
+        operationId: "loginUser",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["username", "password"],
+                properties: {
+                  username: { type: "string" },
+                  password: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Successfully authenticated" },
+          "401": { description: "Invalid credentials" },
+        },
+      },
+    },
+    "/auth/register": {
+      post: {
+        tags: ["Auth"],
+        summary: "Register user",
+        description: "Creates a new user and auto-logs them in.",
+        operationId: "registerUser",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["username", "password"],
+                properties: {
+                  username: { type: "string" },
+                  password: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Successfully registered" },
+          "400": { description: "Validation error" },
+          "409": { description: "Username already exists" },
+        },
+      },
+    },
+    "/logs": {
+      get: {
+        tags: ["Logs"],
+        summary: "Get system logs",
+        description: "Retrieves recent system events. ADMIN role required.",
+        operationId: "getLogs",
+        responses: {
+          "200": { description: "List of system logs" },
+          "403": { description: "Forbidden - Requires ADMIN role" },
         },
       },
     },
