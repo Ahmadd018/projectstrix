@@ -106,7 +106,7 @@ export async function GET() {
   try {
     let where = {};
     if (session.role !== "ADMIN") {
-      where = { userId: session.userId };
+      where = { userId: session.userId as string };
     }
     const dbScans = await prisma.scan.findMany({ where, orderBy: { startedAt: "desc" } });
     
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
        await prisma.scan.create({
          data: {
            id: scanId,
-           userId: session.userId,
+           userId: session.userId as string,
            target: target || "Unknown Target",
            projectName: projectName || "",
            llmModel: llmModel || "openai/gpt-4o",
