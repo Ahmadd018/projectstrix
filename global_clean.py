@@ -79,10 +79,10 @@ def remove_database():
     print_success("Database removed.")
 
 def remove_strix_core():
-    print_step("Uninstalling Strix Core (Python CLI)...")
+    print_step("Uninstalling Strix Core...")
     run_cmd("rm -f /usr/local/bin/strix")
-    run_cmd("rm -rf /opt/strix_core")
-    run_cmd("pip3 uninstall -y strix --break-system-packages")
+    run_cmd("rm -f ~/.local/bin/strix")
+    run_cmd("rm -rf ~/.strix")
     print_success("Strix Core uninstalled.")
 
 def clean_local_files():

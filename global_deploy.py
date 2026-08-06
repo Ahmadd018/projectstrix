@@ -59,10 +59,14 @@ def check_root():
 def install_system_packages():
     print_step("Installing System Dependencies...")
     run_cmd("apt-get update -y")
-    packages = ["git", "curl", "python3-pip", "python3-venv", "postgresql", "postgresql-contrib", "psmisc"]
+    packages = ["git", "curl", "python3-pip", "python3-venv", "postgresql", "postgresql-contrib", "psmisc", "docker.io"]
     for pkg in packages:
         run_cmd(f"apt-get install -y {pkg}")
-    print_success("System packages installed successfully.")
+    print_success("System packages (including Docker) installed successfully.")
+    
+    print_step("Ensuring Docker is running...")
+    run_cmd("systemctl enable docker", fail_on_error=False)
+    run_cmd("systemctl start docker", fail_on_error=False)
 
 def setup_postgresql():
     print_step("Setting up PostgreSQL...")
@@ -103,42 +107,22 @@ def install_nodejs():
 
 def install_strix():
     print_step("Installing Strix Core...")
-    strix_dir = "/opt/strix_core"
-    repo_url = "https://github.com/usestrix/strix.git"
     
-    # Ultra-smart directory handling
-    if os.path.exists(strix_dir):
-        # Check if it's the correct git repo
-        code, out = run_cmd(f"cd {strix_dir} && git config --get remote.origin.url", fail_on_error=False)
-        if repo_url in out or "usestrix/strix" in out:
-            print("Strix source directory already exists. Pulling latest code...")
-            run_cmd(f"cd {strix_dir} && git pull origin main", fail_on_error=False)
-        else:
-            print(f"{Colors.WARNING}Existing directory is not the correct repository. Re-cloning...{Colors.ENDC}")
-            run_cmd(f"rm -rf {strix_dir}")
-            run_cmd(f"git clone {repo_url} {strix_dir}")
-    else:
-        print(f"Cloning {repo_url}...")
-        run_cmd(f"git clone {repo_url} {strix_dir}")
+    print("Fetching official Strix installer...")
+    code, out = run_cmd("curl -sSL https://strix.ai/install | bash", fail_on_error=False)
+    
+    if code != 0:
+        print_error("Failed to install Strix using the official bash script.")
+        print(out)
+        sys.exit(1)
         
-    print(f"Installing Strix CLI from source ({strix_dir})...")
-    run_cmd(f"cd {strix_dir} && pip3 install --break-system-packages .", fail_on_error=False)
-    
     # Verify installation
     code, out = run_cmd("strix --help", fail_on_error=False)
     if code == 0:
-        print_success("Strix installed successfully (/usr/local/bin/strix).")
+        print_success("Strix installed successfully.")
     else:
-        # Fallback if pip put it somewhere else
-        print(f"{Colors.WARNING}strix not found in PATH, trying to locate it...{Colors.ENDC}")
-        code, out = run_cmd("find /usr -name strix -type f -executable | head -n 1", fail_on_error=False)
-        strix_path = out.strip()
-        if strix_path:
-            run_cmd(f"ln -sf {strix_path} /usr/local/bin/strix")
-            print_success(f"Strix linked to /usr/local/bin/strix")
-        else:
-            print_error("Failed to verify Strix installation.")
-            sys.exit(1)
+        print_error("Failed to verify Strix installation (strix command not found).")
+        sys.exit(1)
 
 def setup_dashboard():
     print_step("Setting up Strix Dashboard...")
