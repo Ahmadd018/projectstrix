@@ -103,17 +103,14 @@ def install_nodejs():
 
 def install_strix():
     print_step("Installing Strix Core...")
-    strix_dir = "/opt/strix_core"
+    strix_dir = os.path.join(os.getcwd(), "strix")
     
-    if os.path.exists(strix_dir):
-        print("Strix source directory already exists, pulling latest...")
-        run_cmd(f"cd {strix_dir} && git pull origin main", fail_on_error=False)
-    else:
-        print("Cloning infat0x/strix repository...")
-        run_cmd(f"git clone https://github.com/infat0x/strix {strix_dir}")
-    
-    # We install strix globally using pip, ensuring it uses the system python or a global space
-    print("Installing Strix CLI...")
+    if not os.path.exists(strix_dir):
+        print_error(f"Strix source directory not found at: {strix_dir}")
+        print_error("Please make sure you have the 'strix' folder in this project.")
+        sys.exit(1)
+        
+    print(f"Installing Strix CLI from local source ({strix_dir})...")
     run_cmd(f"cd {strix_dir} && pip3 install --break-system-packages .", fail_on_error=False)
     
     # Verify installation
