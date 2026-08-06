@@ -15,9 +15,39 @@ function isProtectedApi(pathname: string) {
   return !publicApiPrefixes.some(prefix => pathname.startsWith(prefix))
 }
 
+// Simple in-memory rate limiter for brute-force protection
+const loginAttempts = new Map<string, { count: number, resetTime: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const limit = 10; // 10 attempts
+  const windowMs = 60 * 1000; // 1 minute
+
+  let record = loginAttempts.get(ip);
+  if (!record || now > record.resetTime) {
+    loginAttempts.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  if (record.count >= limit) {
+    return false;
+  }
+
+  record.count += 1;
+  return true;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
+  // Rate Limit Auth Routes
+  if (request.method === 'POST' && (pathname === '/api/auth/login' || pathname === '/api/auth/register')) {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: 'Too many requests, please try again later.' }, { status: 429, headers: { 'Retry-After': '60' } })
+    }
+  }
+
   // Public pages
   if (pathname === '/login' || pathname === '/register') {
     return NextResponse.next()

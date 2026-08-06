@@ -20,7 +20,7 @@ export async function createSession(userId: string, username: string, role: stri
     httpOnly: true,
     secure: false, // Force false for simple local/IP access without HTTPS
     expires: expiresAt,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
   });
 }
