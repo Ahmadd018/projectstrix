@@ -116,10 +116,25 @@ def install_strix():
         print(out)
         sys.exit(1)
         
+    # The official script installs to ~/.strix/bin/strix
+    # We must symlink it globally so pm2 and the user can access it easily.
+    sudo_user = os.environ.get("SUDO_USER")
+    strix_paths = [
+        "/root/.strix/bin/strix",
+        os.path.expanduser("~/.strix/bin/strix")
+    ]
+    if sudo_user:
+        strix_paths.append(f"/home/{sudo_user}/.strix/bin/strix")
+        
+    for p in strix_paths:
+        if os.path.exists(p):
+            run_cmd(f"ln -sf {p} /usr/local/bin/strix")
+            break
+            
     # Verify installation
     code, out = run_cmd("strix --help", fail_on_error=False)
     if code == 0:
-        print_success("Strix installed successfully.")
+        print_success("Strix installed successfully (/usr/local/bin/strix).")
     else:
         print_error("Failed to verify Strix installation (strix command not found).")
         sys.exit(1)
