@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("USER")
+  apiKeys      String?
+  createdAt    DateTime @default(now())
+  scans        Scan[]
+}
+
+model Scan {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target       String
+  projectName  String    @default("")
+  llmModel     String    @default("openai/gpt-4o")
+  scanMode     String    @default("standard")
+  status       String    @default("scheduled")
+  startedAt    DateTime  @default(now())
+  period       String    @default("none")
+  nextRunAt    DateTime?
+  vulnCount    Int       @default(0)
+}

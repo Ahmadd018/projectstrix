@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, getUsers } from "@/lib/authStore";
+import { createUser } from "@/lib/authStore";
 import { createSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
@@ -23,9 +23,9 @@ export async function POST(req: NextRequest) {
     const user = await createUser(username, password);
     
     // Auto-login after registration
-    await createSession(user.id, user.username);
+    await createSession(user.id, user.username, user.role);
 
-    return NextResponse.json({ success: true, user: { id: user.id, username: user.username } });
+    return NextResponse.json({ success: true, user: { id: user.id, username: user.username, role: user.role } });
   } catch (err: any) {
     if (err.message === "Username already exists") {
       return NextResponse.json({ error: err.message }, { status: 409 });

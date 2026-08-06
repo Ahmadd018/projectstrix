@@ -5,6 +5,8 @@ import fs from "fs";
 import path from "path";
 import { registerProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 import os from "os";
 
@@ -97,85 +99,68 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
 
 // GET /api/scans — list all scans
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   ensureRunsDir();
   try {
-    const entries = fs.readdirSync(RUNS_DIR, { withFileTypes: true });
-    const dirs = entries.filter((e) => e.isDirectory());
-
-    let recurringMap: Record<string, { period: string, nextRunAt: string }> = {};
-    const recurringFile = path.join(RUNS_DIR, "recurring.json");
-    if (fs.existsSync(recurringFile)) {
-      try {
-        const recurring = JSON.parse(fs.readFileSync(recurringFile, "utf-8"));
-        for (const r of recurring) {
-          recurringMap[r.originalScanId] = { period: r.period, nextRunAt: r.nextRunAt };
-        }
-      } catch (e) {}
+    let where = {};
+    if (session.role !== "ADMIN") {
+      where = { userId: session.userId };
     }
+    const dbScans = await prisma.scan.findMany({ where, orderBy: { startedAt: "desc" } });
+    
+    // Sync logic: loop through dbScans, read vulnerabilities.json and run.json, update DB if changed.
+    const syncedScans = await Promise.all(dbScans.map(async (scan) => {
+      const scanDir = path.join(RUNS_DIR, scan.id);
+      const runFile = path.join(scanDir, "run.json");
+      const vulnFile = path.join(scanDir, "vulnerabilities.json");
+      
+      let changed = false;
+      let newStatus = scan.status;
+      let newVulnCount = scan.vulnCount;
+      
+      if (fs.existsSync(runFile)) {
+         try {
+           const runData = JSON.parse(fs.readFileSync(runFile, "utf-8"));
+           if (runData.status && runData.status !== scan.status) {
+             newStatus = runData.status;
+             changed = true;
+           }
+         } catch(e) {}
+      }
+      
+      if (fs.existsSync(vulnFile)) {
+         try {
+           const vulns = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
+           const count = Array.isArray(vulns) ? vulns.length : 0;
+           if (count !== scan.vulnCount) {
+             newVulnCount = count;
+             changed = true;
+           }
+         } catch(e) {}
+      }
+      
+      if (changed) {
+         try {
+           await prisma.scan.update({ 
+             where: { id: scan.id }, 
+             data: { status: newStatus, vulnCount: newVulnCount } 
+           });
+         } catch(e) {}
+         return { ...scan, status: newStatus, vulnCount: newVulnCount };
+      }
+      
+      return scan;
+    }));
 
-    const scans = dirs
-      .map((e) => {
-        const runFile = path.join(RUNS_DIR, e.name, "run.json");
-        if (!fs.existsSync(runFile)) {
-          return null;
-        }
-        try {
-        const data = JSON.parse(fs.readFileSync(runFile, "utf-8"));
-        if (!data.id) {
-          // Skip auto-generated python CLI directories that don't have our UUID data
-          return null;
-        }
-        const vulnFile = path.join(RUNS_DIR, e.name, "vulnerabilities.json");
-          let vulnCount = 0;
-          if (fs.existsSync(vulnFile)) {
-            try {
-              const vulns = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
-              vulnCount = Array.isArray(vulns) ? vulns.length : 0;
-            } catch (e2) {
-              log.warn(
-                "GET /api/scans",
-                `Failed to parse vulnerabilities.json for ${e.name}`,
-                { err: String(e2) },
-              );
-            }
-          }
-          const scanId = data.id || e.name;
-          return { 
-            id: scanId,
-            target: data.target || "Unknown Target",
-            projectName: data.projectName || "",
-            llmModel: data.llmModel || "Unknown",
-            scanMode: data.scanMode || "standard",
-            status: data.status || "failed",
-            startedAt: data.startedAt || new Date().toISOString(),
-            ...data, 
-            vulnCount,
-            period: recurringMap[scanId]?.period || "none",
-            nextRunAt: recurringMap[scanId]?.nextRunAt || null
-          };
-        } catch (e2) {
-          log.error(
-            "GET /api/scans",
-            `Failed to parse run.json for ${e.name}`,
-            e2,
-          );
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort(
-        (a: any, b: any) =>
-          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-      );
-
-    return NextResponse.json({ scans });
+    return NextResponse.json({ scans: syncedScans });
   } catch (err) {
-    log.error("GET /api/scans", "Failed to list scans directory", err);
+    log.error("GET /api/scans", "Failed to list scans from DB", err);
     return NextResponse.json(
       { scans: [], error: "Failed to list scans" },
       { status: 200 },
     );
-    // NOTE: returns 200 with empty scans so UI doesn't hang on error
   }
 }
 
@@ -208,6 +193,9 @@ export async function POST(req: NextRequest) {
     apiKey: apiKey ? "(provided)" : "(MISSING)",
   });
 
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!target && !targetList) {
     log.warn("POST /api/scans", "Rejected: target or targetList is required");
     return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
@@ -219,6 +207,27 @@ export async function POST(req: NextRequest) {
 
   const scanId = body.preGeneratedScanId || randomUUID();
   const scanDir = path.join(RUNS_DIR, scanId);
+  const isScheduled = body.scheduledAt && !body.preGeneratedScanId && new Date(body.scheduledAt).getTime() > Date.now();
+
+  try {
+    const existing = await prisma.scan.findUnique({ where: { id: scanId } });
+    if (!existing) {
+       await prisma.scan.create({
+         data: {
+           id: scanId,
+           userId: session.userId,
+           target: target || "Unknown Target",
+           projectName: projectName || "",
+           llmModel: llmModel || "openai/gpt-4o",
+           scanMode: scanMode || "standard",
+           status: isScheduled ? "scheduled" : "running",
+           startedAt: isScheduled ? new Date(body.scheduledAt) : new Date(),
+         }
+       });
+    }
+  } catch (e) {
+    log.error("POST /api/scans", "DB Create Error", e);
+  }
 
   // If scheduledAt is in the future, don't run it now. Save it for the scheduler.
   if (body.scheduledAt && !body.preGeneratedScanId) {

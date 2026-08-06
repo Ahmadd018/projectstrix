@@ -33,7 +33,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [apiStatus, setApiStatus] = useState<"ok" | "error" | "loading">("loading");
   const [collapsed, setCollapsed] = useState(false);
-  const [user, setUser] = useState<{ id: string, username: string } | null>(null);
+  const [user, setUser] = useState<{ id: string, username: string, role: string } | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -90,6 +90,10 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="sidebar-nav">
         {navItems.map((item) => {
+          if ((item.path === "/logs" || item.path === "/api-docs") && user?.role !== "ADMIN") {
+            return null;
+          }
+
           const active =
             item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
           const Icon = item.icon;
@@ -127,7 +131,7 @@ export default function Sidebar() {
           {!collapsed && (
             <div className="sidebar-user-info" style={{ flex: 1 }}>
               <div className="sidebar-user-name" style={{ textTransform: "capitalize" }}>{user ? user.username : "Loading..."}</div>
-              <div className="sidebar-user-role">Security Engineer</div>
+              <div className="sidebar-user-role">{user ? (user.role === "ADMIN" ? "Administrator" : "Security Engineer") : ""}</div>
             </div>
           )}
           {!collapsed && user && (

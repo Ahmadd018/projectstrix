@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await createSession(user.id, user.username);
+    await createSession(user.id, user.username, user.role);
 
-    return NextResponse.json({ success: true, user: { id: user.id, username: user.username } });
+    return NextResponse.json({ success: true, user: { id: user.id, username: user.username, role: user.role } });
   } catch (err) {
     return NextResponse.json(
       { error: "Internal server error" },

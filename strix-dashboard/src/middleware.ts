@@ -11,6 +11,7 @@ const publicApiPrefixes = ['/api/auth', '/api/docs', '/api-docs']
 // Helper to check if API path should be protected
 function isProtectedApi(pathname: string) {
   if (!pathname.startsWith(protectedApiPrefix)) return false
+  if (pathname.startsWith('/api/logs')) return true
   return !publicApiPrefixes.some(prefix => pathname.startsWith(prefix))
 }
 
@@ -34,13 +35,15 @@ export async function middleware(request: NextRequest) {
   // Check auth cookie
   const sessionToken = request.cookies.get('strix_session')?.value
   let isAuthenticated = false
+  let userRole = 'USER'
 
   if (sessionToken) {
     try {
-      await jwtVerify(sessionToken, encodedKey, {
+      const verified = await jwtVerify(sessionToken, encodedKey, {
         algorithms: ["HS256"],
       })
       isAuthenticated = true
+      userRole = verified.payload.role as string
     } catch (e) {
       // Invalid token
     }
@@ -51,6 +54,12 @@ export async function middleware(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    
+    // RBAC for APIs
+    if (pathname.startsWith('/api/logs') && userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    
     return NextResponse.next()
   }
 
@@ -59,6 +68,15 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // RBAC for UI
+  if (isAuthenticated && (pathname.startsWith('/logs') || pathname.startsWith('/api-docs'))) {
+    if (userRole !== 'ADMIN') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   return NextResponse.next()

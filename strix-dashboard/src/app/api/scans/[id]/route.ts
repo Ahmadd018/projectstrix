@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import { getProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 import os from "os";
 
@@ -19,6 +21,15 @@ export async function GET(
 ) {
   const { id } = await params;
   log.debug(`GET /api/scans/${id}`, "Fetching scan detail");
+
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dbScan = await prisma.scan.findUnique({ where: { id } });
+  if (!dbScan) return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+  if (session.role !== "ADMIN" && dbScan.userId !== session.userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const scanDir = getScanDir(id);
   const runFile = path.join(scanDir, "run.json");
@@ -69,6 +80,15 @@ export async function DELETE(
   
   log.info(`DELETE /api/scans/${id}`, `Stop/Delete scan requested, purge=${purge}`);
 
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dbScan = await prisma.scan.findUnique({ where: { id } });
+  if (!dbScan) return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+  if (session.role !== "ADMIN" && dbScan.userId !== session.userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const scanDir = getScanDir(id);
   const runFile = path.join(scanDir, "run.json");
 
@@ -111,6 +131,7 @@ export async function DELETE(
         }
       } catch (e) {}
     }
+    await prisma.scan.delete({ where: { id } });
     return NextResponse.json({ success: true, deleted: true });
   }
 
@@ -118,6 +139,7 @@ export async function DELETE(
   run.status = "stopped";
   run.finishedAt = new Date().toISOString();
   fs.writeFileSync(runFile, JSON.stringify(run, null, 2));
+  await prisma.scan.update({ where: { id }, data: { status: "stopped" } });
   log.info(`DELETE /api/scans/${id}`, "Scan marked as stopped");
 
   return NextResponse.json({ success: true });

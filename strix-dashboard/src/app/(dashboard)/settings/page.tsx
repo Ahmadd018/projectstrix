@@ -18,8 +18,15 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const savedKeys = localStorage.getItem("strix_api_keys");
-    if (savedKeys) setKeys(JSON.parse(savedKeys));
+    fetch("/api/user/keys")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error && Object.keys(data).length > 0) {
+          setKeys(prev => ({ ...prev, ...data }));
+        }
+      })
+      .catch(() => {});
+
     const savedModels = localStorage.getItem("strix_custom_models");
     if (savedModels) setCustomModels(JSON.parse(savedModels));
     const savedConfig = localStorage.getItem("strix_agent_config");
@@ -28,9 +35,13 @@ export default function Settings() {
     if (savedNotifs) setNotificationConfig(JSON.parse(savedNotifs));
   }, []);
 
-  const handleSave = (tab: "api" | "agent" | "notifications") => {
+  const handleSave = async (tab: "api" | "agent" | "notifications") => {
     if (tab === "api") {
-      localStorage.setItem("strix_api_keys", JSON.stringify(keys));
+      await fetch("/api/user/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(keys)
+      });
       localStorage.setItem("strix_custom_models", JSON.stringify(customModels.filter(m => m.value.trim() && m.label.trim())));
     }
     else if (tab === "agent") localStorage.setItem("strix_agent_config", JSON.stringify(agentConfig));
