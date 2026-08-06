@@ -59,7 +59,7 @@ def check_root():
 def install_system_packages():
     print_step("Installing System Dependencies...")
     run_cmd("apt-get update -y")
-    packages = ["git", "curl", "python3-pip", "python3-venv", "postgresql", "postgresql-contrib", "fuser"]
+    packages = ["git", "curl", "python3-pip", "python3-venv", "postgresql", "postgresql-contrib", "psmisc"]
     for pkg in packages:
         run_cmd(f"apt-get install -y {pkg}")
     print_success("System packages installed successfully.")
