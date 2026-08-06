@@ -5,12 +5,38 @@
 
 Unlike traditional vulnerability scanners that rely on predefined static signatures, Strix mimics the creative and adaptive thinking of a human security researcher. It actively interacts with targets, understands complex logic flows, and dynamically adjusts its attack strategy based on the responses it receives.
 
-## Core Features
-1. **AI-Driven Assessment:** Integrates directly with top-tier LLMs (like OpenAI GPT-4o and Anthropic Claude 3.5 Sonnet) to perform deep contextual analysis of code and application logic.
-2. **Real-time Monitoring:** Provides a sleek, dark-themed Next.js dashboard where users can launch scans, monitor agent logs via Server-Sent Events (SSE) in real time, and view discovered vulnerabilities as they happen.
-3. **Autonomous Navigation:** The core `strix` agent can crawl web applications, parse API documentation, and attempt sophisticated exploits like IDOR, Authentication Bypasses, and Business Logic Flaws without human intervention.
-4. **Comprehensive Reporting:** Automatically generates detailed vulnerability reports including CVSS scores, Proof of Concepts (PoCs), and actionable remediation steps.
-5. **Secure Architecture:** Built with security in mind, featuring Role-Based Access Control (RBAC), JWT authentication, API rate limiting, and strict security headers.
+## Platform Features
+
+Project Strix provides a comprehensive suite of features distributed across its architecture, empowering both security teams and developers.
+
+### 1. Advanced Web Dashboard (UI)
+- **Modern & Responsive Design:** A fully glassmorphic, dark-themed interface built with Next.js App Router and React.
+- **Interactive Data Visualization:** Real-time metrics including a dynamic Security Score, Active Scans counter, and Critical Threat highlights.
+- **Live Graph Analysis:** A powerful node-based visualizer that maps out the attack surface, showing relationships between endpoints, discovered vulnerabilities, and scan agents.
+- **In-App Notifications:** Real-time alert system notifying users the moment a scan completes or a critical vulnerability is found.
+
+### 2. Autonomous Penetration Testing (Strix Core)
+- **LLM Integration:** Leverages cutting-edge models (OpenAI GPT-4o, Anthropic Claude 3.5 Sonnet) for contextual vulnerability discovery.
+- **Custom Scan Modes:** Supports `quick`, `standard`, and `deep` scan intensities.
+- **Target Flexibility:** Can analyze Live URLs, GitHub Repositories, and local code directories.
+- **Custom Instructions:** Allows users to provide natural language prompts (e.g., "Focus on IDOR vulnerabilities in the billing module").
+
+### 3. Real-Time Scan Execution & Streaming
+- **Live Terminal Emulation:** An embedded web terminal (xterm.js) streams the AI agent's internal thought process and logs in real-time using Server-Sent Events (SSE).
+- **On-the-fly Findings:** Vulnerabilities populate the dashboard the exact moment the AI discovers them, complete with Severity Badges and CVSS scores.
+
+### 4. Enterprise-Grade Security & User Management
+- **Role-Based Access Control (RBAC):** Distinct `ADMIN` and `USER` roles. Admin users get access to system-level logs and configurations.
+- **Hardened Authentication:** JWT-based session management, brute-force protection (Rate Limiting), secure HTTP headers, and strict CSRF cookies.
+- **System Audit Logs:** A dedicated interface for Admins to monitor who initiated scans, logged in, or encountered errors.
+
+### 5. Reporting & Automation
+- **PDF Export:** One-click generation of professional PDF reports detailing all discovered vulnerabilities, Proof of Concepts (PoC), and remediation advice.
+- **Recurring Scan Scheduler:** Set up automated scans (e.g., "Run every Sunday at 3 AM") directly from the dashboard via the built-in Scheduler Daemon.
+- **Interactive API Docs:** Built-in Swagger UI (`/api/docs`) for developers to programmatically trigger scans and integrate Strix into CI/CD pipelines.
+
+### 6. Seamless Deployment
+- **Global Auto-Deployer:** A single `global_deploy.py` script that automatically provisions PostgreSQL, installs Node.js/PM2, clones repositories, configures environments, and builds the Next.js app on fresh Ubuntu servers in minutes.
 
 ## Why Strix?
 In modern software development, security testing often becomes a bottleneck. Manual penetration testing is slow and expensive, while automated scanners produce high false positives and fail to understand business logic. Strix bridges this gap by combining the speed of automation with the intelligence of an AI, providing continuous and deep security validation.
