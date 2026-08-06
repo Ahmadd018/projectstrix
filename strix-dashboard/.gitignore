@@ -41,6 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 # Strix specific
-strix_runs/
-logs/
-data/
+/strix_runs/
+/logs/
+/data/
