@@ -28,7 +28,7 @@ export default function RegisterPage() {
         throw new Error(data.error || "Registration failed");
       }
 
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
