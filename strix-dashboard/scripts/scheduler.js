@@ -2,6 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const { Pool } = require('pg');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { SignJWT } = require('jose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
@@ -19,6 +21,7 @@ async function triggerScan(scan) {
     // Ensure we remove scheduledAt so it doesn't get stuck in a loop
     delete payload.scheduledAt;
     payload.preGeneratedScanId = scan.id; // Tell API to use the existing scan ID
+    payload.userId = scan.userId; // Pass original user ID so API can preserve ownership
     
     console.log(`[Scheduler] Triggering API for scan ${scan.id} (User: ${scan.userId})`);
     
@@ -91,7 +94,8 @@ async function checkScheduledScans() {
       await new Promise(r => setTimeout(r, 1000));
     }
   } catch (err) {
-    console.error("[Scheduler] DB Check Error:", err.message);
+    console.error("[Scheduler] DB Check Error:");
+    console.error(err);
   }
 }
 

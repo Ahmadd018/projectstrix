@@ -222,10 +222,13 @@ export async function POST(req: NextRequest) {
   try {
     const existing = await prisma.scan.findUnique({ where: { id: scanId } });
     if (!existing) {
+       // If scheduler creates a new scan (e.g. recurring), preserve the original userId from payload if it exists
+       const createdUserId = (isScheduler && body.userId) ? body.userId : (session.userId as string);
+       
        await prisma.scan.create({
          data: {
            id: scanId,
-           userId: session.userId as string,
+           userId: createdUserId,
            target: target || "Unknown Target",
            projectName: projectName || "",
            llmModel: llmModel || "openai/gpt-4o",
