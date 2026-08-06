@@ -97,6 +97,12 @@ export async function DELETE(
   const runFile = path.join(scanDir, "run.json");
 
   if (!fs.existsSync(runFile) && !purge) {
+    // Allow cancelling a scheduled scan even without run.json (it hasn't run yet)
+    if (dbScan.status === "scheduled") {
+      await prisma.scan.update({ where: { id }, data: { status: "stopped", period: "none", nextRunAt: null } });
+      log.info(`DELETE /api/scans/${id}`, "Scheduled scan cancelled (no run.json)");
+      return NextResponse.json({ success: true });
+    }
     log.warn(`DELETE /api/scans/${id}`, "Scan not found — cannot stop");
     return NextResponse.json({ error: "Scan not found" }, { status: 404 });
   }

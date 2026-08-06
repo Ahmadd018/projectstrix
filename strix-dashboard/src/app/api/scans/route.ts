@@ -412,12 +412,18 @@ export async function POST(req: NextRequest) {
     updated.exitCode = code;
     fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
     
-    // Read vulns for notification
+    // Read vulns for notification and DB update
     let vulnCount = 0;
     try {
       const vulns = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
       vulnCount = Array.isArray(vulns) ? vulns.length : 0;
     } catch {}
+    
+    // ✅ Bug #3 Fix: Update DB with final status and vuln count
+    prisma.scan.update({
+      where: { id: scanId },
+      data: { status: finalStatus, vulnCount }
+    }).catch(err => log.error("PROC_CLOSE", "Failed to update DB status on scan close", err));
     
     // Send finish notification
     sendWebhookNotification(body.notificationConfig, "finish", updated, vulnCount);
@@ -442,6 +448,11 @@ export async function POST(req: NextRequest) {
     updated.status = "failed";
     updated.finishedAt = new Date().toISOString();
     fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
+    // ✅ Bug #3b Fix: Update DB on proc error too
+    prisma.scan.update({
+      where: { id: scanId },
+      data: { status: "failed" }
+    }).catch(() => {});
     log.warn("PROC_ERROR", "Falling back to DEMO mode after process error");
     runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
   });
@@ -647,6 +658,12 @@ function runMockScan(
       updated.finishedAt = new Date().toISOString();
       updated.exitCode = 0;
       fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
+      
+      // ✅ Bug #6 Fix: Update DB when mock scan finishes
+      prisma.scan.update({
+        where: { id: scanId },
+        data: { status: "completed", vulnCount: mockVulns.length }
+      }).catch(() => {});
       
       // Send finish notification for mock
       sendWebhookNotification(notificationConfig, "finish", updated, mockVulns.length);

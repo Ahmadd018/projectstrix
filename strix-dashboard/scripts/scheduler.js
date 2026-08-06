@@ -1,7 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { Pool } = require('pg');
 const { PrismaPg } = require('@prisma/adapter-pg');
-const { SignJWT } = require('jose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
@@ -10,20 +9,37 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const secretKey = process.env.JWT_SECRET || "strix-super-secret-key-change-in-prod";
-const encodedKey = new TextEncoder().encode(secretKey);
-
 console.log(`[Scheduler] Starting Prisma DB scheduler loop. Checking every 10s`);
 
 async function triggerScan(scan) {
   try {
-    const payload = scan.payload || {};
-    // Ensure we remove scheduledAt so it doesn't get stuck in a loop
-    delete payload.scheduledAt;
-    payload.preGeneratedScanId = scan.id; // Tell API to use the existing scan ID
-    payload.userId = scan.userId; // Pass original user ID so API can preserve ownership
+    // Merge stored payload with DB fields — payload can be null for scans created without advanced options
+    const storedPayload = (scan.payload && typeof scan.payload === 'object') ? scan.payload : {};
     
-    console.log(`[Scheduler] Triggering API for scan ${scan.id} (User: ${scan.userId})`);
+    // Build a complete payload. DB fields are the fallback for any missing keys.
+    const payload = {
+      target: storedPayload.target || scan.target,
+      projectName: storedPayload.projectName || scan.projectName || '',
+      llmModel: storedPayload.llmModel || scan.llmModel || 'openai/gpt-4o',
+      scanMode: storedPayload.scanMode || scan.scanMode || 'standard',
+      apiKey: storedPayload.apiKey || '',
+      simulationMode: storedPayload.simulationMode || false,
+      ...storedPayload, // override with any stored extras
+    };
+    
+    // Ensure scheduledAt is NOT present (would re-schedule the scan)
+    delete payload.scheduledAt;
+    // Set preGeneratedScanId so the API reuses the existing scan record
+    payload.preGeneratedScanId = scan.id;
+    // Pass original user ID so API can preserve ownership
+    payload.userId = scan.userId;
+    
+    if (!payload.target) {
+      console.error(`[Scheduler] Scan ${scan.id} has no target — skipping`);
+      return;
+    }
+
+    console.log(`[Scheduler] Triggering API for scan ${scan.id} (target: ${payload.target}, user: ${scan.userId})`);
     
     const res = await fetch('http://127.0.0.1:80/api/scans', {
       method: 'POST',
@@ -37,6 +53,8 @@ async function triggerScan(scan) {
     if (!res.ok) {
       const text = await res.text();
       console.error(`[Scheduler] API returned ${res.status}: ${text}`);
+    } else {
+      console.log(`[Scheduler] Successfully triggered scan ${scan.id}`);
     }
   } catch (err) {
     console.error(`[Scheduler] Failed to trigger API:`, err.message);

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import os from "os";
-
-const RUNS_DIR = path.join(os.tmpdir(), "strix_runs");
-const RECURRING_FILE = path.join(RUNS_DIR, "recurring.json");
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -12,62 +9,66 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const { period, apiKey } = body; // period: "daily", "weekly", "monthly", "none"
 
-    if (!fs.existsSync(RUNS_DIR)) fs.mkdirSync(RUNS_DIR, { recursive: true });
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    let recurring: any[] = [];
-    if (fs.existsSync(RECURRING_FILE)) {
-      try {
-        recurring = JSON.parse(fs.readFileSync(RECURRING_FILE, "utf-8"));
-      } catch (e) {}
+    // Verify scan exists and user owns it
+    const scan = await prisma.scan.findUnique({ where: { id } });
+    if (!scan) return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+    if (session.role !== "ADMIN" && scan.userId !== session.userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Remove existing config for this scan ID if it exists
-    recurring = recurring.filter((r) => r.originalScanId !== id);
+    if (!period || period === "none") {
+      // Clear the recurring period
+      await prisma.scan.update({
+        where: { id },
+        data: { period: "none", nextRunAt: null }
+      });
+      log.info(`POST /api/scans/${id}/schedule`, "Cleared recurring period");
+      return NextResponse.json({ success: true, period: null });
+    }
 
-    if (period && period !== "none") {
-      // Need original run.json to get target, model, etc.
-      const scanDir = path.join(RUNS_DIR, id);
-      const runFile = path.join(scanDir, "run.json");
-      
-      if (!fs.existsSync(runFile)) {
-        return NextResponse.json({ error: "Scan not found" }, { status: 404 });
-      }
+    // Validate period value
+    const validPeriods = ["daily", "weekly", "monthly"];
+    if (!validPeriods.includes(period)) {
+      return NextResponse.json({ error: "Invalid period. Must be daily, weekly, or monthly." }, { status: 400 });
+    }
 
-      const runMeta = JSON.parse(fs.readFileSync(runFile, "utf-8"));
-      
-      if (!apiKey && !runMeta.simulationMode) {
-        return NextResponse.json({ error: "API Key is required to schedule this scan" }, { status: 400 });
-      }
+    // Require apiKey unless it's an Ollama model or simulation
+    const existingPayload = scan.payload as any;
+    const llmModel = existingPayload?.llmModel || scan.llmModel;
+    if (!apiKey && !llmModel?.startsWith("ollama/") && !existingPayload?.simulationMode) {
+      return NextResponse.json({ error: "API Key is required to schedule recurring scans" }, { status: 400 });
+    }
 
-      // Calculate next run time
-      const now = new Date();
-      if (period === "daily") now.setDate(now.getDate() + 1);
-      else if (period === "weekly") now.setDate(now.getDate() + 7);
-      else if (period === "monthly") now.setMonth(now.getMonth() + 1);
+    // Calculate next run time
+    const nextRunAt = new Date();
+    if (period === "daily") nextRunAt.setDate(nextRunAt.getDate() + 1);
+    else if (period === "weekly") nextRunAt.setDate(nextRunAt.getDate() + 7);
+    else if (period === "monthly") nextRunAt.setMonth(nextRunAt.getMonth() + 1);
 
-      const recurringJob = {
-        id: crypto.randomUUID(),
-        originalScanId: id,
+    // Store updated apiKey in payload for future recurring runs
+    const updatedPayload = {
+      ...(existingPayload || {}),
+      target: existingPayload?.target || scan.target,
+      llmModel: existingPayload?.llmModel || scan.llmModel,
+      scanMode: existingPayload?.scanMode || scan.scanMode,
+      projectName: existingPayload?.projectName || scan.projectName,
+      apiKey: apiKey || existingPayload?.apiKey,
+    };
+
+    await prisma.scan.update({
+      where: { id },
+      data: {
         period,
-        nextRunAt: now.toISOString(),
-        body: {
-          target: runMeta.target,
-          scanName: runMeta.scanName ? `${runMeta.scanName} (Recurring)` : undefined,
-          projectName: runMeta.projectName,
-          llmModel: runMeta.llmModel,
-          scanMode: runMeta.scanMode,
-          simulationMode: runMeta.simulationMode,
-          apiKey: apiKey, // Save the provided key
-          // if there were advanced options, they might be lost if we don't save the full original request
-        }
-      };
+        nextRunAt,
+        payload: updatedPayload as any
+      }
+    });
 
-      recurring.push(recurringJob);
-    }
-
-    fs.writeFileSync(RECURRING_FILE, JSON.stringify(recurring, null, 2));
-
-    return NextResponse.json({ success: true, period: period === "none" ? null : period });
+    log.info(`POST /api/scans/${id}/schedule`, `Set recurring period to ${period}, next run at ${nextRunAt.toISOString()}`);
+    return NextResponse.json({ success: true, period, nextRunAt: nextRunAt.toISOString() });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
