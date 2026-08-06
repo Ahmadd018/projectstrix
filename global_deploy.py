@@ -103,14 +103,25 @@ def install_nodejs():
 
 def install_strix():
     print_step("Installing Strix Core...")
-    strix_dir = os.path.join(os.getcwd(), "strix")
+    strix_dir = "/opt/strix_core"
+    repo_url = "https://github.com/usestrix/strix.git"
     
-    if not os.path.exists(strix_dir):
-        print_error(f"Strix source directory not found at: {strix_dir}")
-        print_error("Please make sure you have the 'strix' folder in this project.")
-        sys.exit(1)
+    # Ultra-smart directory handling
+    if os.path.exists(strix_dir):
+        # Check if it's the correct git repo
+        code, out = run_cmd(f"cd {strix_dir} && git config --get remote.origin.url", fail_on_error=False)
+        if repo_url in out or "usestrix/strix" in out:
+            print("Strix source directory already exists. Pulling latest code...")
+            run_cmd(f"cd {strix_dir} && git pull origin main", fail_on_error=False)
+        else:
+            print(f"{Colors.WARNING}Existing directory is not the correct repository. Re-cloning...{Colors.ENDC}")
+            run_cmd(f"rm -rf {strix_dir}")
+            run_cmd(f"git clone {repo_url} {strix_dir}")
+    else:
+        print(f"Cloning {repo_url}...")
+        run_cmd(f"git clone {repo_url} {strix_dir}")
         
-    print(f"Installing Strix CLI from local source ({strix_dir})...")
+    print(f"Installing Strix CLI from source ({strix_dir})...")
     run_cmd(f"cd {strix_dir} && pip3 install --break-system-packages .", fail_on_error=False)
     
     # Verify installation

@@ -81,6 +81,7 @@ def remove_database():
 def remove_strix_core():
     print_step("Uninstalling Strix Core (Python CLI)...")
     run_cmd("rm -f /usr/local/bin/strix")
+    run_cmd("rm -rf /opt/strix_core")
     run_cmd("pip3 uninstall -y strix --break-system-packages")
     print_success("Strix Core uninstalled.")
 
