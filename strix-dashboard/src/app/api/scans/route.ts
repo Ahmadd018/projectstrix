@@ -222,6 +222,7 @@ export async function POST(req: NextRequest) {
            scanMode: scanMode || "standard",
            status: isScheduled ? "scheduled" : "running",
            startedAt: isScheduled ? new Date(body.scheduledAt) : new Date(),
+           payload: isScheduled ? body : null,
          }
        });
     }
@@ -234,39 +235,6 @@ export async function POST(req: NextRequest) {
     const scheduledTime = new Date(body.scheduledAt).getTime();
     if (scheduledTime > Date.now()) {
       log.info("POST /api/scans", `Scheduling scan for ${body.scheduledAt}`);
-      const scheduledFile = path.join(RUNS_DIR, "scheduled.json");
-      let scheduledScans = [];
-      if (fs.existsSync(scheduledFile)) {
-        try {
-          scheduledScans = JSON.parse(fs.readFileSync(scheduledFile, "utf-8"));
-        } catch (e) {
-          log.warn("POST /api/scans", "Failed to parse scheduled.json, resetting");
-        }
-      }
-      scheduledScans.push({
-        scanId,
-        body,
-        status: "scheduled",
-        createdAt: new Date().toISOString()
-      });
-      fs.mkdirSync(scanDir, { recursive: true });
-      fs.writeFileSync(scheduledFile, JSON.stringify(scheduledScans, null, 2));
-
-      // Write a stub run.json so it appears in the UI
-      const runMeta = {
-        id: scanId,
-        target,
-        scanName,
-        projectName,
-        llmModel,
-        scanMode,
-        status: "scheduled",
-        startedAt: body.scheduledAt, 
-        finishedAt: null,
-        exitCode: null,
-      };
-      fs.writeFileSync(path.join(scanDir, "run.json"), JSON.stringify(runMeta, null, 2));
-
       return NextResponse.json({ scanId, status: "scheduled", scheduledAt: body.scheduledAt });
     }
   }

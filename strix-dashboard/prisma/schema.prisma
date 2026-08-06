@@ -29,4 +29,5 @@ model Scan {
   period       String    @default("none")
   nextRunAt    DateTime?
   vulnCount    Int       @default(0)
+  payload      Json?
 }

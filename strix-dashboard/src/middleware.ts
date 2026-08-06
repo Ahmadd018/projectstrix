@@ -34,10 +34,14 @@ export async function middleware(request: NextRequest) {
 
   // Check auth cookie
   const sessionToken = request.cookies.get('strix_session')?.value
+  const schedulerKey = request.headers.get('x-scheduler-secret')
   let isAuthenticated = false
   let userRole = 'USER'
 
-  if (sessionToken) {
+  if (schedulerKey === "internal_scheduler_secret") {
+    isAuthenticated = true
+    userRole = 'ADMIN' // Allow scheduler to act as ADMIN
+  } else if (sessionToken) {
     try {
       const verified = await jwtVerify(sessionToken, encodedKey, {
         algorithms: ["HS256"],

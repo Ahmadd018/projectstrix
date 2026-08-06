@@ -1,89 +1,105 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const { PrismaClient } = require('@prisma/client');
+const { SignJWT } = require('jose');
+const prisma = new PrismaClient();
 
-const RUNS_DIR = path.join(os.tmpdir(), "strix_runs");
-const SCHEDULED_FILE = path.join(RUNS_DIR, "scheduled.json");
-const RECURRING_FILE = path.join(RUNS_DIR, "recurring.json");
+const secretKey = process.env.JWT_SECRET || "strix-super-secret-key-change-in-prod";
+const encodedKey = new TextEncoder().encode(secretKey);
 
-console.log(`[Scheduler] Starting cron loop. Checking ${SCHEDULED_FILE} and ${RECURRING_FILE} every 10s`);
+console.log(`[Scheduler] Starting Prisma DB scheduler loop. Checking every 10s`);
 
-function triggerScan(body, scanId) {
-  // Remove scheduledAt so it runs immediately when posted back
-  delete body.scheduledAt;
-  // Inject the pre-generated scanId
-  body.preGeneratedScanId = scanId;
-  
-  fetch('http://127.0.0.1:80/api/scans', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  }).then(res => {
-    if (!res.ok) console.error(`[Scheduler] API returned ${res.status}`);
-  }).catch(err => {
+async function triggerScan(scan) {
+  try {
+    const payload = scan.payload || {};
+    // Ensure we remove scheduledAt so it doesn't get stuck in a loop
+    delete payload.scheduledAt;
+    payload.preGeneratedScanId = scan.id; // Tell API to use the existing scan ID
+    
+    // Fetch the user to impersonate them
+    const user = await prisma.user.findUnique({ where: { id: scan.userId }});
+    if (!user) {
+       console.error(`[Scheduler] Cannot run scan ${scan.id}: User not found`);
+       return;
+    }
+
+    // Create a temporary JWT for this user
+    const token = await new SignJWT({ userId: user.id, username: user.username, role: user.role })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("1h")
+      .sign(encodedKey);
+
+    console.log(`[Scheduler] Triggering API for scan ${scan.id} (User: ${user.username})`);
+    
+    const res = await fetch('http://127.0.0.1:80/api/scans', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cookie': `strix_session=${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[Scheduler] API returned ${res.status}: ${text}`);
+    }
+  } catch (err) {
     console.error(`[Scheduler] Failed to trigger API:`, err.message);
-  });
+  }
 }
 
-function checkScheduledScans() {
-  if (fs.existsSync(SCHEDULED_FILE)) {
-    try {
-      const scheduledScans = JSON.parse(fs.readFileSync(SCHEDULED_FILE, "utf-8"));
-      const now = Date.now();
-      const remaining = [];
-      let modified = false;
-      
-      for (const scan of scheduledScans) {
-        const scheduledTime = new Date(scan.body.scheduledAt).getTime();
-        if (scheduledTime <= now) {
-          console.log(`[Scheduler] Triggering scheduled scan ${scan.scanId} for ${scan.body.target}`);
-          triggerScan(scan.body, scan.scanId);
-          modified = true;
-        } else {
-          remaining.push(scan);
-        }
+async function checkScheduledScans() {
+  try {
+    const now = new Date();
+    
+    // 1. Check one-off scheduled scans
+    const scheduledScans = await prisma.scan.findMany({
+      where: {
+        status: "scheduled",
+        startedAt: { lte: now }
       }
-      
-      if (modified) {
-        fs.writeFileSync(SCHEDULED_FILE, JSON.stringify(remaining, null, 2));
-      }
-    } catch (err) {
-      console.error("[Scheduler] Error parsing scheduled.json:", err.message);
+    });
+
+    for (const scan of scheduledScans) {
+      console.log(`[Scheduler] Executing scheduled scan ${scan.id} for ${scan.target}`);
+      await triggerScan(scan);
+      // Wait a moment between triggers to avoid overwhelming the server
+      await new Promise(r => setTimeout(r, 1000)); 
     }
-  }
 
-  // Handle recurring scans
-  if (fs.existsSync(RECURRING_FILE)) {
-    try {
-      const recurringScans = JSON.parse(fs.readFileSync(RECURRING_FILE, "utf-8"));
-      const now = Date.now();
-      let modified = false;
-
-      for (const scan of recurringScans) {
-        const nextRunAt = new Date(scan.nextRunAt).getTime();
-        if (nextRunAt <= now) {
-          console.log(`[Scheduler] Triggering recurring scan for ${scan.body.target}`);
-          triggerScan(scan.body, scan.id); // It uses its own id or generates a new one. Wait, preGeneratedScanId should be new each time for recurring!
-          // We can just omit preGeneratedScanId and let the API generate it!
-          
-          // Calculate NEXT run time
-          const nextDate = new Date(now);
-          if (scan.period === "daily") nextDate.setDate(nextDate.getDate() + 1);
-          else if (scan.period === "weekly") nextDate.setDate(nextDate.getDate() + 7);
-          else if (scan.period === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
-          
-          scan.nextRunAt = nextDate.toISOString();
-          scan.id = require('crypto').randomUUID(); // Generate a new ID for the next run
-          modified = true;
-        }
+    // 2. Check recurring scans (status might be anything, we check nextRunAt)
+    const recurringScans = await prisma.scan.findMany({
+      where: {
+        period: { not: "none" },
+        nextRunAt: { lte: now }
       }
+    });
 
-      if (modified) {
-        fs.writeFileSync(RECURRING_FILE, JSON.stringify(recurringScans, null, 2));
-      }
-    } catch (err) {
-      console.error("[Scheduler] Error parsing recurring.json:", err.message);
+    for (const scan of recurringScans) {
+      console.log(`[Scheduler] Executing recurring scan for ${scan.target}`);
+      
+      // Calculate NEXT run time based on period
+      const nextDate = new Date(now);
+      if (scan.period === "daily") nextDate.setDate(nextDate.getDate() + 1);
+      else if (scan.period === "weekly") nextDate.setDate(nextDate.getDate() + 7);
+      else if (scan.period === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
+      
+      const newScanId = require('crypto').randomUUID();
+
+      // Trigger the run with a new ID
+      const fakeScan = { ...scan, id: newScanId };
+      await triggerScan(fakeScan);
+
+      // Update the original scan's nextRunAt in the DB
+      await prisma.scan.update({
+        where: { id: scan.id },
+        data: { nextRunAt: nextDate }
+      });
+
+      await new Promise(r => setTimeout(r, 1000));
     }
+  } catch (err) {
+    console.error("[Scheduler] DB Check Error:", err.message);
   }
 }
 
