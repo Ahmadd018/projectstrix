@@ -80,7 +80,7 @@ export default function RegisterPage() {
             <User size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)", pointerEvents: "none" }} />
             <input
               className="field-input"
-              style={{ paddingLeft: 42, height: 44, fontSize: 15, background: "rgba(0,0,0,0.2)", border: "1px solid var(--border-md)", transition: "all 0.2s" }}
+              style={{ width: "100%", paddingLeft: 42, height: 44, fontSize: 15, background: "rgba(0,0,0,0.2)", border: "1px solid var(--border-md)", transition: "all 0.2s" }}
               placeholder="admin"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -97,7 +97,7 @@ export default function RegisterPage() {
             <Lock size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)", pointerEvents: "none" }} />
             <input
               className="field-input"
-              style={{ paddingLeft: 42, height: 44, fontSize: 15, background: "rgba(0,0,0,0.2)", border: "1px solid var(--border-md)", transition: "all 0.2s" }}
+              style={{ width: "100%", paddingLeft: 42, height: 44, fontSize: 15, background: "rgba(0,0,0,0.2)", border: "1px solid var(--border-md)", transition: "all 0.2s" }}
               type="password"
               placeholder="••••••••"
               value={password}
