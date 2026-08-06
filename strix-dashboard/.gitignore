@@ -46,3 +46,9 @@ next-env.d.ts
 /data/
 
 /src/generated/prisma
+
+# IDE and AI tools
+/.agents/
+/.claude/
+/.windsurf/
+/.cursor/
