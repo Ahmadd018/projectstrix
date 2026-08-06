@@ -73,6 +73,14 @@ export async function GET(
             e,
           );
         }
+      } else {
+        // Fallback for scans stuck in scheduled / DB only state
+        // To not hold a zombie stream, we enqueue a "scheduled" status
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ type: "status", status: "scheduled" })}\n\n`,
+          )
+        );
       }
 
       // Watch for new log lines and vulns

@@ -39,7 +39,11 @@ export async function GET(
     log.warn(`GET /api/scans/${id}`, "Scan not found — run.json missing", {
       scanDir,
     });
-    return NextResponse.json({ error: "Scan not found" }, { status: 404 });
+    // Fallback to DB info if run.json isn't created yet
+    return NextResponse.json({ 
+      ...dbScan, 
+      vulnerabilities: [] 
+    });
   }
 
   const run = JSON.parse(fs.readFileSync(runFile, "utf-8"));
