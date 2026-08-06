@@ -225,6 +225,13 @@ export async function POST(req: NextRequest) {
        // If scheduler creates a new scan (e.g. recurring), preserve the original userId from payload if it exists
        const createdUserId = (isScheduler && body.userId) ? body.userId : (session.userId as string);
        
+       // Verify the user actually exists (in case of DB resets and stale cookies)
+       const userExists = await prisma.user.findUnique({ where: { id: createdUserId } });
+       if (!userExists) {
+         log.error("POST /api/scans", `User ${createdUserId} not found in DB (Stale session)`);
+         return NextResponse.json({ error: "Invalid session. Please log out and log in again." }, { status: 401 });
+       }
+       
        await prisma.scan.create({
          data: {
            id: scanId,
