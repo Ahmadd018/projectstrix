@@ -197,8 +197,13 @@ def main():
     deploy_service()
     
     print(f"\n{Colors.OKGREEN}{Colors.BOLD}🎉 ALL DONE! Strix is now live.{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}Dashboard: http://<your-server-ip>{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}To view logs, run: {Colors.BOLD}pm2 logs strix-dashboard{Colors.ENDC}")
+    print(f"\n{Colors.OKCYAN}{Colors.BOLD}=== USEFUL COMMANDS ==={Colors.ENDC}")
+    print(f"{Colors.BOLD}Dashboard UI:{Colors.ENDC}    http://<your-server-ip>")
+    print(f"{Colors.BOLD}App Logs:{Colors.ENDC}        pm2 logs strix-dashboard")
+    print(f"{Colors.BOLD}App Status:{Colors.ENDC}      pm2 status")
+    print(f"{Colors.BOLD}Restart App:{Colors.ENDC}     pm2 restart strix-dashboard")
+    print(f"{Colors.BOLD}Database CLI:{Colors.ENDC}    sudo -u postgres psql -d strix")
+    print(f"{Colors.BOLD}Test Strix CLI:{Colors.ENDC}  strix --help\n")
 
 if __name__ == "__main__":
     main()
