@@ -77,7 +77,7 @@ export default function ScanDetailPage() {
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === "log") {
-          setLogs((prev) => [...prev, msg.line]);
+          setLogs((prev) => [...prev, msg.text]);
         } else if (msg.type === "vulnerability") {
           setVulns((prev) => {
             if (prev.find((v) => v.id === msg.vuln.id)) return prev;

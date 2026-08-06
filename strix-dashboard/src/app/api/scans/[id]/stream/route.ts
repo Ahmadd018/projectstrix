@@ -26,21 +26,19 @@ export async function GET(
 
   const stream = new ReadableStream({
     start(controller) {
-      // Send existing log content first
-      if (fs.existsSync(logFile)) {
-        const existing = fs.readFileSync(logFile, "utf-8");
-        const lines = existing.split("\n").filter(Boolean);
-        log.debug(
-          `SSE /api/scans/${id}/stream`,
-          `Replaying ${lines.length} existing log lines`,
-        );
-        for (const line of lines) {
+        // Since xterm.js handles raw strings, we just send chunks.
+        // For existing logs, we send it in one go (or chunked).
+        if (fs.existsSync(logFile)) {
+          const existing = fs.readFileSync(logFile, "utf-8");
+          log.debug(
+            `SSE /api/scans/${id}/stream`,
+            `Replaying ${existing.length} existing bytes of log`,
+          );
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ type: "log", line })}\n\n`,
+              `data: ${JSON.stringify({ type: "log", text: existing })}\n\n`,
             ),
           );
-        }
       } else {
         log.debug(
           `SSE /api/scans/${id}/stream`,
@@ -115,26 +113,23 @@ export async function GET(
               fs.readSync(fd, buf, 0, buf.length, lastSize);
               fs.closeSync(fd);
               const newText = buf.toString("utf-8");
-              const lines = newText.split("\n").filter(Boolean);
               log.debug(
                 `SSE /api/scans/${id}/stream`,
-                `New log data: ${lines.length} lines (+${stat.size - lastSize} bytes)`,
+                `New log data: +${stat.size - lastSize} bytes`,
               );
               lastSize = stat.size;
-              for (const line of lines) {
-                try {
-                  controller.enqueue(
-                    encoder.encode(
-                      `data: ${JSON.stringify({ type: "log", line })}\n\n`,
-                    ),
-                  );
-                } catch (e) {
-                  log.error(
-                    `SSE /api/scans/${id}/stream`,
-                    "Failed to enqueue log line",
-                    e,
-                  );
-                }
+              try {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "log", text: newText })}\n\n`,
+                  ),
+                );
+              } catch (e) {
+                log.error(
+                  `SSE /api/scans/${id}/stream`,
+                  "Failed to enqueue log chunk",
+                  e,
+                );
               }
             }
           } catch (e) {
