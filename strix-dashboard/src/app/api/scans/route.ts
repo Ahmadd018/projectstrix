@@ -345,8 +345,23 @@ export async function POST(req: NextRequest) {
   const args = ["-n"]; // non-interactive by default
   
   if (resumeRun) {
-    args.push("--resume", resumeRun.trim());
+    let actualResumeName = resumeRun.trim();
+    try {
+      const strixRunsDir = path.join(scanDir, "strix_runs");
+      if (fs.existsSync(strixRunsDir)) {
+        const dirs = fs.readdirSync(strixRunsDir).filter(f => fs.statSync(path.join(strixRunsDir, f)).isDirectory());
+        if (dirs.length > 0) {
+          actualResumeName = dirs[0];
+          log.info("POST /api/scans", `Found internal strix run name: ${actualResumeName}`);
+        }
+      }
+    } catch (e) {
+      log.error("POST /api/scans", "Failed to find internal strix run name", e);
+    }
+    args.push("--resume", actualResumeName);
   } else {
+    args.push("--name", scanId);
+    
     if (target) args.push("-t", target);
     
     if (targetList?.trim()) {
