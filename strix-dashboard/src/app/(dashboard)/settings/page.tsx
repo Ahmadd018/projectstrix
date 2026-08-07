@@ -11,7 +11,7 @@ const TABS = [
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("api");
-  const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "" });
+  const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "", dashscope: "", moonshot: "", vertex_ai: "" });
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
@@ -126,7 +126,10 @@ export default function Settings() {
                   { key: "openrouter", label: "OpenRouter API Key",    placeholder: "sk-or-…",   hint: "Used for unified access to dozens of models." },
                   { key: "mistral",    label: "Mistral API Key",       placeholder: "…",         hint: "Used for Mistral Large and other models." },
                   { key: "cohere",     label: "Cohere API Key",        placeholder: "…",         hint: "Used for Command R+ and other Cohere models." },
-                ] as const).map(({ key, label, placeholder, hint }) => (
+                  { key: "dashscope",  label: "DashScope API Key",     placeholder: "sk-…",      hint: "Used for Qwen models via Alibaba Cloud DashScope." },
+                  { key: "moonshot",   label: "Moonshot API Key",      placeholder: "sk-…",      hint: "Used for Kimi models via Moonshot AI." },
+                  { key: "vertex_ai",  label: "Vertex AI API Key",     placeholder: "…",         hint: "Used for Gemini models via Google Cloud Vertex AI." },
+                ] as any).map(({ key, label, placeholder, hint }) => (
                   <div key={key} style={s.field}>
                     <label style={s.label}>{label}</label>
                     <input

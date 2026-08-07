@@ -236,6 +236,9 @@ export async function POST(req: NextRequest) {
   else if (llmModel.startsWith("openrouter/")) resolvedApiKey = userKeys.openrouter || "";
   else if (llmModel.startsWith("mistral/")) resolvedApiKey = userKeys.mistral || "";
   else if (llmModel.startsWith("cohere/")) resolvedApiKey = userKeys.cohere || "";
+  else if (llmModel.startsWith("dashscope/")) resolvedApiKey = userKeys.dashscope || "";
+  else if (llmModel.startsWith("moonshot/")) resolvedApiKey = userKeys.moonshot || "";
+  else if (llmModel.startsWith("vertex_ai/")) resolvedApiKey = userKeys.vertex_ai || "";
 
   if (!resolvedApiKey && !body.simulationMode && !llmModel.startsWith("ollama/")) {
     log.warn("POST /api/scans", `Rejected: API key for ${llmModel} is missing in DB`);
@@ -340,6 +343,9 @@ export async function POST(req: NextRequest) {
     ANTHROPIC_API_KEY: apiKey,
     GEMINI_API_KEY: apiKey,
     DEEPSEEK_API_KEY: apiKey,
+    DASHSCOPE_API_KEY: apiKey,
+    MOONSHOT_API_KEY: apiKey,
+    VERTEX_AI_API_KEY: apiKey,
   };
 
   log.info("POST /api/scans", `Spawning strix process`, {

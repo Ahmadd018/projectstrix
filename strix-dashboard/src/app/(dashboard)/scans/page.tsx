@@ -28,13 +28,30 @@ const LLM_MODELS = [
   { value: "openai/gpt-4o-mini", label: "OpenAI GPT-4o Mini" },
   { value: "openai/o1-preview", label: "OpenAI o1-Preview" },
   { value: "openai/gpt-5", label: "OpenAI GPT-5" },
+  { value: "openai/gpt-5.3-codex", label: "OpenAI GPT-5.3 Codex" },
+  { value: "openai/gpt-5.4", label: "OpenAI GPT-5.4" },
+  { value: "openai/gpt-5.5", label: "OpenAI GPT-5.5" },
+  { value: "openai/gpt-5.5-pro", label: "OpenAI GPT-5.5 Pro" },
+  { value: "openai/gpt-5.6", label: "OpenAI GPT-5.6" },
+  { value: "openai/gpt-5.6-luna", label: "OpenAI GPT-5.6 Luna" },
+  { value: "openai/gpt-5.6-terra", label: "OpenAI GPT-5.6 Terra" },
+  { value: "openai/gpt-5.6-sol", label: "OpenAI GPT-5.6 Sol" },
   // Anthropic
   { value: "anthropic/claude-3-5-sonnet-latest", label: "Anthropic Claude 3.5 Sonnet" },
   { value: "anthropic/claude-3-5-haiku-latest", label: "Anthropic Claude 3.5 Haiku" },
   { value: "anthropic/claude-3-opus-latest", label: "Anthropic Claude 3 Opus" },
+  { value: "anthropic/claude-sonnet-4-6", label: "Anthropic Claude 4.6 Sonnet" },
+  { value: "anthropic/claude-opus-4-8", label: "Anthropic Claude 4.8 Opus" },
+  { value: "anthropic/claude-sonnet-5", label: "Anthropic Claude 5 Sonnet" },
+  { value: "anthropic/claude-opus-5", label: "Anthropic Claude 5 Opus" },
+  { value: "anthropic/claude-fable-5", label: "Anthropic Claude 5 Fable" },
   // Google
   { value: "google/gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
   { value: "google/gemini-3-pro", label: "Google Gemini 3 Pro" },
+  { value: "gemini/gemini-3.1-pro-preview", label: "Google Gemini 3.1 Pro (Preview)" },
+  { value: "gemini/gemini-3.6-flash", label: "Google Gemini 3.6 Flash" },
+  // Vertex AI
+  { value: "vertex_ai/gemini-3.1-pro-preview", label: "Vertex AI Gemini 3.1 Pro" },
   // DeepSeek
   { value: "deepseek/deepseek-coder", label: "DeepSeek Coder" },
   { value: "deepseek/deepseek-v3", label: "DeepSeek v3" },
@@ -54,6 +71,12 @@ const LLM_MODELS = [
   { value: "mistral/open-mixtral-8x7b", label: "Mistral 8x7B" },
   // Cohere
   { value: "cohere/command-r-plus", label: "Cohere Command R+" },
+  // DashScope
+  { value: "dashscope/qwen3.7-max-2026-06-08", label: "Qwen 3.7 Max" },
+  { value: "dashscope/qwen3.8-max", label: "Qwen 3.8 Max" },
+  // Moonshot
+  { value: "moonshot/kimi-k2.7-code", label: "Kimi k2.7 Code" },
+  { value: "moonshot/kimi-k3", label: "Kimi k3" },
   // Local (Ollama)
   { value: "ollama/llama3.1:70b", label: "Local: Llama 3.1 70B (Ollama)" },
   { value: "ollama/qwen2.5:72b", label: "Local: Qwen 2.5 72B (Ollama)" },
