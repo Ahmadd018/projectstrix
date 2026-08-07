@@ -17,6 +17,7 @@ export default defineConfig({
     sidebar: [
       {
         text: 'Guide & Getting Started',
+        collapsed: false,
         items: [
           { text: 'What is Strix?', link: '/guide/what-is-strix' },
           { text: 'Key Features', link: '/guide/features' },
@@ -29,6 +30,7 @@ export default defineConfig({
       },
       {
         text: 'Dashboard & UI',
+        collapsed: false,
         items: [
           { text: 'Overview', link: '/dashboard/overview' },
           { text: 'Authentication', link: '/dashboard/authentication' },
@@ -40,6 +42,7 @@ export default defineConfig({
       },
       {
         text: 'Autonomous Scanning',
+        collapsed: false,
         items: [
           { text: 'Creating Scans', link: '/scanning/creating-scans' },
           { text: 'Scan Modes', link: '/scanning/scan-modes' },
@@ -52,6 +55,7 @@ export default defineConfig({
       },
       {
         text: 'Architecture',
+        collapsed: false,
         items: [
           { text: 'System Overview', link: '/architecture/system-overview' }
         ]
