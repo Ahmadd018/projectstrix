@@ -273,7 +273,7 @@ function ScansContent() {
   async function handleLaunch(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.target.trim() && !form.targetList.trim()) return setError("Target is required");
+    if (!form.target.trim() && !form.targetList.trim() && !form.resumeRun.trim()) return setError("Target is required");
     
     setLaunching(true);
     try {
@@ -928,26 +928,13 @@ function ScansContent() {
               
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div className="field-group">
-                  <label className="field-label">Target URL / Domain</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="https://example.com"
-                    value={form.target}
-                    onChange={(e) => setForm({ ...form, target: e.target.value })}
-                    required
-                  />
-                  <div className="field-hint">The target URL of the scan you want to resume.</div>
-                </div>
-
-                <div className="field-group">
                   <label className="field-label">Previous Run ID (UUID)</label>
                   <input
                     type="text"
                     className="input"
                     placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
                     value={form.resumeRun}
-                    onChange={(e) => setForm({ ...form, resumeRun: e.target.value })}
+                    onChange={(e) => setForm({ ...form, resumeRun: e.target.value, target: "" })}
                     required
                   />
                   <div className="field-hint">Paste the ID of the stopped or failed scan to resume its progress.</div>

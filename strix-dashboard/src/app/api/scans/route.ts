@@ -168,7 +168,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   log.info("POST /api/scans", "New scan request received");
   const body = await req.json();
-  const {
+  let {
     target,
     scanName,
     projectName,
@@ -203,6 +203,17 @@ export async function POST(req: NextRequest) {
   }
 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (resumeRun && !target) {
+    const oldScan = await prisma.scan.findUnique({ where: { id: resumeRun } });
+    if (oldScan) {
+      target = oldScan.target;
+      if (!llmModel) llmModel = oldScan.llmModel;
+      if (!scanMode) scanMode = oldScan.scanMode;
+    } else {
+      target = "Resumed Scan";
+    }
+  }
 
   if (!target && !targetList) {
     log.warn("POST /api/scans", "Rejected: target or targetList is required");
