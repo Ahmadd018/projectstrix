@@ -159,6 +159,7 @@ function ScansContent() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
   const [scanToDelete, setScanToDelete] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -289,6 +290,7 @@ function ScansContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to start scan");
       setShowModal(false);
+      setShowResumeModal(false);
       router.push(`/scans/${data.scanId}`);
     } catch (err: any) {
       setError(err.message);
@@ -358,9 +360,14 @@ function ScansContent() {
           <h1 className="page-heading">Scans</h1>
           <p className="page-desc">Launch and monitor your security assessments.</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={14} /> New Scan
-        </button>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button className="btn-secondary" onClick={() => setShowResumeModal(true)}>
+            <Play size={14} /> Resume Scan
+          </button>
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={14} /> New Scan
+          </button>
+        </div>
       </div>
 
       {/* Main card */}
@@ -898,6 +905,65 @@ function ScansContent() {
                 {scheduling ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Play size={13} />} Confirm Schedule
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Resume Scan Modal */}
+      {showResumeModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowResumeModal(false)}>
+          <div className="modal animate-fade-in" style={{ maxWidth: 450 }}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><Play size={16} color="var(--brand)" /> Resume Scan</div>
+              <button className="btn-icon" onClick={() => setShowResumeModal(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            
+            <form className="modal-body" onSubmit={handleLaunch}>
+              {error && (
+                <div style={{ padding: "12px 16px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "var(--r)", color: "var(--sev-critical)", fontSize: 13, marginBottom: 16 }}>
+                  {error}
+                </div>
+              )}
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div className="field-group">
+                  <label className="field-label">Target URL / Domain</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="https://example.com"
+                    value={form.target}
+                    onChange={(e) => setForm({ ...form, target: e.target.value })}
+                    required
+                  />
+                  <div className="field-hint">The target URL of the scan you want to resume.</div>
+                </div>
+
+                <div className="field-group">
+                  <label className="field-label">Previous Run ID (UUID)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                    value={form.resumeRun}
+                    onChange={(e) => setForm({ ...form, resumeRun: e.target.value })}
+                    required
+                  />
+                  <div className="field-hint">Paste the ID of the stopped or failed scan to resume its progress.</div>
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: 24 }}>
+                <button type="button" className="btn-ghost" onClick={() => setShowResumeModal(false)} disabled={launching}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={launching} style={{ gap: 8 }}>
+                  {launching ? <Loader2 size={16} className="spin" /> : <Play size={16} />} 
+                  {launching ? "Resuming..." : "Resume Scan"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
