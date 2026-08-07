@@ -58,11 +58,21 @@ def check_root():
 
 def install_system_packages():
     print_step("Installing System Dependencies...")
-    run_cmd("apt-get update -y")
     packages = ["git", "curl", "python3-pip", "python3-venv", "postgresql", "postgresql-contrib", "psmisc", "docker.io"]
+    needs_install = []
     for pkg in packages:
-        run_cmd(f"apt-get install -y {pkg}")
-    print_success("System packages (including Docker) installed successfully.")
+        code, _ = run_cmd(f"dpkg -s {pkg}", fail_on_error=False, shell=True)
+        if code != 0:
+            needs_install.append(pkg)
+            
+    if needs_install:
+        print(f"Missing packages: {', '.join(needs_install)}. Updating apt and installing...")
+        run_cmd("apt-get update -y")
+        for pkg in needs_install:
+            run_cmd(f"apt-get install -y {pkg}")
+        print_success("Missing system packages installed successfully.")
+    else:
+        print_success("All system packages are already installed.")
     
     print_step("Ensuring Docker is running...")
     run_cmd("systemctl enable docker", fail_on_error=False)
@@ -108,6 +118,11 @@ def install_nodejs():
 def install_strix():
     print_step("Installing Strix Core...")
     
+    code, _ = run_cmd("strix --help", fail_on_error=False)
+    if code == 0:
+        print_success("Strix Core is already installed. Skipping installation.")
+        return
+        
     print("Fetching official Strix installer...")
     code, out = run_cmd("curl -sSL https://strix.ai/install | bash", fail_on_error=False)
     
