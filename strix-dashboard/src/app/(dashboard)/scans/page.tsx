@@ -62,8 +62,17 @@ const LLM_MODELS = [
   { value: "groq/llama3-70b-8192", label: "Groq Llama 3 70B" },
   { value: "groq/mixtral-8x7b-32768", label: "Groq Mixtral 8x7B" },
   // OpenRouter
+  { value: "openrouter/auto", label: "OpenRouter Auto (Best Model)" },
+  { value: "openrouter/free", label: "OpenRouter Free (Auto-Select Free)" },
   { value: "openrouter/anthropic/claude-3.5-sonnet", label: "OpenRouter Claude 3.5 Sonnet" },
   { value: "openrouter/meta-llama/llama-3.3-70b-instruct", label: "OpenRouter Llama 3.3 70B" },
+  { value: "openrouter/nvidia/llama-3.1-nemotron-70b-instruct:free", label: "OpenRouter Nemotron 70B (Free)" },
+  { value: "openrouter/meta-llama/llama-3.1-8b-instruct:free", label: "OpenRouter Llama 3.1 8B (Free)" },
+  { value: "openrouter/google/gemini-2.5-flash-exp:free", label: "OpenRouter Gemini 2.5 Flash (Free)" },
+  { value: "openrouter/google/gemma-2-9b-it:free", label: "OpenRouter Gemma 2 9B (Free)" },
+  { value: "openrouter/qwen/qwen-2.5-72b-instruct:free", label: "OpenRouter Qwen 2.5 72B (Free)" },
+  { value: "openrouter/openai/o1-mini", label: "OpenRouter OpenAI o1-mini" },
+  { value: "openrouter/openai/gpt-4o-mini", label: "OpenRouter OpenAI GPT-4o-mini" },
   // Mistral
   { value: "mistral/mistral-large-3", label: "Mistral Large 3 (675B MoE)" },
   { value: "mistral/ministral-3-14b", label: "Ministral 3 14B (Reasoning)" },
