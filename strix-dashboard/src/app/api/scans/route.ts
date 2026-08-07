@@ -204,13 +204,14 @@ export async function POST(req: NextRequest) {
 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (resumeRun && !target) {
+  if (resumeRun) {
     const oldScan = await prisma.scan.findUnique({ where: { id: resumeRun } });
     if (oldScan) {
       target = oldScan.target;
-      if (!llmModel) llmModel = oldScan.llmModel;
-      if (!scanMode) scanMode = oldScan.scanMode;
-    } else {
+      llmModel = oldScan.llmModel;
+      scanMode = oldScan.scanMode;
+      projectName = oldScan.projectName;
+    } else if (!target) {
       target = "Resumed Scan";
     }
   }
