@@ -135,22 +135,6 @@ function ScansContent() {
     return () => clearInterval(iv);
   }, []);
 
-  function getApiKey(model: string): string {
-    if (model.startsWith("ollama/")) return ""; // Ollama doesn't need a key
-    try {
-      const savedKeys = JSON.parse(localStorage.getItem("strix_api_keys") || "{}");
-      if (model.startsWith("openai/")) return savedKeys.openai || "";
-      if (model.startsWith("anthropic/")) return savedKeys.anthropic || "";
-      if (model.startsWith("google/")) return savedKeys.gemini || "";
-      if (model.startsWith("deepseek/")) return savedKeys.deepseek || "";
-      if (model.startsWith("groq/")) return savedKeys.groq || "";
-      if (model.startsWith("openrouter/")) return savedKeys.openrouter || "";
-      if (model.startsWith("mistral/")) return savedKeys.mistral || "";
-      if (model.startsWith("cohere/")) return savedKeys.cohere || "";
-    } catch (e) {}
-    return "";
-  }
-
   const [form, setForm] = useState({
     target: "",
     scanName: "",
@@ -199,16 +183,6 @@ function ScansContent() {
       const saved = localStorage.getItem("strix_custom_models");
       if (saved) setCustomModels(JSON.parse(saved));
     } catch(e) {}
-    
-    // Sync API keys from backend to localStorage for getApiKey
-    fetch("/api/user/keys")
-      .then(r => r.json())
-      .then(data => {
-        if (!data.error && Object.keys(data).length > 0) {
-          localStorage.setItem("strix_api_keys", JSON.stringify(data));
-        }
-      })
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -252,11 +226,6 @@ function ScansContent() {
     setError("");
     if (!form.target.trim() && !form.targetList.trim()) return setError("Target is required");
     
-    const apiKey = getApiKey(form.llmModel);
-    if (!apiKey && !form.simulationMode && !form.llmModel.startsWith("ollama/")) {
-      return setError(`Please configure your API Key in Settings first.`);
-    }
-
     setLaunching(true);
     try {
       let notificationConfig = null;
@@ -265,7 +234,7 @@ function ScansContent() {
         if (savedNotifs) notificationConfig = JSON.parse(savedNotifs);
       } catch (e) {}
 
-      const payload = { ...form, apiKey, notificationConfig };
+      const payload = { ...form, notificationConfig };
       if (payload.scheduledAt) {
         payload.scheduledAt = new Date(payload.scheduledAt).toISOString();
       }
@@ -323,15 +292,10 @@ function ScansContent() {
     if (!scheduleModal) return;
     setScheduling(true);
     try {
-      const apiKey = getApiKey(scheduleModal.llmModel);
-      if (!apiKey && !scheduleModal.llmModel.startsWith("ollama/")) {
-         throw new Error(`Please configure your API Key for ${scheduleModal.llmModel} in Settings first.`);
-      }
-
       const res = await fetch(`/api/scans/${scheduleModal.scanId}/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ period: scheduleModal.period, apiKey })
+        body: JSON.stringify({ period: scheduleModal.period })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to schedule");

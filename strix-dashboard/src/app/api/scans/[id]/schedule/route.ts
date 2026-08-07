@@ -7,7 +7,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const body = await req.json();
-    const { period, apiKey } = body; // period: "daily", "weekly", "monthly", "none"
+    const { period } = body; // period: "daily", "weekly", "monthly", "none"
 
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,12 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Invalid period. Must be daily, weekly, or monthly." }, { status: 400 });
     }
 
-    // Require apiKey unless it's an Ollama model or simulation
     const existingPayload = scan.payload as any;
-    const llmModel = existingPayload?.llmModel || scan.llmModel;
-    if (!apiKey && !llmModel?.startsWith("ollama/") && !existingPayload?.simulationMode) {
-      return NextResponse.json({ error: "API Key is required to schedule recurring scans" }, { status: 400 });
-    }
 
     // Calculate next run time
     const nextRunAt = new Date();
@@ -48,14 +43,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     else if (period === "weekly") nextRunAt.setDate(nextRunAt.getDate() + 7);
     else if (period === "monthly") nextRunAt.setMonth(nextRunAt.getMonth() + 1);
 
-    // Store updated apiKey in payload for future recurring runs
+    // Store updated payload for future recurring runs
     const updatedPayload = {
       ...(existingPayload || {}),
       target: existingPayload?.target || scan.target,
       llmModel: existingPayload?.llmModel || scan.llmModel,
       scanMode: existingPayload?.scanMode || scan.scanMode,
       projectName: existingPayload?.projectName || scan.projectName,
-      apiKey: apiKey || existingPayload?.apiKey,
     };
 
     await prisma.scan.update({

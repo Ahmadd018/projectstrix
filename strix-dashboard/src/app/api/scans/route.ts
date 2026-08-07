@@ -175,7 +175,6 @@ export async function POST(req: NextRequest) {
     llmModel,
     scanMode,
     instruction,
-    apiKey,
     targetList,
     scopeMode,
     diffBase,
@@ -190,7 +189,6 @@ export async function POST(req: NextRequest) {
     llmModel,
     scanMode,
     instruction: instruction ? "(provided)" : "(none)",
-    apiKey: apiKey ? "(provided)" : "(MISSING)",
   });
 
   const schedulerKey = req.headers.get('x-scheduler-secret');
@@ -210,28 +208,45 @@ export async function POST(req: NextRequest) {
     log.warn("POST /api/scans", "Rejected: target or targetList is required");
     return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
   }
-  if (!apiKey && !body.simulationMode) {
-    log.warn("POST /api/scans", "Rejected: apiKey is required");
-    return NextResponse.json({ error: "apiKey is required" }, { status: 400 });
-  }
 
   const scanId = body.preGeneratedScanId || randomUUID();
   const scanDir = path.join(RUNS_DIR, scanId);
   const isScheduled = body.scheduledAt && !body.preGeneratedScanId && new Date(body.scheduledAt).getTime() > Date.now();
 
+  const createdUserId = (isScheduler && body.userId) ? body.userId : (session.userId as string);
+  const userExists = await prisma.user.findUnique({ where: { id: createdUserId } });
+  
+  if (!userExists) {
+    log.error("POST /api/scans", `User ${createdUserId} not found in DB (Stale session)`);
+    return NextResponse.json({ error: "Invalid session. Please log out and log in again." }, { status: 401 });
+  }
+
+  // Fetch API Keys directly from DB
+  let userKeys: any = {};
+  if (userExists.apiKeys) {
+    try { userKeys = JSON.parse(userExists.apiKeys); } catch(e) {}
+  }
+
+  let resolvedApiKey = "";
+  if (llmModel.startsWith("openai/")) resolvedApiKey = userKeys.openai || "";
+  else if (llmModel.startsWith("anthropic/")) resolvedApiKey = userKeys.anthropic || "";
+  else if (llmModel.startsWith("google/")) resolvedApiKey = userKeys.gemini || "";
+  else if (llmModel.startsWith("deepseek/")) resolvedApiKey = userKeys.deepseek || "";
+  else if (llmModel.startsWith("groq/")) resolvedApiKey = userKeys.groq || "";
+  else if (llmModel.startsWith("openrouter/")) resolvedApiKey = userKeys.openrouter || "";
+  else if (llmModel.startsWith("mistral/")) resolvedApiKey = userKeys.mistral || "";
+  else if (llmModel.startsWith("cohere/")) resolvedApiKey = userKeys.cohere || "";
+
+  if (!resolvedApiKey && !body.simulationMode && !llmModel.startsWith("ollama/")) {
+    log.warn("POST /api/scans", `Rejected: API key for ${llmModel} is missing in DB`);
+    return NextResponse.json({ error: `API Key for ${llmModel} is not configured in Settings.` }, { status: 400 });
+  }
+
+  const apiKey = resolvedApiKey;
+
   try {
     const existing = await prisma.scan.findUnique({ where: { id: scanId } });
     if (!existing) {
-       // If scheduler creates a new scan (e.g. recurring), preserve the original userId from payload if it exists
-       const createdUserId = (isScheduler && body.userId) ? body.userId : (session.userId as string);
-       
-       // Verify the user actually exists (in case of DB resets and stale cookies)
-       const userExists = await prisma.user.findUnique({ where: { id: createdUserId } });
-       if (!userExists) {
-         log.error("POST /api/scans", `User ${createdUserId} not found in DB (Stale session)`);
-         return NextResponse.json({ error: "Invalid session. Please log out and log in again." }, { status: 401 });
-       }
-       
        await prisma.scan.create({
          data: {
            id: scanId,
