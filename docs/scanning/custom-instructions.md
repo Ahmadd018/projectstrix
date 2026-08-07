@@ -4,7 +4,23 @@ One of the most powerful features of Project Strix is the ability to steer the a
 
 ## How it works
 
-When you provide Custom Instructions in the "New Scan" modal, these instructions are injected directly into the system prompt of the underlying LLM. The AI agent will prioritize these instructions above its generic exploration algorithms.
+When you provide Custom Instructions in the "New Scan" modal, tThese instructions are directly embedded into the System Prompt of the AI agent, effectively acting as an unbreakable directive for that specific scan.
+
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
+graph TD
+    A[User Input: Custom Instructions] --> B(Strix Engine)
+    C[Base Pentesting Rules & Heuristics] --> B
+    D[Target DOM & HTTP Responses] --> B
+    
+    B --> E{LLM System Prompt}
+    E --> F[AI Generates Targeted Payloads]
+    F --> G(Execute Attack)
+    
+    style A fill:#d97706,stroke:#fff,stroke-width:2px,color:#fff
+    style C fill:#333,stroke:#fff,stroke-width:2px,color:#fff
+    style E fill:#b91c1c,stroke:#fff,stroke-width:2px,color:#fff
+```
 
 ## Examples of Custom Instructions
 

@@ -8,6 +8,23 @@ Pentesting large applications can take hours. Occasionally, scans might fail due
 
 Strix includes a powerful **Intelligent Scan Resumption** feature that allows you to pick up exactly where you left off, rather than starting a 4-hour scan from scratch.
 
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
+graph TD
+    A([Failed Scan]) --> B[Click 'Resume Scan']
+    B --> C{Override LLM?}
+    C -- No --> D[Fetch Previous State & Model]
+    C -- Yes --> E[Select New Provider e.g., Local Ollama]
+    E --> F[Inject New API Key/Endpoint]
+    D --> G(Spawn Python Agent)
+    F --> G
+    G --> H[Read /tmp/strix_logs state]
+    H --> I([Resume Pentest from last checkpoint])
+    
+    style A fill:#b91c1c,stroke:#fff,stroke-width:2px,color:#fff
+    style I fill:#047857,stroke:#fff,stroke-width:2px,color:#fff
+```
+
 ## How to Resume a Scan
 
 1. Go to the **Scans** list on the Dashboard.

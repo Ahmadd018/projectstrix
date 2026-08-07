@@ -4,6 +4,26 @@ Strix provides a fully functional RESTful API built on Next.js Route Handlers. Y
 
 Below is a detailed breakdown of every major endpoint. Click on any endpoint to expand its details.
 
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
+sequenceDiagram
+    participant CI as CI/CD Pipeline (e.g., GitHub Actions)
+    participant Strix as Strix REST API
+    
+    CI->>Strix: POST /api/auth/login (Authenticate)
+    Strix-->>CI: 200 OK + strix_session Cookie
+    CI->>Strix: POST /api/scans (Start Scan)
+    Strix-->>CI: 200 OK + scanId
+    
+    loop Every 5 minutes
+        CI->>Strix: GET /api/scans (Check Status)
+        Strix-->>CI: Status: "running"
+    end
+    
+    Strix-->>CI: Status: "completed"
+    CI->>CI: Parse results and Fail/Pass Build
+```
+
 ## Authentication Endpoints
 
 ::: details POST `/api/auth/register`
