@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
   }
 
-  const scanId = body.preGeneratedScanId || randomUUID();
+  const scanId = resumeRun || body.preGeneratedScanId || randomUUID();
   const scanDir = path.join(RUNS_DIR, scanId);
   const isScheduled = body.scheduledAt && !body.preGeneratedScanId && new Date(body.scheduledAt).getTime() > Date.now();
 
@@ -278,9 +278,8 @@ export async function POST(req: NextRequest) {
            payload: isScheduled ? (body as any) : null,
          }
        });
-    } else if (isScheduler) {
-      // If triggered by scheduler, we don't want to change the userId to "scheduler",
-      // we keep the existing one. We just update the status.
+    } else if (isScheduler || resumeRun) {
+      // If triggered by scheduler or resume, keep existing user but update status.
       await prisma.scan.update({
         where: { id: scanId },
         data: {
@@ -320,9 +319,17 @@ export async function POST(req: NextRequest) {
     finishedAt: null,
     exitCode: null,
   };
-  fs.writeFileSync(runFile, JSON.stringify(runMeta, null, 2));
-  fs.writeFileSync(vulnFile, JSON.stringify([], null, 2));
-  log.info("POST /api/scans", `Scan created`, { scanId, scanDir });
+  if (!resumeRun) {
+    fs.writeFileSync(runFile, JSON.stringify(runMeta, null, 2));
+    fs.writeFileSync(vulnFile, JSON.stringify([], null, 2));
+  } else if (fs.existsSync(runFile)) {
+    try {
+      const existingRunMeta = JSON.parse(fs.readFileSync(runFile, "utf-8"));
+      existingRunMeta.status = "running";
+      fs.writeFileSync(runFile, JSON.stringify(existingRunMeta, null, 2));
+    } catch(e) {}
+  }
+  log.info("POST /api/scans", `Scan created/resumed`, { scanId, scanDir });
 
   const userSettings = userExists.settings || { webhookUrl: "", notifyOnStart: false, notifyOnFinish: true };
   const notificationConfig = {
@@ -337,24 +344,26 @@ export async function POST(req: NextRequest) {
   const strixCmd = getStrixCommand();
   const args = ["-n"]; // non-interactive by default
   
-  if (target) args.push("-t", target);
-  
-  if (targetList?.trim()) {
-    const targetListFile = path.join(scanDir, "targets.txt");
-    fs.writeFileSync(targetListFile, targetList.trim());
-    args.push("--target-list", targetListFile);
-  }
+  if (resumeRun) {
+    args.push("--resume", resumeRun.trim());
+  } else {
+    if (target) args.push("-t", target);
+    
+    if (targetList?.trim()) {
+      const targetListFile = path.join(scanDir, "targets.txt");
+      fs.writeFileSync(targetListFile, targetList.trim());
+      args.push("--target-list", targetListFile);
+    }
 
-  if (scanMode) args.push("-m", scanMode);
-  if (instruction?.trim()) args.push("--instruction", instruction.trim());
-  
-  // Advanced arguments mapping
-  if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
-  if (diffBase?.trim()) args.push("--diff-base", diffBase.trim());
-  if (configFile?.trim()) args.push("--config", configFile.trim());
-  if (maxBudget?.trim()) args.push("--max-budget", maxBudget.trim());
-  if (maxTurns?.trim()) args.push("--max-turns", maxTurns.trim());
-  if (resumeRun?.trim()) args.push("--resume", resumeRun.trim());
+    if (scanMode) args.push("-m", scanMode);
+    if (instruction?.trim()) args.push("--instruction", instruction.trim());
+    
+    if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
+    if (diffBase?.trim()) args.push("--diff-base", diffBase.trim());
+    if (configFile?.trim()) args.push("--config", configFile.trim());
+    if (maxBudget?.trim()) args.push("--max-budget", maxBudget.trim());
+    if (maxTurns?.trim()) args.push("--max-turns", maxTurns.trim());
+  }
 
   const env = {
     ...process.env,
