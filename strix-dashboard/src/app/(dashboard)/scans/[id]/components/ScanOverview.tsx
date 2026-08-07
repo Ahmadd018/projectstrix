@@ -20,7 +20,21 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(scan.id);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(scan.id);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = scan.id;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {}
+      textArea.remove();
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -41,7 +55,7 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
       : Math.max(0, 100 - (critical * 20 + high * 10 + medium * 5 + low * 1));
 
   return (
-    <div className={styles.overviewContainer}>
+    <div className={styles.overviewContainer} style={{ paddingBottom: 60 }}>
       <div className={styles.statsRow}>
         <div className={`glass-panel ${styles.statCard}`}>
           <span className={styles.statLabel}>Total Findings</span>
