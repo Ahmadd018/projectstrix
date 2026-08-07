@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { Copy, Check } from "lucide-react";
 import { ScanDetail, Vulnerability } from "../types";
 import styles from "../detail.module.css";
 
@@ -13,6 +17,13 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
   const medium = vulns.filter((v) => v.severity === "medium").length;
   const low = vulns.filter((v) => v.severity === "low").length;
   const total = vulns.length;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(scan.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const maxSeverity =
     critical > 0
@@ -112,6 +123,18 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
         <div className={`glass-panel ${styles.card}`}>
           <h3 className={styles.cardTitle}>Scan Metadata</h3>
           <div className={styles.metadataList}>
+            <div className={styles.metaItem}>
+              <span className={styles.metaKey}>Scan UUID (Run ID)</span>
+              <span 
+                className={styles.metaValue} 
+                style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "var(--brand)" }}
+                onClick={handleCopyId}
+                title="Click to copy UUID"
+              >
+                {scan.id}
+                {copied ? <Check size={14} color="var(--sev-low)" /> : <Copy size={14} />}
+              </span>
+            </div>
             <div className={styles.metaItem}>
               <span className={styles.metaKey}>Target URL / Path</span>
               <span className={styles.metaValue}>{scan.target}</span>
