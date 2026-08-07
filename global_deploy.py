@@ -96,8 +96,20 @@ def setup_postgresql():
     run_cmd(f"sudo -u postgres psql -c \"ALTER DATABASE {db_name} OWNER TO {db_user}\"", fail_on_error=False)
     
     # Force PostgreSQL to listen on TCP for Prisma to connect
-    run_cmd("sudo -u postgres psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"", fail_on_error=False)
+    run_cmd("sudo -u postgres psql -c \"ALTER SYSTEM SET listen_addresses = '127.0.0.1';\"", fail_on_error=False)
+    
+    # Ensure password auth is allowed for localhost
+    run_cmd("sudo -u postgres psql -t -c 'SHOW hba_file;' > /tmp/pg_hba.txt", fail_on_error=False, shell=True)
+    run_cmd("grep -q 'host all all 127.0.0.1/32 md5' $(cat /tmp/pg_hba.txt) || echo 'host all all 127.0.0.1/32 md5' | sudo tee -a $(cat /tmp/pg_hba.txt)", fail_on_error=False, shell=True)
+    
+    print("Restarting PostgreSQL...")
     run_cmd("systemctl restart postgresql", fail_on_error=False)
+    
+    print("----- POSTGRESQL DEBUG INFO -----")
+    run_cmd("systemctl status postgresql --no-pager", fail_on_error=False)
+    run_cmd("ss -tulpan | grep postgres", fail_on_error=False, shell=True)
+    run_cmd("sudo -u postgres psql -c 'SHOW port;'", fail_on_error=False)
+    print("---------------------------------")
     
     print_success("PostgreSQL configured successfully.")
 
