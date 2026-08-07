@@ -40,7 +40,7 @@ git clone https://github.com/infat0x/ProjectStrix.git
 cd ProjectStrix
 
 # Run the global orchestrator
-sudo python3 global_deploy.py
+sudo python3 runner/deploy.py
 ```
 
 > [!IMPORTANT]
@@ -53,7 +53,8 @@ sudo python3 global_deploy.py
 - `strix-dashboard/` — The Next.js Web Application (React, Tailwind CSS, Prisma ORM).
 - `strix/` — The Python-based AI agent core and CLI executable.
 - `docs/` — The VitePress documentation source files (auto-deployed to GitHub pages).
-- `global_deploy.py` — The unified installation, self-healing, and update orchestrator.
+- `runner/deploy.py` — The unified installation, self-healing, and update orchestrator.
+- `runner/nuke.py` — Script to completely clean the environment and uninstall Strix.
 
 ---
 

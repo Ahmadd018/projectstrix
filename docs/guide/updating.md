@@ -4,7 +4,7 @@ As Project Strix is continuously developed, you may want to pull the latest chan
 
 ## The Auto-Deployer Method
 
-The easiest and safest way to update your Strix deployment is to use the exact same script you used to install it. The `global_deploy.py` script is idempotent, meaning it is perfectly safe to run multiple times. It will automatically detect existing configurations, apply any new database schema migrations, and rebuild the UI.
+The easiest and safest way to update your Strix deployment is to use the exact same script you used to install it. The `runner/deploy.py` script is idempotent, meaning it is perfectly safe to run multiple times. It will automatically detect existing configurations, apply any new database schema migrations, and rebuild the UI.
 
 1. SSH into your server.
 2. Navigate to your installation directory:
@@ -18,7 +18,7 @@ The easiest and safest way to update your Strix deployment is to use the exact s
    ```
 4. Run the auto-deployer script:
    ```bash
-   sudo python3 global_deploy.py
+   sudo python3 runner/deploy.py
    ```
 
 The script will:
@@ -29,4 +29,4 @@ The script will:
 - Gracefully restart the PM2 processes.
 
 ## Important Note on Data Loss
-Using `global_deploy.py` will run `npx prisma db push --accept-data-loss`. In development phases, this is perfectly fine. However, if structural schema changes occur that delete tables or columns, this command *could* result in data loss for those specific columns. Always back up your PostgreSQL database before updating critical production environments!
+Using `runner/deploy.py` will run `npx prisma db push --accept-data-loss`. In development phases, this is perfectly fine. However, if structural schema changes occur that delete tables or columns, this command *could* result in data loss for those specific columns. Always back up your PostgreSQL database before updating critical production environments!

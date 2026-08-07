@@ -1,6 +1,6 @@
 # Docker Deployment
 
-*(Note: Official Docker support is currently in experimental phases. For production environments, we highly recommend using the `global_deploy.py` script on a native Linux host as described in the Ubuntu deployment guide.)*
+*(Note: Official Docker support is currently in experimental phases. For production environments, we highly recommend using the `runner/deploy.py` script on a native Linux host as described in the Ubuntu deployment guide.)*
 
 If you prefer containerized environments, you can run Project Strix using Docker Compose. This encapsulates the Next.js frontend, the Python agent runner, and PostgreSQL into isolated containers.
 

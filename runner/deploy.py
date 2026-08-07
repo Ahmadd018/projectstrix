@@ -52,7 +52,7 @@ def check_root():
     print_step("Checking permissions...")
     if os.geteuid() != 0:
         print_error("This script must be run as root (use sudo).")
-        print("Example: sudo python3 global_deploy.py")
+        print("Example: sudo python3 runner/deploy.py")
         sys.exit(1)
     print_success("Running as root.")
 
