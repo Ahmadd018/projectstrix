@@ -70,7 +70,7 @@ const LLM_MODELS = [
   { value: "openrouter/meta-llama/llama-3.1-8b-instruct:free", label: "OpenRouter Llama 3.1 8B (Free)" },
   { value: "openrouter/google/gemini-2.5-flash-exp:free", label: "OpenRouter Gemini 2.5 Flash (Free)" },
   { value: "openrouter/google/gemma-2-9b-it:free", label: "OpenRouter Gemma 2 9B (Free)" },
-  { value: "openrouter/qwen/qwen-2.5-72b-instruct:free", label: "OpenRouter Qwen 2.5 72B (Free)" },
+  { value: "openrouter/qwen/qwen-2.5-72b-instruct", label: "OpenRouter Qwen 2.5 72B (Paid)" },
   { value: "openrouter/openai/o1-mini", label: "OpenRouter OpenAI o1-mini" },
   { value: "openrouter/openai/gpt-4o-mini", label: "OpenRouter OpenAI GPT-4o-mini" },
   // Mistral
