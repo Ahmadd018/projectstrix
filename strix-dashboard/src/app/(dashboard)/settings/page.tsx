@@ -42,6 +42,7 @@ export default function Settings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(keys)
       });
+      localStorage.setItem("strix_api_keys", JSON.stringify(keys));
       localStorage.setItem("strix_custom_models", JSON.stringify(customModels.filter(m => m.value.trim() && m.label.trim())));
     }
     else if (tab === "agent") localStorage.setItem("strix_agent_config", JSON.stringify(agentConfig));

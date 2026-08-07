@@ -199,6 +199,16 @@ function ScansContent() {
       const saved = localStorage.getItem("strix_custom_models");
       if (saved) setCustomModels(JSON.parse(saved));
     } catch(e) {}
+    
+    // Sync API keys from backend to localStorage for getApiKey
+    fetch("/api/user/keys")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error && Object.keys(data).length > 0) {
+          localStorage.setItem("strix_api_keys", JSON.stringify(data));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
