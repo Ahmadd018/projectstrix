@@ -168,16 +168,16 @@ def setup_dashboard():
     if not os.path.exists(env_file):
         print("Creating .env file...")
         with open(env_file, "w") as f:
-            f.write(f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\"\n")
+            f.write("DATABASE_URL=\"postgresql://strix_user:strix_password_123@localhost/strix?host=/var/run/postgresql\"\n")
             f.write("SESSION_SECRET=\"super-secret-key-12345\"\n")
             f.write("WEBHOOK_SECRET=\"strix-webhook-secret\"\n")
     else:
-        # If it exists, ensure we fix the DATABASE_URL to use the correct port
+        # If it exists, ensure we fix the DATABASE_URL to use the unix socket
         import re
         with open(env_file, "r") as f:
             content = f.read()
             
-        new_db_url = f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\""
+        new_db_url = "DATABASE_URL=\"postgresql://strix_user:strix_password_123@localhost/strix?host=/var/run/postgresql\""
         if "DATABASE_URL" in content:
             content = re.sub(r'DATABASE_URL=.*', new_db_url, content)
         else:
@@ -185,7 +185,7 @@ def setup_dashboard():
             
         with open(env_file, "w") as f:
             f.write(content)
-        print(f"Fixed database host and port ({pg_port}) in existing .env file.")
+        print("Fixed database host to use UNIX socket in existing .env file.")
             
     print("Installing npm dependencies...")
     run_cmd(f"cd {dashboard_dir} && npm install --legacy-peer-deps")
