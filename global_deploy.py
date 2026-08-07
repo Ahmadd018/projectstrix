@@ -165,9 +165,18 @@ def setup_dashboard():
     if not os.path.exists(env_file):
         print("Creating .env file...")
         with open(env_file, "w") as f:
-            f.write("DATABASE_URL=\"postgresql://strix_user:strix_password_123@localhost:5432/strix?schema=public\"\n")
+            f.write("DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:5432/strix?schema=public\"\n")
             f.write("SESSION_SECRET=\"super-secret-key-12345\"\n")
             f.write("WEBHOOK_SECRET=\"strix-webhook-secret\"\n")
+    else:
+        # If it exists, ensure we fix the localhost issue
+        with open(env_file, "r") as f:
+            content = f.read()
+        if "@localhost:5432" in content:
+            content = content.replace("@localhost:5432", "@127.0.0.1:5432")
+            with open(env_file, "w") as f:
+                f.write(content)
+            print("Fixed database host in existing .env file.")
             
     print("Installing npm dependencies...")
     run_cmd(f"cd {dashboard_dir} && npm install --legacy-peer-deps")
