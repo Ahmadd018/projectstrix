@@ -59,6 +59,13 @@ export default defineConfig({
         items: [
           { text: 'System Overview', link: '/architecture/system-overview' }
         ]
+      },
+      {
+        text: 'Developer API',
+        collapsed: false,
+        items: [
+          { text: 'REST API Reference', link: '/api/rest-api' }
+        ]
       }
     ],
 
