@@ -13,7 +13,7 @@ Instead of relying on static payloads and predictable regex matching, Strix leve
 
 ---
 
-## 🚀 Key Capabilities
+##  Key Capabilities
 
 - **Autonomous Agent Exploration**: The AI engine actively reads DOMs, API responses, and minified JS files, mapping out business logic to find complex flaws like IDORs and broken access controls.
 - **Real-Time Intelligence Stream**: Watch the AI's internal terminal logs and thoughts stream live to your browser via Server-Sent Events (SSE).
@@ -26,7 +26,7 @@ Instead of relying on static payloads and predictable regex matching, Strix leve
 
 ---
 
-## 🛠️ Deployment (Self-Healing Auto-Deployer)
+##  Deployment (Self-Healing Auto-Deployer)
 
 We provide a robust Python orchestration script that automatically handles system dependencies, PostgreSQL database provisioning, PM2 daemonization, and Next.js building on any fresh Ubuntu/Debian server.
 
@@ -48,7 +48,7 @@ sudo python3 global_deploy.py
 
 ---
 
-## 📚 Repository Structure
+##  Repository Structure
 
 - `strix-dashboard/` — The Next.js Web Application (React, Tailwind CSS, Prisma ORM).
 - `strix/` — The Python-based AI agent core and CLI executable.
@@ -57,7 +57,7 @@ sudo python3 global_deploy.py
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 > [!TIP]
 > **Design Philosophy**
