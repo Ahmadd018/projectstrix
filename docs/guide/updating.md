@@ -22,11 +22,29 @@ The easiest and safest way to update your Strix deployment is to use the exact s
    ```
 
 The script will:
-- Check if your system dependencies (Node.js, Postgres) are still up to date.
-- Install any new NPM packages added in the update.
-- Apply new Prisma database migrations seamlessly (using `db push`).
-- Compile the new Next.js dashboard.
+- Check for Python/Node/System dependencies.
+- Fix broken `dpkg` or missing locales automatically.
+- Re-run `npm install` and `npm run build` for the Next.js app.
+- Apply new `prisma db push` migrations.
 - Gracefully restart the PM2 processes.
+
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
+graph TD
+    A[Start deploy.py] --> B{Root User?}
+    B -- No --> C[Exit with Error]
+    B -- Yes --> D[Check System Dependencies]
+    D --> E{dpkg locked / broken?}
+    E -- Yes --> F[Self-Heal OS & Locales] --> G
+    E -- No --> G[Check/Install NPM & Python libs]
+    G --> H[Run Prisma DB Push]
+    H --> I[Build Next.js App]
+    I --> J{PM2 Running?}
+    J -- Yes --> K[PM2 Restart All]
+    J -- No --> L[PM2 Start App & Scheduler]
+    K --> M([Deployment Complete])
+    L --> M
+```
 
 ## Important Note on Data Loss
 Using `runner/deploy.py` will run `npx prisma db push --accept-data-loss`. In development phases, this is perfectly fine. However, if structural schema changes occur that delete tables or columns, this command *could* result in data loss for those specific columns. Always back up your PostgreSQL database before updating critical production environments!

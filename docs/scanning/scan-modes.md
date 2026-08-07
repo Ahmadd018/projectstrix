@@ -2,6 +2,31 @@
 
 When creating a new scan, you must define the "Scan Mode" (or intensity). This dictates how aggressively the AI agent will interact with the target application, and how deep it will crawl.
 
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
+graph LR
+    A((Target)) --> B[Quick Mode]
+    A --> C[Standard Mode]
+    A --> D[Deep Mode]
+    
+    B --> E(Surface Crawl)
+    B --> F(Misconfigurations)
+    
+    C --> E
+    C --> G(JavaScript Parsing)
+    C --> H(Basic Fuzzing)
+    
+    D --> E
+    D --> G
+    D --> H
+    D --> I(Multi-stage Exploits)
+    D --> J(Exhaustive Crawl)
+    
+    style B fill:#1e3a8a,stroke:#fff,stroke-width:2px,color:#fff
+    style C fill:#047857,stroke:#fff,stroke-width:2px,color:#fff
+    style D fill:#dc2626,stroke:#fff,stroke-width:2px,color:#fff
+```
+
 ## 1. Quick Mode
 - **Description:** Designed for rapid reconnaissance and identifying low-hanging fruit.
 - **Behavior:** The AI agent will perform a surface-level crawl of the target URL, look for exposed `.git` directories, check for common misconfigurations (like missing security headers), and quickly assess the main page functionality.
