@@ -43,7 +43,7 @@ graph TD
     style E fill:#0369a1,stroke:#fff,stroke-width:2px,color:#fff
     style F fill:#d97706,stroke:#fff,stroke-width:2px,color:#fff
     
-    linkStyle default stroke:#888,stroke-width:2px,color:#fff
+    linkStyle default stroke:#888,stroke-width:2px,color:#008000
 ```
 
 When a user initiates a scan from the UI, the Next.js API stores the configuration in PostgreSQL. It then uses Node's `child_process` to spawn the `strix` Python executable in the background, passing the UUID and parameters. The Python process operates entirely independently, logging its findings to temporary files, which the Node.js API streams back to the UI via Server-Sent Events.
