@@ -95,6 +95,10 @@ def setup_postgresql():
     run_cmd(f"sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user}\"", fail_on_error=False)
     run_cmd(f"sudo -u postgres psql -c \"ALTER DATABASE {db_name} OWNER TO {db_user}\"", fail_on_error=False)
     
+    # Force PostgreSQL to listen on TCP for Prisma to connect
+    run_cmd("sudo -u postgres psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"", fail_on_error=False)
+    run_cmd("systemctl restart postgresql", fail_on_error=False)
+    
     print_success("PostgreSQL configured successfully.")
 
 def install_nodejs():
@@ -168,16 +172,16 @@ def setup_dashboard():
     if not os.path.exists(env_file):
         print("Creating .env file...")
         with open(env_file, "w") as f:
-            f.write("DATABASE_URL=\"postgresql://strix_user:strix_password_123@localhost/strix?host=/var/run/postgresql\"\n")
+            f.write(f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\"\n")
             f.write("SESSION_SECRET=\"super-secret-key-12345\"\n")
             f.write("WEBHOOK_SECRET=\"strix-webhook-secret\"\n")
     else:
-        # If it exists, ensure we fix the DATABASE_URL to use the unix socket
+        # If it exists, ensure we fix the DATABASE_URL to use the correct port
         import re
         with open(env_file, "r") as f:
             content = f.read()
             
-        new_db_url = "DATABASE_URL=\"postgresql://strix_user:strix_password_123@localhost/strix?host=/var/run/postgresql\""
+        new_db_url = f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\""
         if "DATABASE_URL" in content:
             content = re.sub(r'DATABASE_URL=.*', new_db_url, content)
         else:
@@ -185,7 +189,7 @@ def setup_dashboard():
             
         with open(env_file, "w") as f:
             f.write(content)
-        print("Fixed database host to use UNIX socket in existing .env file.")
+        print(f"Fixed database host and port ({pg_port}) in existing .env file.")
             
     print("Installing npm dependencies...")
     run_cmd(f"cd {dashboard_dir} && npm install --legacy-peer-deps")
