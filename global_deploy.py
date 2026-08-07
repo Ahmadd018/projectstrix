@@ -108,9 +108,12 @@ def setup_postgresql():
     run_cmd("systemctl restart postgresql", fail_on_error=False)
     
     print("----- POSTGRESQL DEBUG INFO -----")
-    run_cmd("systemctl status postgresql --no-pager", fail_on_error=False)
-    run_cmd("ss -tulpan | grep postgres", fail_on_error=False, shell=True)
-    run_cmd("sudo -u postgres psql -c 'SHOW port;'", fail_on_error=False)
+    c, out1 = run_cmd("systemctl status postgresql --no-pager", fail_on_error=False)
+    print(out1)
+    c, out2 = run_cmd("ss -tulpan | grep postgres", fail_on_error=False, shell=True)
+    print(out2)
+    c, out3 = run_cmd("sudo -u postgres psql -c 'SHOW port;'", fail_on_error=False)
+    print(out3)
     print("---------------------------------")
     
     print_success("PostgreSQL configured successfully.")
