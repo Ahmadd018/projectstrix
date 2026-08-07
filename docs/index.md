@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "Project Strix"
-  text: "Autonomous AI Pentesting Platform"
-  tagline: "Security validation powered by next-generation LLMs."
+  name: "Strix Dashboard"
+  text: "Autonomous AI Pentesting UI"
+  tagline: "The official web interface and orchestrator for the Strix Pentesting Engine."
   actions:
     - theme: brand
       text: Get Started

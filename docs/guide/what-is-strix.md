@@ -1,6 +1,6 @@
-# What is Project Strix?
+# What is the Strix Dashboard?
 
-**Project Strix** is an advanced, enterprise-grade autonomous AI penetration testing platform. Unlike traditional static scanners, Strix relies on the creative reasoning power of Large Language Models (LLMs) to perform dynamic, contextual, and deeply analytical security assessments.
+**Strix Dashboard** is the official web interface and orchestration layer for the Project Strix autonomous AI penetration testing engine. While the core "Strix" engine is a Python-based CLI agent, this project provides the enterprise-grade UI, database management, and background scheduling required to run those agents at scale.
 
 ## The Problem with Traditional Scanners
 
