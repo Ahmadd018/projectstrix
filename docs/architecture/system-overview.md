@@ -37,7 +37,7 @@ graph TD
     C -.->|Writes Logs to /tmp| B
     
     style A fill:#333,stroke:#666,stroke-width:2px,color:#fff
-    style B fill:#b91c1c,stroke:#fff,stroke-width:2px,color:#008000
+    style B fill:#b91c1c,stroke:#fff,stroke-width:2px,color:#fff
     style C fill:#dc2626,stroke:#fff,stroke-width:2px,color:#fff
     style D fill:#991b1b,stroke:#fff,stroke-width:2px,color:#fff
     style E fill:#0369a1,stroke:#fff,stroke-width:2px,color:#fff
