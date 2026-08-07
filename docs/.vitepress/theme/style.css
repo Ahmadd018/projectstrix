@@ -8,6 +8,10 @@
     --vp-c-brand-2: #b91c1c;
     --vp-c-brand-3: #991b1b;
     --vp-c-brand-soft: rgba(220, 38, 38, 0.16);
+    
+    /* Hacker aesthetic fonts */
+    --vp-font-family-base: "Consolas", "Courier New", monospace;
+    --vp-font-family-mono: "Consolas", "Courier New", monospace;
   }
   
   .dark {
