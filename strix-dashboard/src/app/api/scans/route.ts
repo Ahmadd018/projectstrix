@@ -181,7 +181,6 @@ export async function POST(req: NextRequest) {
     configFile,
     maxBudget,
     maxTurns,
-    maxTurns,
     resumeRun,
     overrideLlm,
   } = body;
