@@ -38,6 +38,8 @@ const LLM_MODELS = [
   // DeepSeek
   { value: "deepseek/deepseek-coder", label: "DeepSeek Coder" },
   { value: "deepseek/deepseek-v3", label: "DeepSeek v3" },
+  { value: "deepseek/deepseek-v4-pro", label: "DeepSeek v4 Pro" },
+  { value: "deepseek/deepseek-v4-flash", label: "DeepSeek v4 Flash" },
   // Groq
   { value: "groq/llama3-70b-8192", label: "Groq Llama 3 70B" },
   { value: "groq/mixtral-8x7b-32768", label: "Groq Mixtral 8x7B" },
