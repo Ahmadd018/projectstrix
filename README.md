@@ -1,71 +1,75 @@
-# Project Strix 🦅
+<div align="center">
+  <h1>🦅 Project Strix</h1>
+  <p><strong>Autonomous AI Pentesting Dashboard & Orchestrator</strong></p>
+</div>
 
-Strix — AI-powered Security Assessment Tool & Interactive Dashboard.
+> [!CAUTION]
+> **Authorized Use Only**
+> Project Strix is a powerful offensive security tool designed to identify critical vulnerabilities using autonomous AI agents. Do not run this software against targets you do not own or do not have explicit, documented permission to test.
 
-## Quick Start (One-Line Setup)
+Project Strix is the official enterprise-grade **Autonomous Web Dashboard** and orchestration layer for the Strix AI Pentesting engine. 
 
-Clone the repository and run the setup script:
+Instead of relying on static payloads and predictable regex matching, Strix leverages cutting-edge Large Language Models (such as OpenAI GPT-4o, Anthropic Claude 3.5, or local Ollama instances) to dynamically reason, explore, and attack web applications exactly like a human red-team operator.
+
+---
+
+## 🚀 Key Capabilities
+
+- **Autonomous Agent Exploration**: The AI engine actively reads DOMs, API responses, and minified JS files, mapping out business logic to find complex flaws like IDORs and broken access controls.
+- **Real-Time Intelligence Stream**: Watch the AI's internal terminal logs and thoughts stream live to your browser via Server-Sent Events (SSE).
+- **Intelligent Resumption**: If a massive scan fails due to network drops or LLM rate limits, resume it instantly from the exact point of failure—even overriding the underlying AI model mid-scan.
+- **Enterprise UI & Analytics**: A beautiful dark-themed Next.js dashboard featuring dynamic Recharts for severity distribution and strict Role-Based Access Control (RBAC).
+
+> [!NOTE]
+> **Full Documentation**
+> For detailed guides on Installation, System Architecture, and API configuration, please visit our official documentation site: **[Strix Official Documentation](https://infat0x.github.io/ProjectStrix/)**
+
+---
+
+## 🛠️ Deployment (Self-Healing Auto-Deployer)
+
+We provide a robust Python orchestration script that automatically handles system dependencies, PostgreSQL database provisioning, PM2 daemonization, and Next.js building on any fresh Ubuntu/Debian server.
+
+> [!WARNING]
+> **Port Configuration**
+> By default, the auto-deployer will bind the Strix Dashboard to port `48080`. Ensure this port is permitted through your cloud provider's firewall (e.g., AWS Security Groups or UFW).
 
 ```bash
-git clone https://github.com/your-org/ProjectStrix.git
+# Clone the repository
+git clone https://github.com/infat0x/ProjectStrix.git
 cd ProjectStrix
-bash setup_and_run.sh
+
+# Run the global orchestrator
+sudo python3 global_deploy.py
 ```
 
-This script will automatically:
-1. Install system dependencies (Docker, Python 3, Node.js 20).
-2. Install the **Strix CLI** system-wide (or in user/venv path).
-3. Install Dashboard dependencies and build Next.js production bundle.
+> [!IMPORTANT]
+> The deployment script is completely idempotent. If your `dpkg` is locked or your OS is missing essential `locales` (which often breaks Postgres), the script will automatically self-heal the operating system before continuing.
 
 ---
 
-## Running the Dashboard
+## 📚 Repository Structure
 
-After running `setup_and_run.sh`:
-
-### Option A: From root folder
-```bash
-npm start
-```
-
-### Option B: From dashboard directory
-```bash
-cd strix-dashboard
-npm start
-```
-
-### Option C: Development mode
-```bash
-cd strix-dashboard
-npm run dev
-```
-
-### Option D: Auto-start with setup
-```bash
-bash setup_and_run.sh --start
-```
-
-The dashboard will be available at **`http://localhost`** (port 80).
+- `strix-dashboard/` — The Next.js Web Application (React, Tailwind CSS, Prisma ORM).
+- `strix/` — The Python-based AI agent core and CLI executable.
+- `docs/` — The VitePress documentation source files (auto-deployed to GitHub pages).
+- `global_deploy.py` — The unified installation, self-healing, and update orchestrator.
 
 ---
 
-## 🛠️ CLI Usage (Independent)
+## 🤝 Contributing
 
-You can also use the Strix CLI directly:
+> [!TIP]
+> **Design Philosophy**
+> If you are contributing to the UI or Documentation, remember that we strictly use a "Red Team / Hacker" aesthetic. Use Crimson/Dark themes, Consolas fonts, and glassmorphic UI elements.
 
-```bash
-strix --target https://example.com --scan-mode standard
-```
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/AgentUpdate`).
+3. Commit your changes (`git commit -m 'Add new payload capabilities'`).
+4. Push to the branch (`git push origin feature/AgentUpdate`).
+5. Open a Pull Request.
 
 ---
-
-## 📁 Repository Structure
-
-* `strix/` — Core Python-based AI agent pentesting framework & CLI.
-* `strix-dashboard/` — Modern Next.js web application dashboard.
-  * `strix-dashboard/scripts/` — Auxiliary background scripts (e.g., `scheduler.js`).
-* `docs/` — Documentation and examples (e.g., sample report outputs).
-* `setup_and_run.sh` — Automatic setup script for cloned repositories.
-* `package.json` — Root scripts for building and launching.
-
-> **Note on Background Services**: The Strix deployment utilizes PM2 to keep both the Next.js dashboard (`strix-dashboard`) and the scheduled scans process (`strix-scheduler`) running in the background continuously.
+<div align="center">
+  <i>Developed for next-generation security validation.</i>
+</div>
