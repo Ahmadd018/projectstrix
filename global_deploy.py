@@ -67,9 +67,9 @@ def install_system_packages():
             
     if needs_install:
         print(f"Missing packages: {', '.join(needs_install)}. Updating apt and installing...")
-        run_cmd("apt-get update -y")
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get update -y")
         for pkg in needs_install:
-            run_cmd(f"apt-get install -y {pkg}")
+            run_cmd(f"export DEBIAN_FRONTEND=noninteractive && apt-get install -y {pkg}")
         print_success("Missing system packages installed successfully.")
     else:
         print_success("All system packages are already installed.")
@@ -86,12 +86,12 @@ def setup_postgresql():
     code, _ = run_cmd("sudo -u postgres psql -c 'SELECT 1;'", fail_on_error=False)
     if code != 0:
         print("PostgreSQL is not responding (likely broken install due to missing locales). Fixing...")
-        run_cmd("apt-get install -y locales", fail_on_error=False)
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get install -y locales", fail_on_error=False)
         run_cmd("locale-gen en_US.UTF-8", fail_on_error=False)
         run_cmd("update-locale LANG=en_US.UTF-8", fail_on_error=False)
-        run_cmd("apt-get --purge remove -y postgresql*", fail_on_error=False)
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get --purge remove -y postgresql*", fail_on_error=False)
         run_cmd("rm -rf /etc/postgresql /var/lib/postgresql /var/run/postgresql", fail_on_error=False)
-        run_cmd("apt-get install -y postgresql postgresql-contrib", fail_on_error=False)
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get install -y postgresql postgresql-contrib", fail_on_error=False)
         run_cmd("systemctl enable postgresql", fail_on_error=False)
         run_cmd("systemctl start postgresql", fail_on_error=False)
         
@@ -135,7 +135,7 @@ def install_nodejs():
     if code != 0 or not out.startswith("v20"):
         print("Installing Node.js LTS (v20)...")
         run_cmd("curl -fsSL https://deb.nodesource.com/setup_20.x | bash -")
-        run_cmd("apt-get install -y nodejs")
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get install -y nodejs")
     else:
         print("Node.js v20 is already installed.")
 
