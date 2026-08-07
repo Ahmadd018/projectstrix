@@ -67,6 +67,8 @@ def install_system_packages():
             
     if needs_install:
         print(f"Missing packages: {', '.join(needs_install)}. Updating apt and installing...")
+        # Recover from interrupted dpkg if any
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && dpkg --configure -a", fail_on_error=False)
         run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get update -y")
         for pkg in needs_install:
             run_cmd(f"export DEBIAN_FRONTEND=noninteractive && apt-get install -y {pkg}")
@@ -86,6 +88,7 @@ def setup_postgresql():
     code, _ = run_cmd("sudo -u postgres psql -c 'SELECT 1;'", fail_on_error=False)
     if code != 0:
         print("PostgreSQL is not responding (likely broken install due to missing locales). Fixing...")
+        run_cmd("export DEBIAN_FRONTEND=noninteractive && dpkg --configure -a", fail_on_error=False)
         run_cmd("export DEBIAN_FRONTEND=noninteractive && apt-get install -y locales", fail_on_error=False)
         run_cmd("locale-gen en_US.UTF-8", fail_on_error=False)
         run_cmd("update-locale LANG=en_US.UTF-8", fail_on_error=False)
