@@ -83,11 +83,22 @@ def setup_postgresql():
     run_cmd("systemctl enable postgresql")
     run_cmd("systemctl start postgresql")
 
-    # Create database and user if they don't exist
+    code, _ = run_cmd("sudo -u postgres psql -c 'SELECT 1;'", fail_on_error=False)
+    if code != 0:
+        print("PostgreSQL is not responding (likely broken install due to missing locales). Fixing...")
+        run_cmd("apt-get install -y locales", fail_on_error=False)
+        run_cmd("locale-gen en_US.UTF-8", fail_on_error=False)
+        run_cmd("update-locale LANG=en_US.UTF-8", fail_on_error=False)
+        run_cmd("apt-get --purge remove -y postgresql*", fail_on_error=False)
+        run_cmd("rm -rf /etc/postgresql /var/lib/postgresql /var/run/postgresql", fail_on_error=False)
+        run_cmd("apt-get install -y postgresql postgresql-contrib", fail_on_error=False)
+        run_cmd("systemctl enable postgresql", fail_on_error=False)
+        run_cmd("systemctl start postgresql", fail_on_error=False)
+        
     db_name = "strix"
     db_user = "strix_user"
     db_pass = "strix_password_123"
-
+    
     print("Configuring Database and User...")
     # Using psql as postgres user
     run_cmd(f"sudo -u postgres psql -tc \"SELECT 1 FROM pg_database WHERE datname = '{db_name}'\" | grep -q 1 || sudo -u postgres psql -c \"CREATE DATABASE {db_name}\"", fail_on_error=False)
