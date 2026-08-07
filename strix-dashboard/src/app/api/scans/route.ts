@@ -181,7 +181,9 @@ export async function POST(req: NextRequest) {
     configFile,
     maxBudget,
     maxTurns,
+    maxTurns,
     resumeRun,
+    overrideLlm,
   } = body;
 
   log.debug("POST /api/scans", "Scan parameters", {
@@ -208,7 +210,7 @@ export async function POST(req: NextRequest) {
     const oldScan = await prisma.scan.findUnique({ where: { id: resumeRun } });
     if (oldScan) {
       target = oldScan.target;
-      llmModel = oldScan.llmModel;
+      llmModel = overrideLlm && body.llmModel ? body.llmModel : oldScan.llmModel;
       scanMode = oldScan.scanMode;
       projectName = oldScan.projectName;
     } else if (!target) {

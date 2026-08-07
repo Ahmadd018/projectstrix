@@ -197,6 +197,7 @@ function ScansContent() {
     maxBudget: "",
     maxTurns: "",
     resumeRun: "",
+    overrideLlm: false,
   });
 
   function fetchScans() {
@@ -938,6 +939,33 @@ function ScansContent() {
                     required
                   />
                   <div className="field-hint">Paste the ID of the stopped or failed scan to resume its progress.</div>
+                </div>
+
+                <div className="field-group">
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--fg)" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.overrideLlm} 
+                      onChange={(e) => setForm({ ...form, overrideLlm: e.target.checked })}
+                      style={{ accentColor: "var(--fg)" }}
+                    />
+                    Override LLM Model?
+                  </label>
+                  {form.overrideLlm && (
+                    <div style={{ marginTop: 12 }}>
+                      <select
+                        className="field-input"
+                        value={form.llmModel}
+                        onChange={(e) => setForm({ ...form, llmModel: e.target.value })}
+                        disabled={launching}
+                      >
+                        {[...LLM_MODELS, ...customModels].map((m) => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <div className="field-hint" style={{ marginTop: 6 }}>Select a different AI model to continue the scan with. Note: You must have the API Key for the selected model.</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
