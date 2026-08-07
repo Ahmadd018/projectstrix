@@ -11,7 +11,7 @@ Project Strix relies on a decoupled, asynchronous architecture.
 ## System Architecture Diagram
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20', 'tertiaryColor': '#1e1e20'}}}%%
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
 graph TD
     subgraph UI["Dashboard (Next.js)"]
         A[User Browser]

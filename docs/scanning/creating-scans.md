@@ -20,7 +20,7 @@ Upon clicking launch, the Next.js backend will store the configuration in Postgr
 ## Scan Lifecycle
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20', 'tertiaryColor': '#1e1e20'}}}%%
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
 stateDiagram-v2
     [*] --> Pending : Scan Scheduled
     Pending --> Running : PM2 Picks Up Task

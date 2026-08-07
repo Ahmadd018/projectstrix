@@ -16,7 +16,7 @@ This terminal streams the internal logs of the Python core agent in real-time. Y
 Instead of forcing you to refresh the page to see if a 4-hour pentest is making progress, Strix utilizes **Server-Sent Events (SSE)** to stream the internal thoughts and terminal output of the AI directly to your browser in real-time.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20', 'tertiaryColor': '#1e1e20'}}}%%
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
 sequenceDiagram
     participant Browser as User Browser (UI)
     participant NextJS as Next.js API

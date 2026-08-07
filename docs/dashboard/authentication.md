@@ -3,7 +3,7 @@
 Security tools must inherently be secure themselves. Project Strix uses a **stateless, cookie-based JSON Web Token (JWT)** architecture for authentication. This ensures the dashboard remains fast, scalable, and independent of server-side session memory.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20', 'tertiaryColor': '#1e1e20'}}}%%
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20' }}}%%
 sequenceDiagram
     participant Browser
     participant API as Next.js API (/api/auth)
