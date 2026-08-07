@@ -185,15 +185,15 @@ def deploy_service():
     print_step("Deploying Strix Dashboard as a PM2 Service...")
     dashboard_dir = os.path.join(os.getcwd(), "strix-dashboard")
     
-    # Kill any process on port 80 to prevent EADDRINUSE
-    run_cmd("fuser -k 80/tcp", fail_on_error=False)
+    # Kill any process on port 48080 to prevent EADDRINUSE
+    run_cmd("fuser -k 48080/tcp", fail_on_error=False)
     
     # Delete existing pm2 process if it exists
     run_cmd("pm2 delete strix-dashboard", fail_on_error=False)
     
     # Start the app via PM2
-    print("Starting Next.js via PM2 on port 80...")
-    run_cmd(f"cd {dashboard_dir} && pm2 start npm --name 'strix-dashboard' -- run start -- -H 0.0.0.0 -p 80")
+    print("Starting Next.js via PM2 on port 48080...")
+    run_cmd(f"cd {dashboard_dir} && pm2 start npm --name 'strix-dashboard' -- run start -- -H 0.0.0.0 -p 48080")
     
     # Save PM2 list and configure startup
     run_cmd("pm2 save")
