@@ -48,6 +48,10 @@ const LLM_MODELS = [
   { value: "openrouter/meta-llama/llama-3.1-405b-instruct", label: "OpenRouter Llama 3.1 405B" },
   // Mistral
   { value: "mistral/mistral-large-latest", label: "Mistral Large" },
+  { value: "mistral/mistral-medium-latest", label: "Mistral Medium" },
+  { value: "mistral/mistral-small-latest", label: "Mistral Small" },
+  { value: "mistral/open-mixtral-8x22b", label: "Mistral 8x22B" },
+  { value: "mistral/open-mixtral-8x7b", label: "Mistral 8x7B" },
   // Cohere
   { value: "cohere/command-r-plus", label: "Cohere Command R+" },
   // Local (Ollama)
