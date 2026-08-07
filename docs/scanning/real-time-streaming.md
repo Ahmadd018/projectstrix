@@ -13,6 +13,27 @@ This terminal streams the internal logs of the Python core agent in real-time. Y
 - Errors, rate limits, and network timeouts as they happen.
 
 ## How it works technically
+Instead of forcing you to refresh the page to see if a 4-hour pentest is making progress, Strix utilizes **Server-Sent Events (SSE)** to stream the internal thoughts and terminal output of the AI directly to your browser in real-time.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20', 'tertiaryColor': '#1e1e20'}}}%%
+sequenceDiagram
+    participant Browser as User Browser (UI)
+    participant NextJS as Next.js API
+    participant Python as Strix CLI (Agent)
+
+    Browser->>NextJS: Initiate SSE Connection (/api/scans/[id]/stream)
+    NextJS-->>Browser: Connection Established (text/event-stream)
+    
+    loop Every 500ms
+        Python->>Python: Execute Task & Find Vulnerability
+        Python->>Disk: Write log to /tmp/strix_logs/[id].log
+        NextJS->>Disk: Read new lines from log file
+        NextJS-->>Browser: SSE Event (data: {"msg": "[+] SQLi Found"})
+    end
+```
+
+## How It Works Under the Hood
 1. The Python agent writes its output to a temporary log file located at `/tmp/strix_runs/<uuid>/agent.log`.
 2. The Next.js backend uses a `tail -f` like mechanism to watch this file.
 3. The browser connects to the Next.js backend via **Server-Sent Events (SSE)**.

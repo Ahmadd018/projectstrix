@@ -1,6 +1,25 @@
 # Authentication
 
-Security tools must inherently be secure themselves. Project Strix employs a robust, stateless authentication system to ensure that access to your vulnerability data is strictly protected.
+Security tools must inherently be secure themselves. Project Strix uses a **stateless, cookie-based JSON Web Token (JWT)** architecture for authentication. This ensures the dashboard remains fast, scalable, and independent of server-side session memory.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#dc2626', 'edgeLabelBackground':'#1e1e20', 'tertiaryColor': '#1e1e20'}}}%%
+sequenceDiagram
+    participant Browser
+    participant API as Next.js API (/api/auth)
+    participant DB as PostgreSQL
+
+    Browser->>API: POST /login (username, password)
+    API->>DB: Query User & Verify Hash
+    DB-->>API: Valid Credentials
+    API->>API: Generate JWT (Signed with JWT_SECRET)
+    API-->>Browser: Set-Cookie: strix_session=...; HttpOnly
+    
+    note over Browser,API: Future Requests
+    Browser->>API: GET /api/scans (includes HttpOnly Cookie)
+    API->>API: Verify JWT Signature
+    API-->>Browser: Return Scan Data
+```
 
 ## How It Works
 
