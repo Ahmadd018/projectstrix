@@ -214,7 +214,10 @@ export async function POST(req: NextRequest) {
   const isScheduled = body.scheduledAt && !body.preGeneratedScanId && new Date(body.scheduledAt).getTime() > Date.now();
 
   const createdUserId = (isScheduler && body.userId) ? body.userId : (session.userId as string);
-  const userExists = await prisma.user.findUnique({ where: { id: createdUserId } });
+  const userExists = await prisma.user.findUnique({ 
+    where: { id: createdUserId },
+    include: { settings: true }
+  });
   
   if (!userExists) {
     log.error("POST /api/scans", `User ${createdUserId} not found in DB (Stale session)`);
@@ -309,8 +312,15 @@ export async function POST(req: NextRequest) {
   fs.writeFileSync(vulnFile, JSON.stringify([], null, 2));
   log.info("POST /api/scans", `Scan created`, { scanId, scanDir });
 
+  const userSettings = userExists.settings || { webhookUrl: "", notifyOnStart: false, notifyOnFinish: true };
+  const notificationConfig = {
+    webhookUrl: userSettings.webhookUrl,
+    notifyOnStart: userSettings.notifyOnStart,
+    notifyOnFinish: userSettings.notifyOnFinish
+  };
+
   // Send start notification
-  sendWebhookNotification(body.notificationConfig, "start", runMeta);
+  sendWebhookNotification(notificationConfig, "start", runMeta);
 
   const strixCmd = getStrixCommand();
   const args = ["-n"]; // non-interactive by default
@@ -355,7 +365,7 @@ export async function POST(req: NextRequest) {
 
   if (body.simulationMode) {
     log.info("POST /api/scans", "Simulation Mode enabled, bypassing real agent");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
     return NextResponse.json({ scanId, status: "running", mode: "simulation" });
   }
 
@@ -370,7 +380,7 @@ export async function POST(req: NextRequest) {
       err,
     );
     log.warn("POST /api/scans", "Falling back to DEMO mode");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
     return NextResponse.json({ scanId, status: "running", mode: "demo" });
   }
 
@@ -445,16 +455,37 @@ export async function POST(req: NextRequest) {
     try {
       const vulns = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
       vulnCount = Array.isArray(vulns) ? vulns.length : 0;
+      
+      if (vulnCount > 0) {
+        // Sync vulnerabilities to database
+        const dbVulns = vulns.map((v: any) => ({
+          scanId,
+          vulnId: v.id || randomUUID(),
+          title: v.title || "Unknown",
+          severity: v.severity || "info",
+          endpoint: v.endpoint || "",
+          method: v.method || "",
+          description: v.description || "",
+          poc: v.poc || "",
+          cvss: v.cvss || 0.0,
+          remediation: v.remediation || ""
+        }));
+        
+        prisma.vulnerability.createMany({
+          data: dbVulns,
+          skipDuplicates: true
+        }).catch(e => log.error("PROC_CLOSE", "Failed to sync vulns to DB", e));
+      }
     } catch {}
     
-    // ✅ Bug #3 Fix: Update DB with final status and vuln count
+    // Update DB with final status and vuln count
     prisma.scan.update({
       where: { id: scanId },
       data: { status: finalStatus, vulnCount }
     }).catch(err => log.error("PROC_CLOSE", "Failed to update DB status on scan close", err));
     
     // Send finish notification
-    sendWebhookNotification(body.notificationConfig, "finish", updated, vulnCount);
+    sendWebhookNotification(notificationConfig, "finish", updated, vulnCount);
     
     log.info("PROC_CLOSE", `Scan ${scanId.slice(0, 8)} finished`, {
       exitCode: code,
@@ -482,7 +513,7 @@ export async function POST(req: NextRequest) {
       data: { status: "failed" }
     }).catch(() => {});
     log.warn("PROC_ERROR", "Falling back to DEMO mode after process error");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, body.notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
   });
 
   return NextResponse.json({ scanId, status: "running" });
@@ -687,7 +718,25 @@ function runMockScan(
       updated.exitCode = 0;
       fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
       
-      // ✅ Bug #6 Fix: Update DB when mock scan finishes
+      // Sync mock vulns to DB
+      const dbVulns = mockVulns.map((v: any) => ({
+        scanId,
+        vulnId: v.id || randomUUID(),
+        title: v.title || "Unknown",
+        severity: v.severity || "info",
+        endpoint: v.endpoint || "",
+        method: v.method || "",
+        description: v.description || "",
+        poc: v.poc || "",
+        cvss: v.cvss || 0.0,
+        remediation: v.remediation || ""
+      }));
+      prisma.vulnerability.createMany({
+        data: dbVulns,
+        skipDuplicates: true
+      }).catch(() => {});
+
+      // Update DB when mock scan finishes
       prisma.scan.update({
         where: { id: scanId },
         data: { status: "completed", vulnCount: mockVulns.length }

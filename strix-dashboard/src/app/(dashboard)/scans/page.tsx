@@ -205,10 +205,14 @@ function ScansContent() {
 
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("strix_custom_models");
-      if (saved) setCustomModels(JSON.parse(saved));
-    } catch(e) {}
+    fetch("/api/user/settings")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error && data.customModels) {
+          setCustomModels(data.customModels);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -254,13 +258,7 @@ function ScansContent() {
     
     setLaunching(true);
     try {
-      let notificationConfig = null;
-      try {
-        const savedNotifs = localStorage.getItem("strix_notification_config");
-        if (savedNotifs) notificationConfig = JSON.parse(savedNotifs);
-      } catch (e) {}
-
-      const payload = { ...form, notificationConfig };
+      const payload = { ...form };
       if (payload.scheduledAt) {
         payload.scheduledAt = new Date(payload.scheduledAt).toISOString();
       }

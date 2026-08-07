@@ -27,12 +27,20 @@ export default function Settings() {
       })
       .catch(() => {});
 
-    const savedModels = localStorage.getItem("strix_custom_models");
-    if (savedModels) setCustomModels(JSON.parse(savedModels));
-    const savedConfig = localStorage.getItem("strix_agent_config");
-    if (savedConfig) setAgentConfig(JSON.parse(savedConfig));
-    const savedNotifs = localStorage.getItem("strix_notification_config");
-    if (savedNotifs) setNotificationConfig(JSON.parse(savedNotifs));
+    fetch("/api/user/settings")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) {
+          if (data.settings) {
+            setAgentConfig({ aggressiveness: data.settings.aggressiveness, maxThreads: data.settings.maxThreads });
+            setNotificationConfig({ webhookUrl: data.settings.webhookUrl || "", notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
+          }
+          if (data.customModels) {
+            setCustomModels(data.customModels.map((m: any) => ({ value: m.value, label: m.label })));
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSave = async (tab: "api" | "agent" | "notifications") => {
@@ -42,11 +50,23 @@ export default function Settings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(keys)
       });
-      localStorage.setItem("strix_api_keys", JSON.stringify(keys));
-      localStorage.setItem("strix_custom_models", JSON.stringify(customModels.filter(m => m.value.trim() && m.label.trim())));
+      const validModels = customModels.filter(m => m.value.trim() && m.label.trim());
+      await fetch("/api/user/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "customModels", data: validModels })
+      });
     }
-    else if (tab === "agent") localStorage.setItem("strix_agent_config", JSON.stringify(agentConfig));
-    else if (tab === "notifications") localStorage.setItem("strix_notification_config", JSON.stringify(notificationConfig));
+    else if (tab === "agent" || tab === "notifications") {
+      await fetch("/api/user/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "settings",
+          data: { ...agentConfig, ...notificationConfig }
+        })
+      });
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -129,14 +149,14 @@ export default function Settings() {
                   { key: "dashscope",  label: "DashScope API Key",     placeholder: "sk-…",      hint: "Used for Qwen models via Alibaba Cloud DashScope." },
                   { key: "moonshot",   label: "Moonshot API Key",      placeholder: "sk-…",      hint: "Used for Kimi models via Moonshot AI." },
                   { key: "vertex_ai",  label: "Vertex AI API Key",     placeholder: "…",         hint: "Used for Gemini models via Google Cloud Vertex AI." },
-                ] as any).map(({ key, label, placeholder, hint }) => (
+                ] as any).map(({ key, label, placeholder, hint }: any) => (
                   <div key={key} style={s.field}>
                     <label style={s.label}>{label}</label>
                     <input
                       style={s.input}
                       type="password"
                       placeholder={placeholder}
-                      value={keys[key]}
+                      value={keys[key as keyof typeof keys]}
                       onChange={(e) => setKeys({ ...keys, [key]: e.target.value })}
                     />
                     <span style={s.hint}>{hint}</span>
