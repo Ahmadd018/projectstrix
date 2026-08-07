@@ -162,21 +162,30 @@ def setup_dashboard():
         sys.exit(1)
         
     env_file = os.path.join(dashboard_dir, ".env")
+    code, out = run_cmd("sudo -u postgres psql -c 'SHOW port;' -t", fail_on_error=False)
+    pg_port = out.strip() if code == 0 and out.strip().isdigit() else "5432"
+    
     if not os.path.exists(env_file):
         print("Creating .env file...")
         with open(env_file, "w") as f:
-            f.write("DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:5432/strix?schema=public\"\n")
+            f.write(f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\"\n")
             f.write("SESSION_SECRET=\"super-secret-key-12345\"\n")
             f.write("WEBHOOK_SECRET=\"strix-webhook-secret\"\n")
     else:
-        # If it exists, ensure we fix the localhost issue
+        # If it exists, ensure we fix the DATABASE_URL to use the correct port
+        import re
         with open(env_file, "r") as f:
             content = f.read()
-        if "@localhost:5432" in content:
-            content = content.replace("@localhost:5432", "@127.0.0.1:5432")
-            with open(env_file, "w") as f:
-                f.write(content)
-            print("Fixed database host in existing .env file.")
+            
+        new_db_url = f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\""
+        if "DATABASE_URL" in content:
+            content = re.sub(r'DATABASE_URL=.*', new_db_url, content)
+        else:
+            content += f"\n{new_db_url}\n"
+            
+        with open(env_file, "w") as f:
+            f.write(content)
+        print(f"Fixed database host and port ({pg_port}) in existing .env file.")
             
     print("Installing npm dependencies...")
     run_cmd(f"cd {dashboard_dir} && npm install --legacy-peer-deps")
