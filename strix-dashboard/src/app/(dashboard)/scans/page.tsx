@@ -64,6 +64,9 @@ const LLM_MODELS = [
   { value: "openrouter/anthropic/claude-3.5-sonnet", label: "OpenRouter Claude 3.5 Sonnet" },
   { value: "openrouter/meta-llama/llama-3.1-405b-instruct", label: "OpenRouter Llama 3.1 405B" },
   // Mistral
+  { value: "mistral/mistral-large-3", label: "Mistral Large 3 (675B MoE)" },
+  { value: "mistral/ministral-3-14b", label: "Ministral 3 14B (Reasoning)" },
+  { value: "mistral/shieldstral-3b", label: "Shieldstral (3B)" },
   { value: "mistral/mistral-large-latest", label: "Mistral Large" },
   { value: "mistral/mistral-medium-latest", label: "Mistral Medium" },
   { value: "mistral/mistral-small-latest", label: "Mistral Small" },
