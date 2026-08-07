@@ -99,9 +99,11 @@ def setup_postgresql():
     run_cmd("sudo -u postgres psql -c \"ALTER SYSTEM SET listen_addresses = '127.0.0.1';\"", fail_on_error=False)
     
     # Ensure password auth is allowed for localhost
-    run_cmd("sudo -u postgres psql -t -c 'SHOW hba_file;' > /tmp/pg_hba.txt", fail_on_error=False, shell=True)
-    run_cmd("grep -q 'host all all 127.0.0.1/32 md5' $(cat /tmp/pg_hba.txt) || echo 'host all all 127.0.0.1/32 md5' | sudo tee -a $(cat /tmp/pg_hba.txt)", fail_on_error=False, shell=True)
-    
+    code, out = run_cmd("sudo -u postgres psql -t -c 'SHOW hba_file;'", fail_on_error=False)
+    hba_path = out.strip()
+    if code == 0 and hba_path and os.path.exists(hba_path):
+        run_cmd(f"grep -q 'host all all 127.0.0.1/32 md5' {hba_path} || echo 'host all all 127.0.0.1/32 md5' | sudo tee -a {hba_path}", fail_on_error=False)
+        
     print("Restarting PostgreSQL...")
     run_cmd("systemctl restart postgresql", fail_on_error=False)
     
