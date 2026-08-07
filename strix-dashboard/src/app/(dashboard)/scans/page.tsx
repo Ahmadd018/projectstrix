@@ -58,11 +58,12 @@ const LLM_MODELS = [
   { value: "deepseek/deepseek-v4-pro", label: "DeepSeek v4 Pro" },
   { value: "deepseek/deepseek-v4-flash", label: "DeepSeek v4 Flash" },
   // Groq
+  { value: "groq/llama-3.3-70b-versatile", label: "Groq Llama 3.3 70B" },
   { value: "groq/llama3-70b-8192", label: "Groq Llama 3 70B" },
   { value: "groq/mixtral-8x7b-32768", label: "Groq Mixtral 8x7B" },
   // OpenRouter
   { value: "openrouter/anthropic/claude-3.5-sonnet", label: "OpenRouter Claude 3.5 Sonnet" },
-  { value: "openrouter/meta-llama/llama-3.1-405b-instruct", label: "OpenRouter Llama 3.1 405B" },
+  { value: "openrouter/meta-llama/llama-3.3-70b-instruct", label: "OpenRouter Llama 3.3 70B" },
   // Mistral
   { value: "mistral/mistral-large-3", label: "Mistral Large 3 (675B MoE)" },
   { value: "mistral/ministral-3-14b", label: "Ministral 3 14B (Reasoning)" },
