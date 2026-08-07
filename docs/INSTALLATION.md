@@ -1,61 +1,51 @@
-# Installation & Setup
+# Installation & Deployment
 
-Follow these steps to deploy Project Strix in a development or production environment (e.g., Ubuntu VM).
+Deploying Project Strix is extremely simple thanks to the included self-healing `global_deploy.py` auto-deployer script. It is designed to work seamlessly on fresh minimal cloud servers (e.g., Ubuntu/Debian) as well as development environments.
 
 ## Prerequisites
-- **Node.js**: v20+ 
-- **Python**: v3.10+ (for Strix Core)
-- **PostgreSQL**: v14+
-- **PM2**: Global installation (`npm install -g pm2`)
-- **Git**
+- A Linux-based OS (Ubuntu 22.04/24.04 recommended)
+- `python3` and `sudo` privileges
+- Git
 
-## 1. Clone the Repository
+*(Note: Node.js, PM2, PostgreSQL, and other dependencies will be automatically installed and configured by the deployer script if missing.)*
+
+## Deployment Steps
+
+### 1. Clone the Repository
+Access your server via SSH and clone the project:
 ```bash
 git clone https://github.com/infat0x/ProjectStrix.git
 cd ProjectStrix
 ```
 
-## 2. Environment Variables
-Create a `.env` file in the `strix-dashboard` directory:
-```env
-DATABASE_URL="postgresql://strixuser:your_password_here@localhost:5432/strix?schema=public"
-JWT_SECRET="your-super-secure-secret-key"
-```
-
-## 3. Starting the Application (The Easy Way)
-We provide a convenient shell script to handle port cleanup, dependency installation, database synchronization, and starting both the Next.js server and PM2 scheduler.
+### 2. Run the Auto-Deployer
+The `global_deploy.py` script acts as a self-healing deployment engine. Execute it with root privileges:
 
 ```bash
-cd ~/ProjectStrix
-chmod +x start_dev.sh
-./start_dev.sh
+sudo python3 global_deploy.py
 ```
 
-**What `start_dev.sh` does:**
-1. Kills any zombie processes holding port 80.
-2. Clears out any old PM2 processes.
-3. Automatically runs `npm install` and `npx prisma generate` to keep dependencies and database schemas synchronized.
-4. Pushes the latest Prisma schema to PostgreSQL.
-5. Starts the `strix-scheduler` background worker via PM2.
-6. Starts the Next.js frontend on port 80 (`0.0.0.0:80`).
+### What `global_deploy.py` handles automatically:
+1. **Dependency Installation**: Checks for and installs required packages (Node.js v20, PM2, PostgreSQL, etc.) using non-interactive modes to prevent hangs.
+2. **Self-Healing Mechanics**: Automatically detects and recovers from broken `dpkg` states, missing OS `locales` (which often break Postgres installs), and dynamically resolves PostgreSQL connection ports.
+3. **Database Configuration**: Reinstalls or fixes PostgreSQL, forces it to listen on TCP, creates the `strix` database, and sets up the `strix_user` with secure `pg_hba.conf` rules.
+4. **Environment Setup**: Automatically generates the `.env` file for the dashboard with the correct dynamic PostgreSQL URL.
+5. **Dashboard Build**: Cleans old builds, installs NPM packages (`--legacy-peer-deps`), pushes the Prisma schema, and creates an optimized Next.js production build.
+6. **Service Deployment**: Kills conflicting processes on port `48080`, and starts the Strix Dashboard daemon via PM2.
 
-The dashboard will now be accessible at `http://<your-server-ip>:80`.
-
-## 4. Manual Start (Optional)
-If you prefer to start things manually without the script:
-
-```bash
-cd ~/ProjectStrix/strix-dashboard
-
-# Install and sync DB
-npm install
-npx prisma generate
-npx prisma db push --accept-data-loss
-
-# Start background scheduler
-pm2 start scripts/scheduler.js --name "strix-scheduler"
-pm2 save
-
-# Start UI
-sudo npm run dev -- -H 0.0.0.0 -p 80
+### 3. Accessing the Dashboard
+Once the script completes, Strix will be live and running in the background.
+Access the web interface by navigating to:
 ```
+http://<your-server-ip>:48080
+```
+
+## Useful Commands
+After deployment, you can use these commands to manage the Strix service:
+
+- **View Live Logs**: `sudo pm2 logs strix-dashboard`
+- **Check Status**: `sudo pm2 status`
+- **Restart Dashboard**: `sudo pm2 restart strix-dashboard`
+- **Stop Dashboard**: `sudo pm2 stop strix-dashboard`
+- **Database Access**: `sudo -u postgres psql -d strix`
+- **Test Strix CLI**: `strix --help`
