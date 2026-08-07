@@ -2,8 +2,8 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Strix Dashboard",
-  description: "The official web interface and orchestrator for the Strix Pentesting Engine",
+  title: "Project Strix",
+  description: "Autonomous Web Dashboard for the Strix Pentesting Engine",
   base: "/ProjectStrix/", // Crucial for GitHub Pages hosting on infat0x.github.io/ProjectStrix/
   outDir: ".vitepress/dist",
   

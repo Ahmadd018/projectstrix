@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  name: "Strix Dashboard"
-  text: "Autonomous AI Pentesting UI"
+  name: "Project Strix"
+  text: "Autonomous Web Dashboard"
   tagline: "The official web interface and orchestrator for the Strix Pentesting Engine."
   actions:
     - theme: brand
