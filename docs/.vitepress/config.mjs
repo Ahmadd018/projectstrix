@@ -16,23 +16,44 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: 'Overview',
+        text: 'Guide & Getting Started',
         items: [
-          { text: 'Introduction', link: '/DESCRIPTION' },
-          { text: 'Architecture', link: '/ARCHITECTURE' }
+          { text: 'What is Strix?', link: '/guide/what-is-strix' },
+          { text: 'Key Features', link: '/guide/features' },
+          { text: 'Prerequisites', link: '/guide/prerequisites' },
+          { text: 'Ubuntu Deployment', link: '/guide/installation-ubuntu' },
+          { text: 'Docker Deployment', link: '/guide/installation-docker' },
+          { text: 'Configuration', link: '/guide/configuration' },
+          { text: 'Updating Strix', link: '/guide/updating' }
         ]
       },
       {
-        text: 'Getting Started',
+        text: 'Dashboard & UI',
         items: [
-          { text: 'Installation', link: '/INSTALLATION' },
-          { text: 'User Guide', link: '/USER_GUIDE' }
+          { text: 'Overview', link: '/dashboard/overview' },
+          { text: 'Authentication', link: '/dashboard/authentication' },
+          { text: 'Role-Based Access', link: '/dashboard/role-based-access' },
+          { text: 'Analytics & Charts', link: '/dashboard/analytics-charts' },
+          { text: 'System Logs', link: '/dashboard/system-logs' },
+          { text: 'API Settings', link: '/dashboard/settings' }
         ]
       },
       {
-        text: 'Development',
+        text: 'Autonomous Scanning',
         items: [
-          { text: 'Bug Review', link: '/BUG_REVIEW' }
+          { text: 'Creating Scans', link: '/scanning/creating-scans' },
+          { text: 'Scan Modes', link: '/scanning/scan-modes' },
+          { text: 'Target Lists', link: '/scanning/target-lists' },
+          { text: 'Custom Instructions', link: '/scanning/custom-instructions' },
+          { text: 'LLM Providers', link: '/scanning/llm-providers' },
+          { text: 'Real-Time Streaming', link: '/scanning/real-time-streaming' },
+          { text: 'Intelligent Resumption', link: '/scanning/resume-scan' }
+        ]
+      },
+      {
+        text: 'Architecture',
+        items: [
+          { text: 'System Overview', link: '/architecture/system-overview' }
         ]
       }
     ],

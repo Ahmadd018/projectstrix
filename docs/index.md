@@ -9,7 +9,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /INSTALLATION
+      link: /guide/what-is-strix
     - theme: alt
       text: View on GitHub
       link: https://github.com/infat0x/ProjectStrix
