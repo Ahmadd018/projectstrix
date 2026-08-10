@@ -89,7 +89,7 @@ def clean_local_files():
     print_step("Cleaning local workspace files...")
     run_cmd("rm -rf /tmp/strix_runs")
     
-    dashboard_dir = os.path.join(os.getcwd(), "strix-dashboard")
+    dashboard_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "strix-dashboard")
     if os.path.exists(dashboard_dir):
         run_cmd(f"cd {dashboard_dir} && rm -rf node_modules .next")
         
@@ -108,7 +108,7 @@ def main():
     print(f"\n{Colors.OKGREEN}{Colors.BOLD}🎉 CLEANUP COMPLETE!{Colors.ENDC}")
     print("Strix has been successfully removed from this server.")
     print("You can now safely delete this project directory if you wish:")
-    print(f"rm -rf {os.getcwd()}")
+    print(f"rm -rf {os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))}")
 
 if __name__ == "__main__":
     main()

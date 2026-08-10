@@ -191,7 +191,7 @@ def install_strix():
 
 def setup_dashboard():
     print_step("Setting up Strix Dashboard...")
-    dashboard_dir = os.path.join(os.getcwd(), "strix-dashboard")
+    dashboard_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "strix-dashboard")
     if not os.path.exists(dashboard_dir):
         print_error(f"Dashboard directory not found at: {dashboard_dir}")
         sys.exit(1)
@@ -236,7 +236,7 @@ def setup_dashboard():
 
 def deploy_service():
     print_step("Deploying Strix Dashboard as a PM2 Service...")
-    dashboard_dir = os.path.join(os.getcwd(), "strix-dashboard")
+    dashboard_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "strix-dashboard")
     
     # Kill any process on port 48080 to prevent EADDRINUSE
     run_cmd("fuser -k 48080/tcp", fail_on_error=False)
