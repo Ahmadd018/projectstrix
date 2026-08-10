@@ -56,6 +56,22 @@ export default withMermaid(
         ]
       },
       {
+        text: 'Operations & Integration',
+        collapsed: false,
+        items: [
+          { text: 'Troubleshooting & FAQ', link: '/guide/troubleshooting' },
+          { text: 'Vulnerability Management', link: '/dashboard/vulnerability-management' },
+          { text: 'Webhooks & Alerts', link: '/operations/webhooks' }
+        ]
+      },
+      {
+        text: 'Security & Hosting',
+        collapsed: false,
+        items: [
+          { text: 'Securing Strix', link: '/security/securing-strix' }
+        ]
+      },
+      {
         text: 'Architecture',
         collapsed: false,
         items: [
@@ -66,7 +82,8 @@ export default withMermaid(
         text: 'Developer API',
         collapsed: false,
         items: [
-          { text: 'REST API Reference', link: '/api/rest-api' }
+          { text: 'REST API Reference', link: '/api/rest-api' },
+          { text: 'Contributing Guide', link: '/development/contributing' }
         ]
       }
     ],
