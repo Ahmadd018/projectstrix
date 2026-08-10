@@ -361,8 +361,6 @@ export async function POST(req: NextRequest) {
     }
     args.push("--resume", actualResumeName);
   } else {
-    args.push("--name", scanId);
-    
     if (target) args.push("-t", target);
     
     if (targetList?.trim()) {
