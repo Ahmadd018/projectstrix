@@ -222,6 +222,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
   }
 
+  let displayTarget = target;
+  if (!displayTarget && targetList) {
+    const list = targetList.split('\n').filter((t: string) => t.trim().length > 0);
+    if (list.length === 1) {
+      displayTarget = list[0].trim();
+    } else if (list.length > 1) {
+      displayTarget = `Multiple Targets (${list.length})`;
+    } else {
+      displayTarget = "Unknown Target";
+    }
+  } else if (!displayTarget) {
+    displayTarget = "Unknown Target";
+  }
+
   const scanId = resumeRun || body.preGeneratedScanId || randomUUID();
   const scanDir = path.join(RUNS_DIR, scanId);
   const isScheduled = body.scheduledAt && !body.preGeneratedScanId && new Date(body.scheduledAt).getTime() > Date.now();
@@ -270,7 +284,7 @@ export async function POST(req: NextRequest) {
          data: {
            id: scanId,
            userId: createdUserId,
-           target: target || "Unknown Target",
+           target: displayTarget,
            projectName: projectName || "",
            llmModel: llmModel || "openai/gpt-4o",
            scanMode: scanMode || "standard",
