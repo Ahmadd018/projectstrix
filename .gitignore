@@ -7,3 +7,10 @@ __pycache__/
 node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+strixexampleoutput.json
+*.log
+.gemini/
+.claude/
+.agents/
+.windsurf/
+.cursor/

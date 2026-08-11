@@ -52,3 +52,5 @@ next-env.d.ts
 /.claude/
 /.windsurf/
 /.cursor/
+/.gemini/
+strixexampleoutput.json
