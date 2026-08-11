@@ -162,9 +162,17 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
                 {copied ? <Check size={14} color="var(--sev-low)" /> : <Copy size={14} />}
               </span>
             </div>
-            <div className={styles.metaItem}>
-              <span className={styles.metaKey}>Target URL / Path</span>
-              <span className={styles.metaValue}>{scan.target}</span>
+            <div className={styles.metaItem} style={{ alignItems: "flex-start" }}>
+              <span className={styles.metaKey} style={{ marginTop: 4 }}>Target URL / Path</span>
+              <span className={styles.metaValue}>
+                {scan.payload?.targetList ? (
+                  <pre style={{ margin: 0, padding: "8px 12px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", fontSize: 12, maxHeight: 150, overflowY: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                    {scan.payload.targetList}
+                  </pre>
+                ) : (
+                  scan.target
+                )}
+              </span>
             </div>
             <div className={styles.metaItem}>
               <span className={styles.metaKey}>LLM Model Engine</span>

@@ -223,18 +223,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
   }
 
-  let displayTarget = target;
+  let displayTarget = (target || "").replace(/ /g, '_');
   if (!displayTarget && targetList) {
     const list = targetList.split('\n').filter((t: string) => t.trim().length > 0);
     if (list.length === 1) {
-      displayTarget = list[0].trim();
+      displayTarget = list[0].trim().replace(/ /g, '_');
     } else if (list.length > 1) {
-      displayTarget = `Multiple Targets (${list.length})`;
+      displayTarget = `Multiple_Targets_(${list.length})`;
     } else {
-      displayTarget = "Unknown Target";
+      displayTarget = "Unknown_Target";
     }
   } else if (!displayTarget) {
-    displayTarget = "Unknown Target";
+    displayTarget = "Unknown_Target";
   }
 
   const scanId = resumeRun || body.preGeneratedScanId || randomUUID();
@@ -376,7 +376,7 @@ export async function POST(req: NextRequest) {
     }
     args.push("--resume", actualResumeName);
   } else {
-    if (target && target !== "Unknown Target" && !target.startsWith("Multiple Targets")) {
+    if (target && target !== "Unknown_Target" && !target.startsWith("Multiple_Targets")) {
       args.push("-t", target);
     }
     
