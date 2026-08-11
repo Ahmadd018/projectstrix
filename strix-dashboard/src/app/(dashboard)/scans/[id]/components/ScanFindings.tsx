@@ -107,8 +107,18 @@ export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns:
 
             <section className={styles.pocSection}>
               <h3>Proof of Concept (PoC)</h3>
-              {selectedVuln.poc ? (
-                <pre className={styles.pocCode}>{selectedVuln.poc}</pre>
+              {selectedVuln.poc || selectedVuln.poc_description || selectedVuln.poc_script_code ? (
+                <>
+                  {selectedVuln.poc_description && (
+                    <p style={{ marginBottom: '12px' }}>{selectedVuln.poc_description}</p>
+                  )}
+                  {selectedVuln.poc_script_code && (
+                    <pre className={styles.pocCode}>{selectedVuln.poc_script_code}</pre>
+                  )}
+                  {selectedVuln.poc && !selectedVuln.poc_script_code && (
+                    <pre className={styles.pocCode}>{selectedVuln.poc}</pre>
+                  )}
+                </>
               ) : (
                 <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px dashed #333', borderRadius: '8px', color: '#888', fontSize: '13px' }}>
                   No automated PoC snippet was recorded for this specific finding. Check the Raw Artifacts or Logs for full exploitation steps.

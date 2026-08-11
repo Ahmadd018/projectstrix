@@ -6,6 +6,8 @@ export interface Vulnerability {
   method?: string;
   description: string;
   poc?: string;
+  poc_description?: string;
+  poc_script_code?: string;
   cvss?: number;
   remediation?: string;
   target?: string;
