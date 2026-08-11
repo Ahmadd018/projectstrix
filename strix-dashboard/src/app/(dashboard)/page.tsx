@@ -24,7 +24,7 @@ interface Scan {
 interface Vuln {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low" | "informative";
+  severity: "critical" | "high" | "medium" | "low" | "informative" | "info";
   endpoint: string;
   scanTarget: string;
   scanId: string;

@@ -6,7 +6,7 @@ import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2 }
 interface Vulnerability {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low" | "informative";
+  severity: "critical" | "high" | "medium" | "low" | "informative" | "info";
   endpoint: string;
   method?: string;
   description: string;
@@ -27,7 +27,7 @@ interface VulnWithScan extends Vulnerability {
   scanTarget: string;
 }
 
-const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, informative: 4 };
+const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
 const SEVERITIES = ["all", "critical", "high", "medium", "low", "informative"] as const;
 
 function sevClass(s: string) {

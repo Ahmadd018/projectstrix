@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 export interface Vulnerability {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low" | "info" | "informative";
   endpoint: string;
   method?: string;
   description: string;
@@ -105,7 +105,7 @@ export function generateMarkdown(details: ScanDetails) {
   md += `|----------|-------|----------|\n`;
   
   vulnerabilities.sort((a, b) => {
-    const order = { critical: 0, high: 1, medium: 2, low: 3 };
+    const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
     return (order[a.severity] ?? 99) - (order[b.severity] ?? 99);
   }).forEach(v => {
     md += `| **${v.severity.toUpperCase()}** | ${v.title} | \`${v.method || "GET"} ${v.endpoint}\` |\n`;
@@ -137,7 +137,7 @@ export function generateHTML(details: ScanDetails) {
   const date = new Date(scan.startedAt).toLocaleString();
   
   const vulnsHtml = vulnerabilities.sort((a, b) => {
-    const order = { critical: 0, high: 1, medium: 2, low: 3 };
+    const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
     return (order[a.severity] ?? 99) - (order[b.severity] ?? 99);
   }).map((v, i) => `
     <div class="vuln-card sev-${v.severity}">
@@ -241,7 +241,7 @@ export function generatePDF(details: ScanDetails) {
   doc.text("Findings Summary", 14, 75);
   
   const sortedVulns = vulnerabilities.sort((a, b) => {
-    const order = { critical: 0, high: 1, medium: 2, low: 3 };
+    const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
     return (order[a.severity] ?? 99) - (order[b.severity] ?? 99);
   });
 
