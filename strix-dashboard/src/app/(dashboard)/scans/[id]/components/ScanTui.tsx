@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import styles from "../detail.module.css";
 
 export default function ScanTui({
@@ -10,39 +10,39 @@ export default function ScanTui({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // Parse logs to simulate TUI data
+  // Parse logs to simulate TUI data (Stats, Tree, and clean log stream)
   const parsedData = useMemo(() => {
     let toolsExecuted = 0;
     let activeAgents = new Set<string>();
-    activeAgents.add("Orchestrator"); // Always active
+    activeAgents.add("Orchestrator"); 
     
     const parsedLogs: { type: string; text: string; id: number }[] = [];
     
     logs.forEach((log, index) => {
-      // Strip ANSI just for our string matching if any leaked
-      const cleanLog = log.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+      // Clean up any stray ANSI or messy characters if present
+      let cleanLog = log.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+      cleanLog = cleanLog.replace(/[╭─╮│╰╯║═╔╗╚╝]/g, ''); // Remove stray box chars
+      
       const lower = cleanLog.toLowerCase();
+      if (!cleanLog.trim() || cleanLog.includes("MODEL QUALITY WARNING")) return; // Skip useless noise
       
       let type = "normal";
-      if (lower.includes("tool:") || lower.includes("executing tool") || lower.includes("using tool")) {
+      if (lower.includes("tool:") || lower.includes("executing tool") || lower.includes("using tool") || lower.includes("proxy")) {
         type = "tool";
         toolsExecuted++;
-      } else if (lower.includes("error") || lower.includes("failed")) {
+      } else if (lower.includes("error") || lower.includes("failed") || lower.includes("traceback")) {
         type = "error";
       } else if (lower.includes("thought:") || lower.includes("thinking") || lower.includes("reasoning")) {
         type = "thinking";
-      } else if (lower.includes("[+]") || lower.includes("found") || lower.includes("success")) {
+      } else if (lower.includes("[+]") || lower.includes("found") || lower.includes("success") || lower.includes("initiated")) {
         type = "action";
       }
       
-      // Infer active agents
-      if (lower.includes("recon")) activeAgents.add("Recon Agent");
-      if (lower.includes("exploit") || lower.includes("payload")) activeAgents.add("Exploit Agent");
+      if (lower.includes("recon") || lower.includes("scan")) activeAgents.add("Recon Agent");
+      if (lower.includes("exploit") || lower.includes("payload") || lower.includes("poc")) activeAgents.add("Exploit Agent");
       if (lower.includes("crawl") || lower.includes("spider")) activeAgents.add("Crawler");
-
-      if (cleanLog.trim().length > 0) {
-        parsedLogs.push({ type, text: cleanLog.trim(), id: index });
-      }
+      
+      parsedLogs.push({ type, text: cleanLog.trim(), id: index });
     });
 
     return {
@@ -57,7 +57,7 @@ export default function ScanTui({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [parsedData.parsedLogs]);
+  }, [parsedData.parsedLogs, status]);
 
   return (
     <div className={styles.tuiContainer}>
@@ -79,8 +79,8 @@ export default function ScanTui({
             <span className={styles.tuiStatValue}>{parsedData.activeAgents.length}</span>
           </div>
         </div>
-        <div style={{ color: '#444', fontSize: '12px' }}>
-          Strix AI TUI Simulator v1.0
+        <div style={{ color: '#444', fontSize: '12px', marginTop: 'auto' }}>
+          Strix AI TUI Simulator v3.0
         </div>
       </div>
 
@@ -100,10 +100,23 @@ export default function ScanTui({
         </div>
       </div>
 
-      {/* MAIN PANE: Interactive Tool Stream */}
+      {/* MAIN PANE: Interactive Tool Stream (React DOM) */}
       <div className={styles.tuiMain}>
-        <div className={styles.tuiPaneTitle}>Live Execution Stream</div>
-        <div className={styles.tuiLogStream} ref={scrollRef}>
+        <div className={styles.tuiPaneTitle} style={{ paddingLeft: '8px', paddingBottom: '8px', borderBottom: '1px solid #222', marginBottom: '8px' }}>
+          Live Execution Stream
+        </div>
+        <div 
+          className={styles.tuiLogStream} 
+          ref={scrollRef}
+          style={{ padding: '0 8px 8px 8px', overflowY: 'auto', flex: 1, position: 'relative', background: '#050505', borderRadius: '4px' }}
+        >
+          {parsedData.parsedLogs.length === 0 && (
+            <div className={styles.emptyState} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
+              <div className={styles.spinner} />
+              <span>Waiting for agent output...</span>
+            </div>
+          )}
+          
           {parsedData.parsedLogs.map((log) => {
             let colorClass = "";
             switch (log.type) {
@@ -113,17 +126,18 @@ export default function ScanTui({
               case "thinking": colorClass = styles.tuiLogThinking; break;
             }
             return (
-              <div key={log.id} className={`${styles.tuiLogLine} ${colorClass}`}>
+              <div key={log.id} className={`${styles.tuiLogLine} ${colorClass}`} style={{ marginBottom: '4px' }}>
                 <span className={styles.tuiTerminalCaret}>❯</span>
                 {log.text}
               </div>
             );
           })}
+          
           {status === "running" && (
-            <div className={styles.tuiLogLine} style={{ opacity: 0.7 }}>
+            <div className={styles.tuiLogLine} style={{ opacity: 0.7, marginTop: '8px' }}>
               <span className={styles.tuiTerminalCaret}>❯</span>
-              <span className={styles.spinner} style={{ width: '12px', height: '12px', display: 'inline-block', borderTopColor: '#dc2626' }} />
-              <span style={{ marginLeft: '8px' }}>Waiting for agent response...</span>
+              <span className={styles.spinner} style={{ width: '12px', height: '12px', display: 'inline-block', borderTopColor: '#dc2626', marginRight: '8px', verticalAlign: 'middle' }} />
+              <span>Waiting for agent response...</span>
             </div>
           )}
         </div>

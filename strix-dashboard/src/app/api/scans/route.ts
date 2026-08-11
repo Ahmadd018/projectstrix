@@ -357,7 +357,7 @@ export async function POST(req: NextRequest) {
   sendWebhookNotification(notificationConfig, "start", runMeta);
 
   const strixCmd = getStrixCommand();
-  const args: string[] = [];
+  const args = ["-n"]; // Non-interactive to ensure clean logs
   
   if (resumeRun) {
     let actualResumeName = resumeRun.trim();
@@ -396,8 +396,6 @@ export async function POST(req: NextRequest) {
   const env = {
     ...process.env,
     PATH: `${process.env.PATH || ""}:/usr/local/bin:${process.env.HOME || ""}/.local/bin`,
-    FORCE_COLOR: "1",
-    TERM: "xterm-256color",
     STRIX_LLM: llmModel || "openai/gpt-4o",
     LLM_API_KEY: apiKey,
     OPENAI_API_KEY: apiKey,
