@@ -1,5 +1,6 @@
 <div align="center">
-  <h1>🦅 Project Strix</h1>
+  <img src="strix-dashboard/public/logo.svg" width="250" alt="Project Strix Logo" />
+  <h1>Project Strix</h1>
   <p><strong>Autonomous AI Pentesting Dashboard & Orchestrator</strong></p>
 </div>
 
