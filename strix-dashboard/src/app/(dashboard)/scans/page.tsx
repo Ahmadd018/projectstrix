@@ -170,6 +170,10 @@ function ScansContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingBulk, setDeletingBulk] = useState(false);
+  
   const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string, llmModel: string } | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
@@ -318,6 +322,34 @@ function ScansContent() {
     fetchScans();
   }
 
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected scan(s)?`)) return;
+    
+    setDeletingBulk(true);
+    try {
+      await fetch("/api/scans/bulk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      fetchScans();
+    } catch (e) {
+      console.error("Bulk delete failed", e);
+    } finally {
+      setDeletingBulk(false);
+    }
+  }
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
   async function handleSchedulePeriod(scan: Scan, period: string) {
     if (period === "none") {
       // Clear period immediately
@@ -362,6 +394,22 @@ function ScansContent() {
           <p className="page-desc">Launch and monitor your security assessments.</p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
+          {selectionMode && (
+            <button 
+              className="btn-primary" 
+              style={{ background: selectedIds.size > 0 ? "var(--sev-critical-bg)" : "var(--bg-3)", color: selectedIds.size > 0 ? "var(--sev-critical)" : "var(--fg-3)", border: selectedIds.size > 0 ? "1px solid var(--sev-critical-bd)" : "1px solid var(--border)", pointerEvents: selectedIds.size > 0 ? "auto" : "none" }} 
+              onClick={handleBulkDelete}
+              disabled={deletingBulk}
+            >
+              {deletingBulk ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />} Delete Selected ({selectedIds.size})
+            </button>
+          )}
+          <button className="btn-secondary" onClick={() => {
+            setSelectionMode(!selectionMode);
+            setSelectedIds(new Set());
+          }}>
+            {selectionMode ? "Cancel" : "Choose Scans"}
+          </button>
           <button className="btn-secondary" onClick={() => setShowResumeModal(true)}>
             <Play size={14} /> Resume Scan
           </button>
@@ -434,7 +482,7 @@ function ScansContent() {
         {/* Table header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
+          gridTemplateColumns: selectionMode ? "30px 2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px" : "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
           gap: 12,
           padding: "10px 20px",
           borderBottom: "1px solid var(--border)",
@@ -448,6 +496,19 @@ function ScansContent() {
           background: "var(--bg-1)",
           zIndex: 10,
         }}>
+          {selectionMode && (
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <input 
+                type="checkbox" 
+                style={{ accentColor: "var(--fg)" }}
+                checked={filteredScans.length > 0 && selectedIds.size === filteredScans.length}
+                onChange={(e) => {
+                  if (e.target.checked) setSelectedIds(new Set(filteredScans.map(s => s.id)));
+                  else setSelectedIds(new Set());
+                }}
+              />
+            </div>
+          )}
           <div>Target</div>
           <div>Mode</div>
           <div>Model</div>
@@ -507,21 +568,39 @@ function ScansContent() {
                   {!isCollapsed && groupScans.map((scan) => (
                     <div
                       key={scan.id}
-                      onClick={() => router.push(`/scans/${scan.id}`)}
+                      onClick={(e) => {
+                        if (selectionMode) {
+                          e.preventDefault();
+                          toggleSelection(scan.id);
+                        } else {
+                          router.push(`/scans/${scan.id}`);
+                        }
+                      }}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
+                        gridTemplateColumns: selectionMode ? "30px 2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px" : "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
                         gap: 12,
                         padding: "12px 20px",
                         borderBottom: "1px solid var(--border)",
                         cursor: "pointer",
                         alignItems: "center",
+                        background: selectedIds.has(scan.id) ? "var(--bg-3)" : "",
                         transition: "background var(--dur)",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-2)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                      onMouseEnter={(e) => { if (!selectedIds.has(scan.id)) e.currentTarget.style.background = "var(--bg-2)"; }}
+                      onMouseLeave={(e) => { if (!selectedIds.has(scan.id)) e.currentTarget.style.background = ""; }}
                       className="scan-row"
                     >
+                      {selectionMode && (
+                        <div style={{ display: "flex", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            style={{ accentColor: "var(--fg)" }}
+                            checked={selectedIds.has(scan.id)}
+                            onChange={() => toggleSelection(scan.id)}
+                          />
+                        </div>
+                      )}
                       <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {scan.scanName ? <span style={{ fontWeight: 600 }}>{scan.scanName} <span style={{ fontWeight: 400, color: "var(--fg-3)" }}>({scan.target})</span></span> : scan.target}
                       </div>

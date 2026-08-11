@@ -43,6 +43,10 @@ export default function VulnerabilitiesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<VulnWithScan | null>(null);
 
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingBulk, setDeletingBulk] = useState(false);
+
   const projects = Array.from(new Set(allVulns.map(v => v.scanTarget)));
 
   const fetchAll = useCallback(async () => {
@@ -71,6 +75,40 @@ export default function VulnerabilitiesPage() {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected vulnerability(s)?`)) return;
+    
+    setDeletingBulk(true);
+    try {
+      const items = Array.from(selectedIds).map(id => {
+        const [scanId, vulnId] = id.split("::");
+        return { scanId, vulnId };
+      });
+
+      await fetch("/api/vulnerabilities/bulk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items })
+      });
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      setSelected(null);
+      fetchAll();
+    } catch (e) {
+      console.error("Bulk delete failed", e);
+    } finally {
+      setDeletingBulk(false);
+    }
+  }
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
   const filtered = allVulns.filter((v) => {
     if (filter !== "all" && v.severity !== filter) return false;
     if (filterProject !== "all" && v.scanTarget !== filterProject) return false;
@@ -95,9 +133,29 @@ export default function VulnerabilitiesPage() {
   return (
     <div className="page" style={{ height: "100%", maxWidth: "none" }}>
       {/* Header */}
-      <div className="page-intro">
-        <h1 className="page-heading">Vulnerabilities</h1>
-        <p className="page-desc">All findings across your security assessments.</p>
+      <div className="page-intro" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1 className="page-heading">Vulnerabilities</h1>
+          <p className="page-desc">All findings across your security assessments.</p>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          {selectionMode && (
+            <button 
+              className="btn-primary" 
+              style={{ background: selectedIds.size > 0 ? "var(--sev-critical-bg)" : "var(--bg-3)", color: selectedIds.size > 0 ? "var(--sev-critical)" : "var(--fg-3)", border: selectedIds.size > 0 ? "1px solid var(--sev-critical-bd)" : "1px solid var(--border)", pointerEvents: selectedIds.size > 0 ? "auto" : "none" }} 
+              onClick={handleBulkDelete}
+              disabled={deletingBulk}
+            >
+              {deletingBulk ? <Loader2 size={14} className="spin" /> : <ShieldAlert size={14} />} Delete Selected ({selectedIds.size})
+            </button>
+          )}
+          <button className="btn-secondary" onClick={() => {
+            setSelectionMode(!selectionMode);
+            setSelectedIds(new Set());
+          }}>
+            {selectionMode ? "Cancel" : "Choose Vulnerabilities"}
+          </button>
+        </div>
       </div>
 
       {/* Severity stat cards */}
@@ -233,28 +291,61 @@ export default function VulnerabilitiesPage() {
                 <p>No vulnerabilities found</p>
               </div>
             ) : (
-              filtered.map((v) => {
-                const isSelected = selected?.id === v.id && selected.scanId === v.scanId;
-                return (
-                <div
-                  key={`${v.scanId}-${v.id}`}
-                  onClick={() => setSelected(isSelected ? null : v)}
-                  className="trow"
-                  style={{
-                    cursor: "pointer",
-                    background: isSelected ? "var(--bg-3)" : `var(--sev-${v.severity}-bg)`,
-                    borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
-                    borderLeft: `2px solid var(--sev-${v.severity})`,
-                    transition: "background 0.2s"
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) e.currentTarget.style.background = "var(--bg-3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) e.currentTarget.style.background = `var(--sev-${v.severity}-bg)`;
-                  }}
-                >
-                  <div className="trow-main">
+              <>
+                {selectionMode && (
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 20px", borderBottom: "1px solid var(--border)", background: "var(--bg-2)", fontSize: 12, fontWeight: 600, color: "var(--fg-3)" }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ accentColor: "var(--fg)", marginRight: 12 }}
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedIds(new Set(filtered.map(v => `${v.scanId}::${v.id}`)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                    Select All ({filtered.length})
+                  </div>
+                )}
+                {filtered.map((v) => {
+                  const uniqueId = `${v.scanId}::${v.id}`;
+                  const isSelected = selectedIds.has(uniqueId) || (selected?.id === v.id && selected.scanId === v.scanId);
+                  return (
+                  <div
+                    key={uniqueId}
+                    onClick={(e) => {
+                      if (selectionMode) {
+                        e.preventDefault();
+                        toggleSelection(uniqueId);
+                      } else {
+                        setSelected(isSelected && !selectedIds.has(uniqueId) ? null : v);
+                      }
+                    }}
+                    className="trow"
+                    style={{
+                      cursor: "pointer",
+                      background: isSelected ? "var(--bg-3)" : `var(--sev-${v.severity}-bg)`,
+                      borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
+                      borderLeft: `2px solid var(--sev-${v.severity})`,
+                      transition: "background 0.2s"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = "var(--bg-3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = `var(--sev-${v.severity}-bg)`;
+                    }}
+                  >
+                    {selectionMode && (
+                      <div style={{ display: "flex", alignItems: "center", marginRight: 12 }} onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox" 
+                          style={{ accentColor: "var(--fg)" }}
+                          checked={selectedIds.has(uniqueId)}
+                          onChange={() => toggleSelection(uniqueId)}
+                        />
+                      </div>
+                    )}
+                    <div className="trow-main">
                     <div className="trow-title">{v.title}</div>
                     <div className="trow-sub">
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
@@ -274,10 +365,10 @@ export default function VulnerabilitiesPage() {
                     )}
                   </div>
                 </div>
-              )})
-            )}
+                )})
+              )}
+            </div>
           </div>
-        </div>
 
         {/* Detail pane */}
         <div
