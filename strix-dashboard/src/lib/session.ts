@@ -17,7 +17,7 @@ export async function createSession(userId: string, username: string, role: stri
   const cookieStore = await cookies();
   cookieStore.set("strix_session", session, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // Secure in prod
+    secure: process.env.HTTPS_ENABLED === "true", // Must be false for HTTP access (localhost/IP)
     expires: expiresAt,
     sameSite: "strict",
     path: "/",
