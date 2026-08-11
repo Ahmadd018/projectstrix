@@ -2,6 +2,55 @@ import { useState } from "react";
 import { ScanDetail, Vulnerability } from "../types";
 import { SeverityBadge } from "./SeverityBadge";
 import styles from "../detail.module.css";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { Copy, Check } from "lucide-react";
+
+const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : "text";
+  const codeString = String(children).replace(/\n$/, "");
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!inline) {
+    return (
+      <div style={{ position: "relative", marginTop: "12px", marginBottom: "12px", borderRadius: "8px", overflow: "hidden", border: "1px solid #333" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1a1a1a", padding: "6px 12px", borderBottom: "1px solid #333" }}>
+          <span style={{ fontSize: "12px", color: "#888", fontFamily: "monospace", textTransform: "uppercase" }}>{lang}</span>
+          <button 
+            onClick={handleCopy}
+            style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: copied ? "#4caf50" : "#aaa", cursor: "pointer", fontSize: "12px" }}
+            title="Copy code"
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+        <SyntaxHighlighter
+          style={vscDarkPlus as any}
+          language={lang}
+          PreTag="div"
+          customStyle={{ margin: 0, padding: "16px", background: "#0d0d0d", fontSize: "13px" }}
+          {...props}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+  return (
+    <code className={className} style={{ background: "rgba(255,255,255,0.1)", padding: "2px 4px", borderRadius: "4px", fontFamily: "monospace" }} {...props}>
+      {children}
+    </code>
+  );
+};
 
 export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns: Vulnerability[] }) {
   const [selectedVuln, setSelectedVuln] = useState<Vulnerability | null>(null);
@@ -113,10 +162,14 @@ export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns:
                     <p style={{ marginBottom: '12px' }}>{selectedVuln.poc_description}</p>
                   )}
                   {selectedVuln.poc_script_code && (
-                    <pre className={styles.pocCode}>{selectedVuln.poc_script_code}</pre>
+                    <ReactMarkdown components={{ code: CodeBlock }}>
+                      {selectedVuln.poc_script_code}
+                    </ReactMarkdown>
                   )}
                   {selectedVuln.poc && !selectedVuln.poc_script_code && (
-                    <pre className={styles.pocCode}>{selectedVuln.poc}</pre>
+                    <ReactMarkdown components={{ code: CodeBlock }}>
+                      {selectedVuln.poc.includes("```") ? selectedVuln.poc : `\`\`\`text\n${selectedVuln.poc}\n\`\`\``}
+                    </ReactMarkdown>
                   )}
                 </>
               ) : (
