@@ -5,6 +5,9 @@ layout: home
 hero:
   name: "Project Strix"
   text: "Autonomous Web Dashboard"
+  image:
+    src: /logo.svg
+    alt: Project Strix Logo
   tagline: "The official web interface and orchestrator for the Strix Pentesting Engine."
   actions:
     - theme: brand

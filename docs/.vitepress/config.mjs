@@ -10,6 +10,7 @@ export default withMermaid(
   outDir: ".vitepress/dist",
   
   themeConfig: {
+    logo: '/logo.svg',
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
