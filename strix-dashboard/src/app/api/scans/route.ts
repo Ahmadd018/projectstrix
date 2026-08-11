@@ -384,6 +384,11 @@ export async function POST(req: NextRequest) {
       const targetListFile = path.join(scanDir, "targets.txt");
       fs.writeFileSync(targetListFile, targetList.trim());
       args.push("--target-list", targetListFile);
+    } else {
+      const existingTargetListFile = path.join(scanDir, "targets.txt");
+      if (fs.existsSync(existingTargetListFile)) {
+        args.push("--target-list", existingTargetListFile);
+      }
     }
 
     if (scanMode) args.push("-m", scanMode);
