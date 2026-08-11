@@ -50,7 +50,7 @@ export default function RegisterPage() {
         borderRadius: "var(--r-xl)",
         background: "linear-gradient(180deg, rgba(20,20,20,0.8) 0%, rgba(10,10,10,0.95) 100%)",
         backdropFilter: "blur(24px)",
-        animation: "fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+        animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards"
       }}
     >
       <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -74,7 +74,7 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div className="field" style={{ animation: "fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards", opacity: 0 }}>
+        <div className="field" style={{ animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards", opacity: 0 }}>
           <label className="field-label" style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-2)" }}>Username</label>
           <div style={{ position: "relative" }}>
             <User size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)", pointerEvents: "none" }} />
@@ -91,7 +91,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <div className="field" style={{ animation: "fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards", opacity: 0 }}>
+        <div className="field" style={{ animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards", opacity: 0 }}>
           <label className="field-label" style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-2)" }}>Password</label>
           <div style={{ position: "relative" }}>
             <Lock size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)", pointerEvents: "none" }} />
@@ -110,7 +110,7 @@ export default function RegisterPage() {
 
         {error && (
           <div style={{ 
-            animation: "fadeSlideUp 0.3s forwards",
+            animation: "blurSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
             padding: "12px 16px", 
             background: "var(--sev-critical-bg)", 
             border: "1px solid var(--sev-critical-bd)", 
@@ -127,7 +127,7 @@ export default function RegisterPage() {
           type="submit" 
           className="btn-primary" 
           style={{ 
-            animation: "fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards", opacity: 0,
+            animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards", opacity: 0,
             width: "100%", 
             height: 44,
             justifyContent: "center", 
@@ -143,14 +143,14 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      <div style={{ animation: "fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards", opacity: 0, textAlign: "center", fontSize: 13, color: "var(--fg-3)" }}>
+      <div style={{ animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards", opacity: 0, textAlign: "center", fontSize: 13, color: "var(--fg-3)" }}>
         Already have an account? <Link href="/login" style={{ color: "var(--fg)", textDecoration: "none", fontWeight: 500, transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color="var(--sev-high)"} onMouseOut={e => e.currentTarget.style.color="var(--fg)"}>Log in</Link>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes blurSlideIn {
+          0% { opacity: 0; filter: blur(20px); transform: scale(0.9) translateY(30px) rotateX(-10deg); }
+          100% { opacity: 1; filter: blur(0px); transform: scale(1) translateY(0) rotateX(0deg); }
         }
         .field-input:focus {
           border-color: rgba(255,255,255,0.3) !important;
