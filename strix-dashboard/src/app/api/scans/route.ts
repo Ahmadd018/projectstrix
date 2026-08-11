@@ -291,7 +291,7 @@ export async function POST(req: NextRequest) {
            scanMode: scanMode || "standard",
            status: isScheduled ? "scheduled" : "running",
            startedAt: isScheduled ? new Date(body.scheduledAt) : new Date(),
-           payload: isScheduled ? (body as any) : null,
+           payload: body as any, // Always save the payload to maintain config for future schedules
          }
        });
     } else if (isScheduler || resumeRun) {

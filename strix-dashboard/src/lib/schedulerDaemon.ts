@@ -106,10 +106,8 @@ async function checkScheduledScans() {
       else if (scan.period === "weekly") nextDate.setDate(nextDate.getDate() + 7);
       else if (scan.period === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
 
-      // Create a new scan ID for this recurring run (so old one stays as history)
-      const { randomUUID } = await import("crypto");
-      const newScanId = randomUUID();
-      await triggerScan({ ...scan, id: newScanId });
+      // Rescan the same scan ID as requested by user
+      await triggerScan(scan);
 
       // Update nextRunAt on the original scan record
       await prisma.scan.update({
