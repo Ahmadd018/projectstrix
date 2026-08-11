@@ -66,13 +66,15 @@ export default function Sidebar() {
   return (
     <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
       {/* Logo */}
-      <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-mark" style={{ background: "transparent", width: 32, height: 32 }}>
-            <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      <div className="sidebar-header" style={{ justifyContent: collapsed ? "center" : "space-between" }}>
+        {!collapsed && (
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-mark" style={{ background: "transparent", width: 32, height: 32 }}>
+              <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
+            <span className="sidebar-logo-text">Project Strix</span>
           </div>
-          {!collapsed && <span className="sidebar-logo-text">Project Strix</span>}
-        </div>
+        )}
         <button
           className="sidebar-collapse-btn"
           onClick={() => setCollapsed(!collapsed)}
@@ -117,12 +119,12 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="sidebar-footer">
         {/* API Status */}
-        <div className="sidebar-api-status">
+        <div className="sidebar-api-status" style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px", justifyContent: collapsed ? "center" : "flex-start" }}>
           <span
             className={`status-dot${apiStatus === "ok" ? " online" : " offline"}`}
           />
           {!collapsed && (
-            <span className="sidebar-api-text">
+            <span className="sidebar-api-text" style={{ fontSize: 12, color: "var(--fg-3)" }}>
               API {apiStatus === "ok" ? "Online" : apiStatus === "error" ? "Offline" : "…"}
             </span>
           )}
@@ -131,7 +133,12 @@ export default function Sidebar() {
         {/* User */}
         <div 
           className="sidebar-user" 
-          style={{ position: "relative", cursor: "pointer", transition: "background 0.2s", borderRadius: 8, padding: "8px 12px" }}
+          style={{ 
+            position: "relative", cursor: "pointer", transition: "background 0.2s", borderRadius: 8, 
+            padding: collapsed ? "8px 0" : "8px 12px", 
+            display: "flex", alignItems: "center", gap: 10,
+            justifyContent: collapsed ? "center" : "flex-start"
+          }}
           onClick={() => setShowProfile(true)}
           onMouseOver={e => e.currentTarget.style.background = "var(--bg-2)"}
           onMouseOut={e => e.currentTarget.style.background = "transparent"}
