@@ -18,13 +18,18 @@ export default function ScanTui({
     
     const parsedLogs: { type: string; text: string; id: number }[] = [];
     
-    logs.forEach((log, index) => {
+    // The logs array contains chunks. Join them and split by newline to process line by line.
+    const allLines = logs.join('').split('\n');
+    
+    allLines.forEach((log, index) => {
       // Clean up any stray ANSI or messy characters if present
       let cleanLog = log.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
       cleanLog = cleanLog.replace(/[╭─╮│╰╯║═╔╗╚╝]/g, ''); // Remove stray box chars
       
       const lower = cleanLog.toLowerCase();
-      if (!cleanLog.trim() || cleanLog.includes("MODEL QUALITY WARNING")) return; // Skip useless noise
+      if (!cleanLog.trim()) return;
+      if (cleanLog.includes("MODEL QUALITY WARNING")) return; // Skip useless noise
+      if (cleanLog.includes("│") || cleanLog.includes("─") || cleanLog.includes("╭") || cleanLog.includes("╮") || cleanLog.includes("╰") || cleanLog.includes("╯")) return; // Skip broken box drawing lines
       
       let type = "normal";
       if (lower.includes("tool:") || lower.includes("executing tool") || lower.includes("using tool") || lower.includes("proxy")) {
