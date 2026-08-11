@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, X, Search, FileSpreadsheet, Loader2, FileJson, FileCode, Code, File } from "lucide-react";
 import { fetchScanDetails, generateJSON, generateCSV, generateMarkdown, generateHTML, generatePDF } from "@/lib/reportGenerator";
+import { useDialog } from "@/components/DialogProvider";
 
 interface Scan {
   id: string;
@@ -17,6 +18,7 @@ export default function Reports() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [search, setSearch] = useState("");
   const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
+  const { alert } = useDialog();
 
   useEffect(() => {
     fetch("/api/scans")

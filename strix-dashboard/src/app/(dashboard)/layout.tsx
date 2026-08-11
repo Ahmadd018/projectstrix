@@ -1,11 +1,19 @@
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import { getSession } from "@/lib/session";
+import PendingLockScreen from "@/components/PendingLockScreen";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+  
+  if (session?.status === "PENDING" || session?.status === "REJECTED") {
+    return <PendingLockScreen />;
+  }
+
   return (
     <div className="app">
       <Sidebar />

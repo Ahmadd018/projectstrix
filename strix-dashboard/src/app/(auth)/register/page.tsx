@@ -25,14 +25,7 @@ export default function RegisterPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        if (data.user?.status === "APPROVED") {
-          router.push("/");
-        } else {
-          setError(""); // Clear any previous errors
-          alert("Registration successful! Your account is currently pending admin approval. You will not be able to log in until an administrator approves your account.");
-          router.push("/login");
-        }
+        router.push("/");
       } else {
         const data = await res.json();
         throw new Error(data.error || "Registration failed");

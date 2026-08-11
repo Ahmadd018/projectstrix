@@ -67,6 +67,7 @@ export async function middleware(request: NextRequest) {
   const schedulerKey = request.headers.get('x-scheduler-secret')
   let isAuthenticated = false
   let userRole = 'USER'
+  let userStatus = 'APPROVED'
 
   const expectedSchedulerKey = process.env.SCHEDULER_SECRET || "internal_scheduler_secret"
   if (schedulerKey === expectedSchedulerKey) {
@@ -79,6 +80,7 @@ export async function middleware(request: NextRequest) {
       })
       isAuthenticated = true
       userRole = verified.payload.role as string
+      userStatus = (verified.payload.status as string) || 'APPROVED'
     } catch (e) {
       // Invalid token
     }
@@ -88,6 +90,10 @@ export async function middleware(request: NextRequest) {
   if (isProtectedApi(pathname)) {
     if (!isAuthenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    if (userStatus !== 'APPROVED' && userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Account not approved' }, { status: 403 })
     }
     
     // RBAC for APIs

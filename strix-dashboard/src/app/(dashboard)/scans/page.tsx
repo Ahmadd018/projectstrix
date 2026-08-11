@@ -6,6 +6,7 @@ import {
   Play, Trash2, Square, Folder, FolderOpen,
   Search, Plus, Loader2, Settings2, ChevronDown, ChevronRight, Clock
 } from "lucide-react";
+import { useDialog } from "@/components/DialogProvider";
 
 interface Scan {
   id: string;
@@ -174,6 +175,7 @@ function ScansContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingBulk, setDeletingBulk] = useState(false);
   
+  const { confirm, alert } = useDialog();
   const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string, llmModel: string } | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
@@ -312,35 +314,32 @@ function ScansContent() {
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    setScanToDelete(id);
-  }
-
-  async function confirmDelete() {
-    if (!scanToDelete) return;
-    await fetch(`/api/scans/${scanToDelete}?purge=true`, { method: "DELETE" });
-    setScanToDelete(null);
-    fetchScans();
+    confirm("Are you sure you want to permanently delete this scan?", async () => {
+        await fetch(`/api/scans/${id}?purge=true`, { method: "DELETE" });
+        fetchScans();
+    });
   }
 
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected scan(s)?`)) return;
     
-    setDeletingBulk(true);
-    try {
-      await fetch("/api/scans/bulk", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selectedIds) })
-      });
-      setSelectedIds(new Set());
-      setSelectionMode(false);
-      fetchScans();
-    } catch (e) {
-      console.error("Bulk delete failed", e);
-    } finally {
-      setDeletingBulk(false);
-    }
+    confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected scan(s)?`, async () => {
+      setDeletingBulk(true);
+      try {
+        await fetch("/api/scans/bulk", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+        fetchScans();
+      } catch (e) {
+        console.error("Bulk delete failed", e);
+      } finally {
+        setDeletingBulk(false);
+      }
+    });
   }
 
   const toggleSelection = (id: string) => {

@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { DialogProvider } from "@/components/DialogProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <DialogProvider>
+          {children}
+        </DialogProvider>
       </body>
     </html>
   );

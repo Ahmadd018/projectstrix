@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check } from "lucide-react";
+import { useDialog } from "@/components/DialogProvider";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
@@ -109,6 +110,7 @@ export default function VulnerabilitiesPage() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingBulk, setDeletingBulk] = useState(false);
+  const { confirm, alert } = useDialog();
 
   const projects = Array.from(new Set(allVulns.map(v => v.scanTarget)));
 
@@ -140,29 +142,30 @@ export default function VulnerabilitiesPage() {
 
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected vulnerability(s)?`)) return;
     
-    setDeletingBulk(true);
-    try {
-      const items = Array.from(selectedIds).map(id => {
-        const [scanId, vulnId] = id.split("::");
-        return { scanId, vulnId };
-      });
+    confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected vulnerability(s)?`, async () => {
+      setDeletingBulk(true);
+      try {
+        const items = Array.from(selectedIds).map(id => {
+          const [scanId, vulnId] = id.split("::");
+          return { scanId, vulnId };
+        });
 
-      await fetch("/api/vulnerabilities/bulk", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items })
-      });
-      setSelectedIds(new Set());
-      setSelectionMode(false);
-      setSelected(null);
-      fetchAll();
-    } catch (e) {
-      console.error("Bulk delete failed", e);
-    } finally {
-      setDeletingBulk(false);
-    }
+        await fetch("/api/vulnerabilities/bulk", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items })
+        });
+        setSelectedIds(new Set());
+        setSelectionMode(false);
+        setSelected(null);
+        fetchAll();
+      } catch (e: any) {
+        alert(e.message || "Bulk delete failed");
+      } finally {
+        setDeletingBulk(false);
+      }
+    });
   }
 
   const toggleSelection = (id: string) => {

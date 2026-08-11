@@ -22,10 +22,8 @@ export async function POST(req: NextRequest) {
 
     const user = await createUser(username, password);
     
-    // Auto-login after registration only if approved (e.g. first user/admin)
-    if (user.status === "APPROVED") {
-      await createSession(user.id, user.username, user.role);
-    }
+    // Auto-login after registration (even if pending, so they see the lock screen)
+    await createSession(user.id, user.username, user.role, user.status);
 
     return NextResponse.json({ success: true, user: { id: user.id, username: user.username, role: user.role, status: user.status } });
   } catch (err: any) {

@@ -5,10 +5,10 @@ import { cookies } from "next/headers";
 const secretKey = process.env.SESSION_SECRET || "strix-fallback-secret-change-me";
 const encodedKey = new TextEncoder().encode(secretKey);
 
-export async function createSession(userId: string, username: string, role: string = "USER") {
+export async function createSession(userId: string, username: string, role: string = "USER", status: string = "APPROVED") {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  const session = await new SignJWT({ userId, username, role })
+  const session = await new SignJWT({ userId, username, role, status })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")

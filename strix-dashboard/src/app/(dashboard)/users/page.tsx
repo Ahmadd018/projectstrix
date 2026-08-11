@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { UserCheck, UserX, Shield, ShieldOff, AlertTriangle, Users, Trash2 } from "lucide-react";
+import { useDialog } from "@/components/DialogProvider";
 
 type UserData = {
   id: string;
@@ -15,6 +16,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { alert, confirm } = useDialog();
 
   useEffect(() => {
     fetchUsers();
@@ -151,7 +153,7 @@ export default function UsersPage() {
                             <ShieldOff size={14} /> Demote
                           </button>
                         )}
-                        <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { if(confirm("Reject and disable this user?")) updateUser(user.id, { status: "REJECTED" }) }}>
+                        <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { confirm("Reject and disable this user?", () => updateUser(user.id, { status: "REJECTED" })) }}>
                           <UserX size={14} /> Disable
                         </button>
                       </>
@@ -162,7 +164,7 @@ export default function UsersPage() {
                       </button>
                     )}
                     {/* Permanent Delete Button */}
-                    <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { if(confirm("Are you sure you want to PERMANENTLY delete this user? This action cannot be undone.")) deleteUser(user.id) }} title="Permanently Delete">
+                    <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { confirm("Are you sure you want to PERMANENTLY delete this user? This action cannot be undone.", () => deleteUser(user.id)) }} title="Permanently Delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
