@@ -161,8 +161,8 @@ function ScansContent() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const [scanToDelete, setScanToDelete] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
+  const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "finished">("all");
@@ -941,24 +941,6 @@ function ScansContent() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {scanToDelete && (
-        <div className="modal-overlay" onClick={() => setScanToDelete(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <div className="modal-header">
-              <div className="modal-title" style={{ color: "var(--sev-critical)" }}>Delete Scan</div>
-            </div>
-            <div className="modal-body" style={{ color: "var(--fg-2)" }}>
-              Are you sure you want to permanently delete this scan? All associated data and vulnerabilities will be removed from the system. This action cannot be undone.
-            </div>
-            <div className="modal-footer">
-              <button className="btn-ghost" onClick={() => setScanToDelete(null)}>Cancel</button>
-              <button className="btn-primary" style={{ background: "var(--sev-critical)", borderColor: "var(--sev-critical-bd)", color: "#fff" }} onClick={confirmDelete}>
-                <Trash2 size={13} /> Delete Permanently
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Schedule API Key Modal */}
