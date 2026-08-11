@@ -60,7 +60,8 @@ function statusLedClass(status: string) {
 }
 
 function sevClass(s: string) {
-  return `sev sev-${s}`;
+  const normalized = s.toLowerCase() === "info" ? "informative" : s.toLowerCase();
+  return `sev sev-${normalized}`;
 }
 
 export default function Dashboard() {

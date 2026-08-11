@@ -31,7 +31,8 @@ const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, informative: 4
 const SEVERITIES = ["all", "critical", "high", "medium", "low", "informative"] as const;
 
 function sevClass(s: string) {
-  return `sev sev-${s}`;
+  const normalized = s.toLowerCase() === "info" ? "informative" : s.toLowerCase();
+  return `sev sev-${normalized}`;
 }
 
 export default function VulnerabilitiesPage() {
@@ -128,7 +129,7 @@ export default function VulnerabilitiesPage() {
     high: allVulns.filter((v) => v.severity === "high").length,
     medium: allVulns.filter((v) => v.severity === "medium").length,
     low: allVulns.filter((v) => v.severity === "low").length,
-    informative: allVulns.filter((v) => v.severity === "informative").length,
+    informative: allVulns.filter((v) => v.severity === "informative" || v.severity === "info").length,
   };
 
   return (
@@ -325,16 +326,16 @@ export default function VulnerabilitiesPage() {
                     className="trow"
                     style={{
                       cursor: "pointer",
-                      background: isSelected ? "var(--bg-3)" : `var(--sev-${v.severity}-bg)`,
+                      background: isSelected ? "var(--bg-3)" : `var(--sev-${v.severity.toLowerCase() === "info" ? "informative" : v.severity.toLowerCase()}-bg)`,
                       borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
-                      borderLeft: `2px solid var(--sev-${v.severity})`,
+                      borderLeft: `2px solid var(--sev-${v.severity.toLowerCase() === "info" ? "informative" : v.severity.toLowerCase()})`,
                       transition: "background 0.2s"
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) e.currentTarget.style.background = "var(--bg-3)";
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = `var(--sev-${v.severity}-bg)`;
+                      if (!isSelected) e.currentTarget.style.background = `var(--sev-${v.severity.toLowerCase() === "info" ? "informative" : v.severity.toLowerCase()}-bg)`;
                     }}
                   >
                     {selectionMode && (

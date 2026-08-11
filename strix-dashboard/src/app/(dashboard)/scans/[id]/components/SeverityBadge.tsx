@@ -6,6 +6,8 @@ export function SeverityBadge({ s }: { s: string }) {
       medium: "badge-medium",
       low: "badge-low",
       informative: "badge-informative",
-    }[s] ?? "badge-informative";
-  return <span className={`badge ${cls}`}>{s}</span>;
+      info: "badge-informative",
+    }[s.toLowerCase()] ?? "badge-informative";
+  const display = s.toUpperCase() === "INFO" ? "INFO" : s;
+  return <span className={`badge ${cls}`}>{display}</span>;
 }

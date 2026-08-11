@@ -96,8 +96,10 @@ export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns:
                   medium: styles.rowMedium,
                   low: styles.rowLow,
                   informative: styles.rowInformative,
-                };
-                const rowClass = bgMap[v.severity] || styles.rowLow;
+                  info: styles.rowInformative,
+                } as Record<string, string>;
+                const normalizedSev = v.severity.toLowerCase() === "info" ? "informative" : v.severity.toLowerCase();
+                const rowClass = bgMap[normalizedSev] || styles.rowLow;
                 
                 return (
                 <tr
