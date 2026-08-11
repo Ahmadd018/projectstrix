@@ -366,9 +366,11 @@ export default function VulnerabilitiesPage() {
                       </span>
                     )}
                   </div>
-                </div>
-                )})
-              )}
+                  </div>
+                );
+                })}
+              </>
+            )}
             </div>
           </div>
 
