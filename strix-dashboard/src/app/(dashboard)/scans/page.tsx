@@ -940,9 +940,6 @@ function ScansContent() {
           </div>
         </div>
       )}
-
-      )}
-
       {/* Schedule API Key Modal */}
       {scheduleModal && (
         <div className="modal-overlay" onClick={() => { setScheduleModal(null); setError(""); }}>

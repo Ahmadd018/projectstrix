@@ -642,8 +642,6 @@ code, pre { font-family: var(--font-mono); }
   border-bottom: 1px solid var(--border);
 }
 
-.section-head-left {}
-
 .section-title {
   font-size: 13.5px;
   font-weight: 600;
@@ -816,8 +814,6 @@ code, pre { font-family: var(--font-mono); }
   gap: 24px;
   max-width: 1400px;
 }
-
-.page-intro {}
 .page-heading {
   font-size: 22px;
   font-weight: 700;
