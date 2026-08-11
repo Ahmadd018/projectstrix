@@ -1,7 +1,67 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2 } from "lucide-react";
+import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+
+const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : "text";
+  const codeString = String(children).replace(/\n$/, "");
+
+  const handleCopy = () => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(codeString);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = codeString;
+      textArea.style.position = "absolute";
+      textArea.style.left = "-999999px";
+      document.body.prepend(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (error) {} finally {
+        textArea.remove();
+      }
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!inline) {
+    return (
+      <div style={{ position: "relative", marginTop: "12px", marginBottom: "12px", borderRadius: "8px", overflow: "hidden", border: "1px solid #333" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1a1a1a", padding: "6px 12px", borderBottom: "1px solid #333" }}>
+          <span style={{ fontSize: "12px", color: "#888", fontFamily: "monospace", textTransform: "uppercase" }}>{lang}</span>
+          <button 
+            onClick={handleCopy}
+            style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "12px" }}
+          >
+            {copied ? <><Check size={14} color="#4ade80" /> Copied</> : <><Copy size={14} /> Copy</>}
+          </button>
+        </div>
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={lang}
+          PreTag="div"
+          customStyle={{ margin: 0, background: "#0d0d0d", padding: "16px", fontSize: "13px" }}
+          {...props}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
+  return (
+    <code style={{ background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: "4px", fontFamily: "monospace", fontSize: "0.9em", color: "#ff7c1f" }} className={className} {...props}>
+      {children}
+    </code>
+  );
+};
 
 interface Vulnerability {
   id: string;
@@ -11,6 +71,8 @@ interface Vulnerability {
   method?: string;
   description: string;
   poc?: string;
+  poc_description?: string;
+  poc_script_code?: string;
   cvss?: number;
   remediation?: string;
 }
@@ -450,18 +512,35 @@ export default function VulnerabilitiesPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--fg-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
                     <Info size={12} /> Description
                   </div>
-                  <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>{selected.description}</p>
+                  <div style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }} className="markdown-body">
+                    <ReactMarkdown components={{ code: CodeBlock }}>
+                      {selected.description}
+                    </ReactMarkdown>
+                  </div>
                 </div>
 
                 {/* PoC */}
-                {selected.poc && (
+                {(selected.poc || selected.poc_description || selected.poc_script_code) && (
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--fg-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
                       <Terminal size={12} /> Proof of Concept
                     </div>
-                    <pre style={{ background: "#000", border: "1px solid var(--border-md)", borderRadius: "var(--r)", padding: "14px", fontSize: 12, fontFamily: "var(--font-mono)", color: "#4ade80", overflowX: "auto", lineHeight: 1.6 }}>
-                      <code>{selected.poc}</code>
-                    </pre>
+                    
+                    {selected.poc_description && (
+                      <p style={{ marginBottom: '12px', fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>
+                        {selected.poc_description}
+                      </p>
+                    )}
+                    {selected.poc_script_code && (
+                      <ReactMarkdown components={{ code: CodeBlock }}>
+                        {selected.poc_script_code}
+                      </ReactMarkdown>
+                    )}
+                    {selected.poc && !selected.poc_script_code && (
+                      <ReactMarkdown components={{ code: CodeBlock }}>
+                        {selected.poc.includes("```") ? selected.poc : `\`\`\`text\n${selected.poc}\n\`\`\``}
+                      </ReactMarkdown>
+                    )}
                   </div>
                 )}
 
