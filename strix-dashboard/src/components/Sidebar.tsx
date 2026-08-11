@@ -70,7 +70,7 @@ export default function Sidebar() {
           <div className="sidebar-logo-mark" style={{ background: "transparent" }}>
             <img src="/logo.png" alt="Logo" style={{ width: 28, height: 28, objectFit: "contain" }} />
           </div>
-          {!collapsed && <span className="sidebar-logo-text">Strix Security</span>}
+          {!collapsed && <span className="sidebar-logo-text">Project Strix</span>}
         </div>
         <button
           className="sidebar-collapse-btn"
