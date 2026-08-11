@@ -190,7 +190,7 @@ export default function ScanDetailPage() {
         {activeTab === "overview" && (
           <ScanOverview scan={scan} vulns={vulns} elapsed={elapsed} />
         )}
-        {activeTab === "vulns" && <ScanFindings vulns={vulns} />}
+        {activeTab === "vulns" && <ScanFindings scan={scan} vulns={vulns} />}
         {activeTab === "tui" && <ScanTui logs={logs} status={scan.status} />}
         {activeTab === "logs" && <ScanLogs logs={logs} status={scan.status} />}
         {activeTab === "raw" && <ScanRaw scan={scan} />}

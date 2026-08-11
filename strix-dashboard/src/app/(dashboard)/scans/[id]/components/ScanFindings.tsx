@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Vulnerability } from "../types";
+import { ScanDetail, Vulnerability } from "../types";
 import { SeverityBadge } from "./SeverityBadge";
 import styles from "../detail.module.css";
 
-export default function ScanFindings({ vulns }: { vulns: Vulnerability[] }) {
+export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns: Vulnerability[] }) {
   const [selectedVuln, setSelectedVuln] = useState<Vulnerability | null>(null);
 
   return (
@@ -87,11 +87,17 @@ export default function ScanFindings({ vulns }: { vulns: Vulnerability[] }) {
             </div>
             <h2 className={styles.pocTitle}>{selectedVuln.title}</h2>
 
-            <div className={styles.pocEndpoint}>
-              <span className={styles.methodTag}>
-                {selectedVuln.method ?? "GET"}
-              </span>
-              <code>{selectedVuln.endpoint}</code>
+            <div className={styles.pocEndpoint} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase' }}>Target Domain:</span>
+                <span style={{ color: '#e5e5e5', fontFamily: 'monospace' }}>{selectedVuln.target || scan.target}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                <span className={styles.methodTag}>
+                  {selectedVuln.method ?? "GET"}
+                </span>
+                <code style={{ wordBreak: 'break-all' }}>{selectedVuln.endpoint}</code>
+              </div>
             </div>
 
             <section className={styles.pocSection}>
@@ -99,12 +105,16 @@ export default function ScanFindings({ vulns }: { vulns: Vulnerability[] }) {
               <p>{selectedVuln.description}</p>
             </section>
 
-            {selectedVuln.poc && (
-              <section className={styles.pocSection}>
-                <h3>Proof of Concept</h3>
+            <section className={styles.pocSection}>
+              <h3>Proof of Concept (PoC)</h3>
+              {selectedVuln.poc ? (
                 <pre className={styles.pocCode}>{selectedVuln.poc}</pre>
-              </section>
-            )}
+              ) : (
+                <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px dashed #333', borderRadius: '8px', color: '#888', fontSize: '13px' }}>
+                  No automated PoC snippet was recorded for this specific finding. Check the Raw Artifacts or Logs for full exploitation steps.
+                </div>
+              )}
+            </section>
 
             {selectedVuln.remediation && (
               <section className={styles.pocSection}>

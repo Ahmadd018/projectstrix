@@ -8,6 +8,7 @@ export interface Vulnerability {
   poc?: string;
   cvss?: number;
   remediation?: string;
+  target?: string;
 }
 
 export interface ScanDetail {
