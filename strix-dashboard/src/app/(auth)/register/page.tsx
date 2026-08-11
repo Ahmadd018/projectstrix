@@ -63,7 +63,7 @@ export default function RegisterPage() {
           alignItems: "center", 
           justifyContent: "center",
         }}>
-          <img src="/logo.svg" alt="Strix Logo" style={{ width: 48, height: 48, objectFit: "contain" }} />
+          <img src="/logo.svg" alt="Strix Logo" style={{ width: 64, height: 64, objectFit: "contain" }} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Create Account</h1>
