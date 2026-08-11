@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserCheck, UserX, Shield, ShieldOff, AlertTriangle, Users } from "lucide-react";
+import { UserCheck, UserX, Shield, ShieldOff, AlertTriangle, Users, Trash2 } from "lucide-react";
 
 type UserData = {
   id: string;
@@ -43,6 +43,21 @@ export default function UsersPage() {
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || "Failed to update user");
+      }
+      fetchUsers(); // refresh list
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const deleteUser = async (id: string) => {
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to delete user");
       }
       fetchUsers(); // refresh list
     } catch (err: any) {
@@ -146,6 +161,10 @@ export default function UsersPage() {
                         <UserCheck size={14} /> Restore
                       </button>
                     )}
+                    {/* Permanent Delete Button */}
+                    <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { if(confirm("Are you sure you want to PERMANENTLY delete this user? This action cannot be undone.")) deleteUser(user.id) }} title="Permanently Delete">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>

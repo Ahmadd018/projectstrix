@@ -39,3 +39,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Prevent deleting the last admin
+    if (targetUser.role === "ADMIN" && targetUser.status === "APPROVED") {
+      const adminCount = await prisma.user.count({
+        where: { role: "ADMIN", status: "APPROVED" }
+      });
+      
+      if (adminCount <= 1) {
+        return NextResponse.json({ error: "Cannot delete the last administrator" }, { status: 400 });
+      }
+    }
+
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

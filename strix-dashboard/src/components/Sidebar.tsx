@@ -132,7 +132,7 @@ export default function Sidebar() {
           >
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Users className="nav-link-icon" />
-              {pendingCount > 0 && (
+              {pendingCount > 0 && pathname !== "/users" && (
                 <span style={{
                   position: "absolute", top: -4, right: -4, background: "var(--sev-critical)", color: "#fff",
                   fontSize: 10, fontWeight: "bold", width: 14, height: 14, borderRadius: "50%",
@@ -143,7 +143,7 @@ export default function Sidebar() {
             {!collapsed && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                 <span className="nav-link-label">Team Control</span>
-                {pendingCount > 0 && (
+                {pendingCount > 0 && pathname !== "/users" && (
                   <span style={{ background: "var(--sev-critical)", color: "#fff", padding: "2px 6px", borderRadius: 10, fontSize: 11, fontWeight: "bold" }}>
                     {pendingCount}
                   </span>
