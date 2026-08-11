@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from "react";
 import styles from "../detail.module.css";
+import ReactMarkdown from 'react-markdown';
 
 export default function ScanTui({
   logs,
@@ -18,24 +19,29 @@ export default function ScanTui({
     
     const parsedLogs: { type: string; text: string; id: number }[] = [];
     
-    // The logs array contains chunks. Join them and split by newline to process line by line.
     const allLines = logs.join('').split('\n');
+    let currentMarkdownBlock: string[] = [];
     
-    allLines.forEach((log, index) => {
-      // Clean up any stray ANSI or messy characters if present
+    const flushMarkdownBlock = () => {
+      if (currentMarkdownBlock.length > 0) {
+        parsedLogs.push({ type: "markdown", text: currentMarkdownBlock.join('\n'), id: parsedLogs.length });
+        currentMarkdownBlock = [];
+      }
+    };
+    
+    allLines.forEach((log) => {
       let cleanLog = log.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-      cleanLog = cleanLog.replace(/[╭─╮│╰╯║═╔╗╚╝]/g, ''); // Remove stray box chars
+      cleanLog = cleanLog.replace(/[╭─╮│╰╯║═╔╗╚╝]/g, ''); 
       
       const lower = cleanLog.toLowerCase();
       if (!cleanLog.trim()) return;
-      if (cleanLog.includes("MODEL QUALITY WARNING")) return; // Skip useless noise
-      if (cleanLog.includes("│") || cleanLog.includes("─") || cleanLog.includes("╭") || cleanLog.includes("╮") || cleanLog.includes("╰") || cleanLog.includes("╯")) return; // Skip broken box drawing lines
+      if (cleanLog.includes("MODEL QUALITY WARNING")) return; 
       
       let type = "normal";
       if (lower.includes("tool:") || lower.includes("executing tool") || lower.includes("using tool") || lower.includes("proxy")) {
         type = "tool";
         toolsExecuted++;
-      } else if (lower.includes("error") || lower.includes("failed") || lower.includes("traceback")) {
+      } else if (lower.includes("error") || lower.includes("failed") || lower.includes("traceback") || lower.includes("exception")) {
         type = "error";
       } else if (lower.includes("thought:") || lower.includes("thinking") || lower.includes("reasoning")) {
         type = "thinking";
@@ -47,8 +53,14 @@ export default function ScanTui({
       if (lower.includes("exploit") || lower.includes("payload") || lower.includes("poc")) activeAgents.add("Exploit Agent");
       if (lower.includes("crawl") || lower.includes("spider")) activeAgents.add("Crawler");
       
-      parsedLogs.push({ type, text: cleanLog.trim(), id: index });
+      if (type === "normal") {
+        currentMarkdownBlock.push(cleanLog);
+      } else {
+        flushMarkdownBlock();
+        parsedLogs.push({ type, text: cleanLog, id: parsedLogs.length });
+      }
     });
+    flushMarkdownBlock();
 
     return {
       toolsExecuted,
@@ -85,7 +97,7 @@ export default function ScanTui({
           </div>
         </div>
         <div style={{ color: '#444', fontSize: '12px', marginTop: 'auto' }}>
-          Strix AI TUI Simulator v3.0
+          Strix AI TUI Simulator v4.0 (Markdown)
         </div>
       </div>
 
@@ -105,7 +117,7 @@ export default function ScanTui({
         </div>
       </div>
 
-      {/* MAIN PANE: Interactive Tool Stream (React DOM) */}
+      {/* MAIN PANE: Interactive Tool Stream (Markdown Rendered) */}
       <div className={styles.tuiMain}>
         <div className={styles.tuiPaneTitle} style={{ paddingLeft: '8px', paddingBottom: '8px', borderBottom: '1px solid #222', marginBottom: '8px' }}>
           Live Execution Stream
@@ -123,6 +135,31 @@ export default function ScanTui({
           )}
           
           {parsedData.parsedLogs.map((log) => {
+            if (log.type === "markdown") {
+              return (
+                <div key={log.id} className={styles.tuiLogLine} style={{ marginBottom: '16px', color: '#c9d1d9' }}>
+                  <ReactMarkdown 
+                    components={{
+                      code({node, inline, className, children, ...props}: any) {
+                        return (
+                          <code className={className} style={{ background: 'rgba(255,255,255,0.1)', padding: inline ? '2px 4px' : '12px', borderRadius: '4px', fontFamily: 'monospace', display: inline ? 'inline' : 'block', overflowX: 'auto' }} {...props}>
+                            {children}
+                          </code>
+                        )
+                      },
+                      h1({children}) { return <h1 style={{ fontSize: '1.2rem', margin: '8px 0', color: '#fff' }}>{children}</h1> },
+                      h2({children}) { return <h2 style={{ fontSize: '1.1rem', margin: '8px 0', color: '#fff' }}>{children}</h2> },
+                      h3({children}) { return <h3 style={{ fontSize: '1rem', margin: '8px 0', color: '#fff' }}>{children}</h3> },
+                      p({children}) { return <p style={{ margin: '4px 0', lineHeight: 1.5 }}>{children}</p> },
+                      ul({children}) { return <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>{children}</ul> },
+                    }}
+                  >
+                    {log.text}
+                  </ReactMarkdown>
+                </div>
+              );
+            }
+
             let colorClass = "";
             switch (log.type) {
               case "tool": colorClass = styles.tuiLogTool; break;
@@ -131,17 +168,17 @@ export default function ScanTui({
               case "thinking": colorClass = styles.tuiLogThinking; break;
             }
             return (
-              <div key={log.id} className={`${styles.tuiLogLine} ${colorClass}`} style={{ marginBottom: '4px' }}>
-                <span className={styles.tuiTerminalCaret}>❯</span>
-                {log.text}
+              <div key={log.id} className={`${styles.tuiLogLine} ${colorClass}`} style={{ marginBottom: '6px', display: 'flex', alignItems: 'flex-start' }}>
+                <span className={styles.tuiTerminalCaret} style={{ marginTop: '2px', marginRight: '10px' }}>❯</span>
+                <div style={{ flex: 1 }}>{log.text}</div>
               </div>
             );
           })}
           
           {status === "running" && (
-            <div className={styles.tuiLogLine} style={{ opacity: 0.7, marginTop: '8px' }}>
-              <span className={styles.tuiTerminalCaret}>❯</span>
-              <span className={styles.spinner} style={{ width: '12px', height: '12px', display: 'inline-block', borderTopColor: '#dc2626', marginRight: '8px', verticalAlign: 'middle' }} />
+            <div className={styles.tuiLogLine} style={{ opacity: 0.7, marginTop: '8px', display: 'flex', alignItems: 'center' }}>
+              <span className={styles.tuiTerminalCaret} style={{ marginRight: '10px' }}>❯</span>
+              <span className={styles.spinner} style={{ width: '12px', height: '12px', display: 'inline-block', borderTopColor: '#dc2626', marginRight: '8px' }} />
               <span>Waiting for agent response...</span>
             </div>
           )}
