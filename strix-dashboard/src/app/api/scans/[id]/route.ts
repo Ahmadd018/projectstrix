@@ -70,7 +70,7 @@ export async function GET(
     log.debug(`GET /api/scans/${id}`, "No vulnerabilities.json yet");
   }
 
-  return NextResponse.json({ ...run, vulnerabilities });
+  return NextResponse.json({ ...dbScan, ...run, vulnerabilities });
 }
 
 // DELETE /api/scans/[id] — stop a running scan or delete it

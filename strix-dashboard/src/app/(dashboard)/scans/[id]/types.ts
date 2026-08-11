@@ -23,6 +23,7 @@ export interface ScanDetail {
   startedAt: string;
   finishedAt: string | null;
   vulnerabilities: Vulnerability[];
+  payload?: any;
 }
 
 export const SEVERITY_ORDER: Record<string, number> = {
