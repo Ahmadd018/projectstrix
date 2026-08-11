@@ -178,48 +178,82 @@ export default function Sidebar() {
             style={{
               background: "var(--bg-1)",
               border: "1px solid var(--border)",
-              borderRadius: 16,
-              padding: 24,
-              width: 300,
+              borderRadius: 20,
+              padding: 32,
+              width: 420,
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+              gap: 24,
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
               animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards"
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--fg)", color: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: "bold" }}>
-              {user ? user.username.charAt(0).toUpperCase() : "U"}
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <h2 style={{ fontSize: 20, margin: 0, textTransform: "capitalize" }}>{user?.username || "Guest"}</h2>
-              <p style={{ color: "var(--fg-3)", fontSize: 13, marginTop: 4 }}>{user?.role === "ADMIN" ? "Administrator" : "Security Engineer"}</p>
-            </div>
-            <div style={{ width: "100%", background: "var(--bg-2)", padding: 12, borderRadius: 8, fontSize: 12, color: "var(--fg-2)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span>User ID:</span>
-                <span style={{ fontFamily: "monospace" }}>{user?.id.split("-")[0]}...</span>
+            {/* Header / Avatar */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{ 
+                width: 72, height: 72, borderRadius: "50%", 
+                background: "linear-gradient(135deg, var(--fg) 0%, var(--bg-3) 100%)", 
+                color: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", 
+                fontSize: 28, fontWeight: "bold",
+                boxShadow: "0 8px 16px rgba(0,0,0,0.2)"
+              }}>
+                {user ? user.username.charAt(0).toUpperCase() : "U"}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Status:</span>
-                <span style={{ color: "var(--sev-low)" }}>Active</span>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ fontSize: 22, margin: 0, textTransform: "capitalize", fontWeight: 700, letterSpacing: "-0.02em" }}>{user?.username || "Guest"}</h2>
+                <p style={{ color: "var(--fg-3)", fontSize: 14, marginTop: 4, fontWeight: 500 }}>{user?.role === "ADMIN" ? "System Administrator" : "Security Engineer"}</p>
+              </div>
+              <div style={{ padding: "6px 12px", background: "rgba(74,222,128,0.1)", color: "#4ade80", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                Active
               </div>
             </div>
-            <button 
-              className="btn-danger" 
-              style={{ width: "100%", padding: 10, borderRadius: 8, border: "none", background: "var(--sev-critical-bg)", color: "var(--sev-critical)", cursor: "pointer", fontWeight: 600, transition: "background 0.2s" }}
-              onMouseOver={e => e.currentTarget.style.background = "var(--sev-critical-bd)"}
-              onMouseOut={e => e.currentTarget.style.background = "var(--sev-critical-bg)"}
-              onClick={() => {
-                fetch("/api/auth/logout", { method: "POST" }).then(() => {
-                  window.location.href = "/login";
-                });
-              }}
-            >
-              Sign Out
-            </button>
+
+            {/* Info Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ background: "var(--bg-2)", padding: 16, borderRadius: 12 }}>
+                <div style={{ color: "var(--fg-3)", fontSize: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>User ID</div>
+                <div style={{ fontFamily: "monospace", fontSize: 13, color: "var(--fg)" }}>{user?.id.split("-")[0]}</div>
+              </div>
+              <div style={{ background: "var(--bg-2)", padding: 16, borderRadius: 12 }}>
+                <div style={{ color: "var(--fg-3)", fontSize: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Account Tier</div>
+                <div style={{ fontSize: 13, color: "var(--fg)", fontWeight: 500 }}>Enterprise</div>
+              </div>
+              <div style={{ background: "var(--bg-2)", padding: 16, borderRadius: 12 }}>
+                <div style={{ color: "var(--fg-3)", fontSize: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Session IP</div>
+                <div style={{ fontFamily: "monospace", fontSize: 13, color: "var(--fg)" }}>127.0.0.1</div>
+              </div>
+              <div style={{ background: "var(--bg-2)", padding: 16, borderRadius: 12 }}>
+                <div style={{ color: "var(--fg-3)", fontSize: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>2FA Status</div>
+                <div style={{ fontSize: 13, color: "var(--sev-high)", fontWeight: 500 }}>Disabled</div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+              <Link 
+                href="/settings" 
+                onClick={() => setShowProfile(false)}
+                style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--fg)", cursor: "pointer", fontWeight: 600, transition: "background 0.2s", textAlign: "center", textDecoration: "none" }}
+                onMouseOver={e => e.currentTarget.style.background = "var(--bg-2)"}
+                onMouseOut={e => e.currentTarget.style.background = "transparent"}
+              >
+                Settings
+              </Link>
+              <button 
+                className="btn-danger" 
+                style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: "var(--sev-critical-bg)", color: "var(--sev-critical)", cursor: "pointer", fontWeight: 600, transition: "background 0.2s" }}
+                onMouseOver={e => e.currentTarget.style.background = "var(--sev-critical-bd)"}
+                onMouseOut={e => e.currentTarget.style.background = "var(--sev-critical-bg)"}
+                onClick={() => {
+                  fetch("/api/auth/logout", { method: "POST" }).then(() => {
+                    window.location.href = "/login";
+                  });
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
           <style dangerouslySetInnerHTML={{__html: `
             @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
