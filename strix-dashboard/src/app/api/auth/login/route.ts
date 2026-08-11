@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (user.status === "PENDING") {
+      return NextResponse.json({ error: "Your account is pending admin approval." }, { status: 403 });
+    }
+    if (user.status === "REJECTED") {
+      return NextResponse.json({ error: "Your account request was rejected." }, { status: 403 });
+    }
+
     await createSession(user.id, user.username, user.role);
 
     return NextResponse.json({ success: true, user: { id: user.id, username: user.username, role: user.role } });

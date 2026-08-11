@@ -6,6 +6,7 @@ export interface User {
   username: string;
   passwordHash: string;
   role: string;
+  status: string;
   apiKeys: string | null;
   createdAt: Date;
 }
@@ -29,13 +30,16 @@ export async function createUser(username: string, passwordPlain: string): Promi
 
   const passwordHash = await bcrypt.hash(passwordPlain, 10);
   
-  const role = (username === "admin") ? "ADMIN" : "USER";
+  const totalUsers = await prisma.user.count();
+  const role = (totalUsers === 0 || username === "admin") ? "ADMIN" : "USER";
+  const status = (totalUsers === 0 || username === "admin") ? "APPROVED" : "PENDING";
 
   const newUser = await prisma.user.create({
     data: {
       username: username,
       passwordHash,
       role,
+      status
     }
   });
 

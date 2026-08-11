@@ -11,6 +11,7 @@ model User {
   username     String   @unique
   passwordHash String
   role         String   @default("USER")
+  status       String   @default("APPROVED")
   apiKeys      String?
   createdAt    DateTime @default(now())
   scans        Scan[]

@@ -24,12 +24,19 @@ export default function RegisterPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user?.status === "APPROVED") {
+          router.push("/");
+        } else {
+          setError(""); // Clear any previous errors
+          alert("Registration successful! Your account is currently pending admin approval. You will not be able to log in until an administrator approves your account.");
+          router.push("/login");
+        }
+      } else {
+        const data = await res.json();
         throw new Error(data.error || "Registration failed");
       }
-
-      window.location.href = "/";
     } catch (err: any) {
       setError(err.message);
       setLoading(false);

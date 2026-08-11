@@ -35,6 +35,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState<{ id: string, username: string, role: string } | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -62,6 +63,14 @@ export default function Sidebar() {
     const iv = setInterval(check, 30000);
     return () => clearInterval(iv);
   }, []);
+
+  useEffect(() => {
+    if (user?.role === "ADMIN") {
+      fetch("/api/users/pending-count").then(r => r.json()).then(data => {
+        setPendingCount(data.pendingCount || 0);
+      }).catch(console.error);
+    }
+  }, [user]);
 
   return (
     <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
@@ -114,6 +123,34 @@ export default function Sidebar() {
             </Link>
           );
         })}
+        {user?.role === "ADMIN" && (
+          <Link 
+            href="/users" 
+            className={`nav-link${pathname === "/users" ? " active" : ""}`}
+            title="Team Management"
+          >
+            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Users className="nav-link-icon" />
+              {pendingCount > 0 && (
+                <span style={{
+                  position: "absolute", top: -4, right: -4, background: "var(--sev-critical)", color: "#fff",
+                  fontSize: 10, fontWeight: "bold", width: 14, height: 14, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid var(--bg-1)"
+                }}>{pendingCount}</span>
+              )}
+            </div>
+            {!collapsed && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                <span className="nav-link-label">Team Control</span>
+                {pendingCount > 0 && (
+                  <span style={{ background: "var(--sev-critical)", color: "#fff", padding: "2px 6px", borderRadius: 10, fontSize: 11, fontWeight: "bold" }}>
+                    {pendingCount}
+                  </span>
+                )}
+              </div>
+            )}
+          </Link>
+        )}
       </nav>
 
       {/* Footer */}
