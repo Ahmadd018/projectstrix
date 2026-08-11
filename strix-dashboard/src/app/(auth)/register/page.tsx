@@ -57,15 +57,13 @@ export default function RegisterPage() {
           width: 56, 
           height: 56, 
           borderRadius: 16, 
-          background: "linear-gradient(135deg, rgba(255,124,31,0.2) 0%, rgba(255,124,31,0.05) 100%)",
-          border: "1px solid rgba(255,124,31,0.2)",
+          background: "transparent",
+          border: "none",
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center",
-          color: "var(--sev-high)",
-          boxShadow: "0 8px 16px rgba(255,124,31,0.1)"
         }}>
-          <User size={28} strokeWidth={2.5} />
+          <img src="/logo.png" alt="Strix Logo" style={{ width: 48, height: 48, objectFit: "contain" }} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Create Account</h1>

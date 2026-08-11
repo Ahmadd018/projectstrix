@@ -67,7 +67,9 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-mark">S</div>
+          <div className="sidebar-logo-mark" style={{ background: "transparent" }}>
+            <img src="/logo.png" alt="Logo" style={{ width: 28, height: 28, objectFit: "contain" }} />
+          </div>
           {!collapsed && <span className="sidebar-logo-text">Strix Security</span>}
         </div>
         <button

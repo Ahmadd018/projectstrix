@@ -57,15 +57,13 @@ export default function LoginPage() {
           width: 56, 
           height: 56, 
           borderRadius: 16, 
-          background: "linear-gradient(135deg, rgba(74,222,128,0.2) 0%, rgba(74,222,128,0.05) 100%)",
-          border: "1px solid rgba(74,222,128,0.2)",
+          background: "transparent",
+          border: "none",
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center",
-          color: "var(--sev-low)",
-          boxShadow: "0 8px 16px rgba(74,222,128,0.1)"
         }}>
-          <User size={28} strokeWidth={2.5} />
+          <img src="/logo.png" alt="Strix Logo" style={{ width: 48, height: 48, objectFit: "contain" }} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Welcome to Strix</h1>
