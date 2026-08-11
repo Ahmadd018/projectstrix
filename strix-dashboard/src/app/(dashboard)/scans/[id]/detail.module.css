@@ -682,3 +682,102 @@
   color: var(--text-secondary);
   font-size: 0.95rem;
 }
+
+/* Custom TUI Styles */
+.tuiContainer {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  height: 600px;
+  background-color: #050505;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 16px;
+  font-family: var(--font-mono);
+  color: #e5e5e5;
+}
+
+.tuiHeader {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #222;
+  padding-bottom: 16px;
+  margin-bottom: 8px;
+}
+
+.tuiStats {
+  display: flex;
+  gap: 32px;
+}
+
+.tuiStatBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tuiStatLabel {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tuiStatValue {
+  font-size: 18px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tuiStatValueHighlight {
+  color: #dc2626;
+}
+
+.tuiSidebar {
+  border-right: 1px solid #222;
+  padding-right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tuiPaneTitle {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tuiAgentTree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tuiAgentNode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.tuiAgentIcon {
+  color: #dc2626;
+}
+
+.tuiAgentLine {
+  width: 12px;
+  height: 1px;
+  background-color: #444;
+  margin-left: 8px;
+}
+
+.tuiMain {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-left: 16px;
+}
