@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
@@ -54,16 +55,17 @@ export default function LoginPage() {
     >
       <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
         <div style={{ 
-          width: 56, 
-          height: 56, 
-          borderRadius: 16, 
-          background: "transparent",
-          border: "none",
+          width: 120, 
+          height: 120, 
+          borderRadius: 24, 
+          background: "rgba(255,0,0,0.05)",
+          border: "1px solid rgba(255,0,0,0.1)",
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center",
+          boxShadow: "0 0 30px rgba(255,0,0,0.1)",
         }}>
-          <img src="/logo.svg" alt="Strix Logo" style={{ width: 96, height: 96, objectFit: "contain" }} />
+          <img src="/logo.svg" alt="Strix Logo" style={{ width: 90, height: 90, objectFit: "contain" }} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Welcome to Strix</h1>
@@ -142,7 +144,7 @@ export default function LoginPage() {
       </form>
 
       <div style={{ animation: "fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards", opacity: 0, textAlign: "center", fontSize: 13, color: "var(--fg-3)" }}>
-        Don't have an account? <a href="/register" style={{ color: "var(--fg)", textDecoration: "none", fontWeight: 500, transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color="var(--sev-low)"} onMouseOut={e => e.currentTarget.style.color="var(--fg)"}>Create one</a>
+        Don't have an account? <Link href="/register" style={{ color: "var(--fg)", textDecoration: "none", fontWeight: 500, transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color="var(--sev-high)"} onMouseOut={e => e.currentTarget.style.color="var(--fg)"}>Sign up</Link>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
