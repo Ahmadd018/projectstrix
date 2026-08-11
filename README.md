@@ -23,7 +23,7 @@ Instead of relying on static payloads and predictable regex matching, Strix leve
 
 > [!NOTE]
 > **Full Documentation**
-> For detailed guides on Installation, System Architecture, and API configuration, please visit our official documentation site: **[Strix Official Documentation](https://infat0x.github.io/ProjectStrix/)**
+> For detailed guides on Installation, System Architecture, and API configuration, please visit our official documentation site: **[Documentation](https://infat0x.github.io/ProjectStrix/)**
 
 ---
 
