@@ -191,6 +191,70 @@ sequenceDiagram
 ```
 :::
 
+::: details DELETE `/api/scans/bulk`
+**Description:** Deletes multiple scans in a single request.
+
+**Headers:**
+- `Content-Type: application/json`
+- `Cookie: strix_session=<jwt>`
+
+**Request Body:**
+```json
+{
+  "ids": ["550e8400-e29b-41d4-a716-446655440000", "990e8400-e29b-41d4-a716-446655441111"]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Scans deleted successfully"
+}
+```
+:::
+
+::: details POST `/api/scans/[id]/schedule`
+**Description:** Sets a recurring cron schedule for an existing scan configuration.
+
+**Headers:**
+- `Content-Type: application/json`
+- `Cookie: strix_session=<jwt>`
+
+**Request Body:**
+```json
+{
+  "cron": "0 0 * * 0" // Run every Sunday at midnight
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Schedule created successfully"
+}
+```
+:::
+
+---
+
+## Analytics Endpoints
+
+::: details GET `/api/analytics`
+**Description:** Retrieves statistical data and charts information for the dashboard.
+
+**Headers:**
+- `Cookie: strix_session=<jwt>`
+
+**Response (200 OK):**
+```json
+{
+  "totalScans": 150,
+  "criticalVulns": 12,
+  "activeAgents": 2
+}
+```
+:::
+
 ---
 
 ## Streaming Endpoints

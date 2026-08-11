@@ -120,6 +120,51 @@ const spec = {
         },
       },
     },
+    "/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get current user profile",
+        description: "Returns the profile of the currently authenticated user.",
+        operationId: "getMe",
+        responses: {
+          "200": { description: "User profile returned successfully" },
+          "401": { description: "Not authenticated" },
+        },
+      },
+    },
+    "/auth/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Logout user",
+        description: "Destroys the current user session.",
+        operationId: "logoutUser",
+        responses: {
+          "200": { description: "Logged out successfully" },
+        },
+      },
+    },
+    "/user/settings": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get user settings",
+        description: "Retrieves account settings for the authenticated user.",
+        operationId: "getUserSettings",
+        responses: {
+          "200": { description: "User settings returned" },
+        },
+      },
+    },
+    "/analytics": {
+      get: {
+        tags: ["Logs"],
+        summary: "Get dashboard analytics",
+        description: "Retrieves statistical data for the dashboard charts.",
+        operationId: "getAnalytics",
+        responses: {
+          "200": { description: "Analytics data returned successfully" },
+        },
+      },
+    },
     "/logs": {
       get: {
         tags: ["Logs"],
@@ -245,6 +290,29 @@ const spec = {
             },
           },
           "404": { description: "Scan not found" },
+        },
+      },
+    },
+    "/scans/bulk": {
+      delete: {
+        tags: ["Scans"],
+        summary: "Bulk delete scans",
+        description: "Deletes multiple scans by their IDs.",
+        operationId: "bulkDeleteScans",
+        responses: {
+          "200": { description: "Scans deleted successfully" },
+        },
+      },
+    },
+    "/scans/{id}/schedule": {
+      post: {
+        tags: ["Scans"],
+        summary: "Schedule a scan",
+        description: "Sets a recurring schedule for a specific scan configuration.",
+        operationId: "scheduleScan",
+        parameters: [{ $ref: "#/components/parameters/ScanId" }],
+        responses: {
+          "200": { description: "Scan scheduled successfully" },
         },
       },
     },
