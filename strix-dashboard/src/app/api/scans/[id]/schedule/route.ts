@@ -30,9 +30,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Validate period value
-    const validPeriods = ["daily", "weekly", "monthly"];
+    const validPeriods = ["daily", "weekly", "monthly", "3_minutes"];
     if (!validPeriods.includes(period)) {
-      return NextResponse.json({ error: "Invalid period. Must be daily, weekly, or monthly." }, { status: 400 });
+      return NextResponse.json({ error: "Invalid period. Must be daily, weekly, monthly, or 3_minutes." }, { status: 400 });
     }
 
     const existingPayload = scan.payload as any;
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (period === "daily") nextRunAt.setDate(nextRunAt.getDate() + 1);
     else if (period === "weekly") nextRunAt.setDate(nextRunAt.getDate() + 7);
     else if (period === "monthly") nextRunAt.setMonth(nextRunAt.getMonth() + 1);
+    else if (period === "3_minutes") nextRunAt.setMinutes(nextRunAt.getMinutes() + 3);
 
     // Store updated payload for future recurring runs
     const updatedPayload = {

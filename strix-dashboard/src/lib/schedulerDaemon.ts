@@ -105,6 +105,7 @@ async function checkScheduledScans() {
       if (scan.period === "daily") nextDate.setDate(nextDate.getDate() + 1);
       else if (scan.period === "weekly") nextDate.setDate(nextDate.getDate() + 7);
       else if (scan.period === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
+      else if (scan.period === "3_minutes") nextDate.setMinutes(nextDate.getMinutes() + 3);
 
       // Rescan the same scan ID as requested by user
       await triggerScan(scan);

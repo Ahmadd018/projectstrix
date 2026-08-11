@@ -642,6 +642,7 @@ function ScansContent() {
                           }}
                         >
                           <option value="none">None</option>
+                          <option value="3_minutes">Every 3 Minutes (Test)</option>
                           <option value="daily">Daily</option>
                           <option value="weekly">Weekly</option>
                           <option value="monthly">Monthly</option>
