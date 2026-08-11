@@ -376,7 +376,9 @@ export async function POST(req: NextRequest) {
     }
     args.push("--resume", actualResumeName);
   } else {
-    if (target) args.push("-t", target);
+    if (target && target !== "Unknown Target" && !target.startsWith("Multiple Targets")) {
+      args.push("-t", target);
+    }
     
     if (targetList?.trim()) {
       const targetListFile = path.join(scanDir, "targets.txt");

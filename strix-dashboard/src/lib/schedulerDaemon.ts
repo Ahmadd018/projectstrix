@@ -18,13 +18,13 @@ async function triggerScan(scan: any) {
     const stored = (scan.payload && typeof scan.payload === "object") ? scan.payload as any : {};
 
     const payload: any = {
-      target: stored.target || scan.target,
+      ...stored,
+      target: stored.target !== undefined ? stored.target : scan.target,
       projectName: stored.projectName || scan.projectName || "",
       llmModel: stored.llmModel || scan.llmModel || "openai/gpt-4o",
       scanMode: stored.scanMode || scan.scanMode || "standard",
       apiKey: stored.apiKey || "",
       simulationMode: stored.simulationMode || false,
-      ...stored,
       // These must always be set correctly:
       preGeneratedScanId: scan.id,
       userId: scan.userId,
@@ -33,8 +33,8 @@ async function triggerScan(scan: any) {
     // Must not re-schedule this trigger
     delete payload.scheduledAt;
 
-    if (!payload.target) {
-      log.warn("SCHEDULER", `Scan ${scan.id} has no target — skipping`);
+    if (!payload.target && !payload.targetList && !payload.configFile) {
+      log.warn("SCHEDULER", `Scan ${scan.id} has no target, targetList, or config — skipping`);
       return;
     }
 
