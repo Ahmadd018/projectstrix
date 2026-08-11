@@ -90,12 +90,14 @@ export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns:
             </thead>
             <tbody>
               {vulns.map((v) => {
-                const rowClass = {
+                const bgMap = {
                   critical: styles.rowCritical,
                   high: styles.rowHigh,
                   medium: styles.rowMedium,
                   low: styles.rowLow,
-                }[v.severity] || styles.rowLow;
+                  informative: styles.rowInformative,
+                };
+                const rowClass = bgMap[v.severity] || styles.rowLow;
                 
                 return (
                 <tr

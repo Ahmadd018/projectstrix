@@ -6,7 +6,7 @@ import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2 }
 interface Vulnerability {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low" | "informative";
   endpoint: string;
   method?: string;
   description: string;
@@ -27,8 +27,8 @@ interface VulnWithScan extends Vulnerability {
   scanTarget: string;
 }
 
-const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
-const SEVERITIES = ["all", "critical", "high", "medium", "low"] as const;
+const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, informative: 4 };
+const SEVERITIES = ["all", "critical", "high", "medium", "low", "informative"] as const;
 
 function sevClass(s: string) {
   return `sev sev-${s}`;
@@ -128,6 +128,7 @@ export default function VulnerabilitiesPage() {
     high: allVulns.filter((v) => v.severity === "high").length,
     medium: allVulns.filter((v) => v.severity === "medium").length,
     low: allVulns.filter((v) => v.severity === "low").length,
+    informative: allVulns.filter((v) => v.severity === "informative").length,
   };
 
   return (
@@ -160,7 +161,7 @@ export default function VulnerabilitiesPage() {
 
       {/* Severity stat cards */}
       <div className="stats-grid">
-        {(["critical", "high", "medium", "low"] as const).map((s) => (
+        {(["critical", "high", "medium", "low", "informative"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilter(filter === s ? "all" : s)}
@@ -183,7 +184,8 @@ export default function VulnerabilitiesPage() {
                   s === "critical" ? "var(--sev-critical)" :
                   s === "high"     ? "var(--sev-high)" :
                   s === "medium"   ? "var(--sev-medium)" :
-                  "var(--sev-low)",
+                  s === "low"      ? "var(--sev-low)" :
+                  "var(--sev-informative)",
               }}
             >
               {counts[s]}

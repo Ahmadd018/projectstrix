@@ -44,6 +44,10 @@
   --sev-low-bg:       rgba(74,222,128,0.08);
   --sev-low-bd:       rgba(74,222,128,0.20);
 
+  --sev-informative:    #3b82f6;
+  --sev-informative-bg: rgba(59,130,246,0.08);
+  --sev-informative-bd: rgba(59,130,246,0.20);
+
   /* Status */
   --status-running:   #4ade80;
   --status-completed: rgba(255,255,255,0.50);
@@ -724,10 +728,11 @@ code, pre { font-family: var(--font-mono); }
   border: 1px solid;
 }
 
-.sev-critical { background: var(--sev-critical-bg); color: var(--sev-critical); border-color: var(--sev-critical-bd); }
-.sev-high     { background: var(--sev-high-bg);     color: var(--sev-high);     border-color: var(--sev-high-bd); }
-.sev-medium   { background: var(--sev-medium-bg);   color: var(--sev-medium);   border-color: var(--sev-medium-bd); }
-.sev-low      { background: var(--sev-low-bg);      color: var(--sev-low);      border-color: var(--sev-low-bd); }
+.badge-critical, .sev-critical { background: var(--sev-critical-bg); color: var(--sev-critical); border-color: var(--sev-critical-bd); box-shadow: 0 0 6px rgba(255,59,59,0.3); }
+.badge-high,     .sev-high     { background: var(--sev-high-bg);     color: var(--sev-high);     border-color: var(--sev-high-bd); }
+.badge-medium,   .sev-medium   { background: var(--sev-medium-bg);   color: var(--sev-medium);   border-color: var(--sev-medium-bd); }
+.badge-low,      .sev-low      { background: var(--sev-low-bg);      color: var(--sev-low);      border-color: var(--sev-low-bd); }
+.badge-informative, .sev-informative { background: var(--sev-informative-bg); color: var(--sev-informative); border-color: var(--sev-informative-bd); }
 
 /* Status indicator */
 .status-badge {

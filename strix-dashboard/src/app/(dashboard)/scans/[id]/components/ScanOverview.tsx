@@ -16,6 +16,7 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
   const high = vulns.filter((v) => v.severity === "high").length;
   const medium = vulns.filter((v) => v.severity === "medium").length;
   const low = vulns.filter((v) => v.severity === "low").length;
+  const informative = vulns.filter((v) => v.severity === "informative").length;
   const total = vulns.length;
   const [copied, setCopied] = useState(false);
 
@@ -48,7 +49,9 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
           ? "Medium"
           : low > 0
             ? "Low"
-            : "Secure";
+            : informative > 0
+              ? "Informative"
+              : "Secure";
   const riskScore =
     total === 0
       ? 100
@@ -129,6 +132,16 @@ export default function ScanOverview({ scan, vulns, elapsed }: Props) {
                   ></div>
                 </div>
                 <span className={styles.distCount}>{low}</span>
+              </div>
+              <div className={styles.distRow}>
+                <span className={styles.distLabel}>Informative</span>
+                <div className={styles.distTrack}>
+                  <div
+                    className={`${styles.distFill} ${styles.bgInformative}`}
+                    style={{ width: `${(informative / total) * 100}%` }}
+                  ></div>
+                </div>
+                <span className={styles.distCount}>{informative}</span>
               </div>
             </div>
           )}

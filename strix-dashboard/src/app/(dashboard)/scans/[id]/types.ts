@@ -1,7 +1,7 @@
 export interface Vulnerability {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low" | "informative";
   endpoint: string;
   method?: string;
   description: string;

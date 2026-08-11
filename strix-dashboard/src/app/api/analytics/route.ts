@@ -39,11 +39,11 @@ export async function GET(req: NextRequest) {
     const criticalVulns = vulnerabilities.filter(v => v.severity.toLowerCase() === "critical").length;
 
     // 2. Vulnerability by Severity Breakdown
-    const severityCount = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    const severityCount = { critical: 0, high: 0, medium: 0, low: 0, informative: 0 };
     vulnerabilities.forEach(v => {
       const s = v.severity.toLowerCase();
       if (s in severityCount) severityCount[s as keyof typeof severityCount]++;
-      else severityCount.info++;
+      else severityCount.informative++;
     });
 
     // 3. Scan Trend over last 7 days
@@ -70,9 +70,9 @@ export async function GET(req: NextRequest) {
       severityBreakdown: [
         { name: "Critical", value: severityCount.critical, fill: "var(--sev-critical)" },
         { name: "High", value: severityCount.high, fill: "var(--sev-high)" },
-        { name: "Medium", value: severityCount.medium, fill: "var(--sev-med)" },
+        { name: "Medium", value: severityCount.medium, fill: "var(--sev-medium)" },
         { name: "Low", value: severityCount.low, fill: "var(--sev-low)" },
-        { name: "Info", value: severityCount.info, fill: "var(--fg-3)" }
+        { name: "Informative", value: severityCount.informative, fill: "var(--sev-informative)" }
       ].filter(s => s.value > 0),
       trendData,
       recentVulns: vulnerabilities.slice(0, 8)

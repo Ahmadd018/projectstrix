@@ -342,6 +342,7 @@
 .bgHigh { background: var(--sev-high); }
 .bgMedium { background: var(--sev-medium); }
 .bgLow { background: var(--sev-low); }
+.bgInformative { background: var(--sev-informative); }
 
 .distCount {
   width: 24px;

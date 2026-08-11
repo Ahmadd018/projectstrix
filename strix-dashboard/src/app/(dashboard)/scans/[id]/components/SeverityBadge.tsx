@@ -5,6 +5,7 @@ export function SeverityBadge({ s }: { s: string }) {
       high: "badge-high",
       medium: "badge-medium",
       low: "badge-low",
-    }[s] ?? "badge-low";
+      informative: "badge-informative",
+    }[s] ?? "badge-informative";
   return <span className={`badge ${cls}`}>{s}</span>;
 }

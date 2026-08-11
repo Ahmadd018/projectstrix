@@ -24,7 +24,7 @@ interface Scan {
 interface Vuln {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low";
+  severity: "critical" | "high" | "medium" | "low" | "informative";
   endpoint: string;
   scanTarget: string;
   scanId: string;
@@ -91,7 +91,7 @@ export default function Dashboard() {
           } catch {}
         }
         vulns.sort((a, b) => {
-          const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+          const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, informative: 4 };
           return order[a.severity] - order[b.severity];
         });
         setRecentVulns(vulns.slice(0, 6));
