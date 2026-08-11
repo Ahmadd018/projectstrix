@@ -4,10 +4,7 @@ import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 
-// Regex to strip ANSI escape codes so the plain log is readable
-const stripAnsi = (str: string) => str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-
-export default function ScanLogs({
+export default function ScanTui({
   logs,
   status,
 }: {
@@ -23,22 +20,21 @@ export default function ScanLogs({
     
     const term = new Terminal({
       theme: {
-        background: '#0a0a0a',
-        foreground: '#e5e5e5',
-        cursor: 'transparent',
-        selectionBackground: 'rgba(255, 255, 255, 0.3)'
+        background: '#111111',
+        foreground: '#f8f8f2',
+        cursor: '#ff0000',
+        selectionBackground: 'rgba(220, 38, 38, 0.3)' // Strix red selection
       },
       fontFamily: 'var(--font-mono)',
-      fontSize: 12,
+      fontSize: 14,
       disableStdin: true,
-      convertEol: true, // Converts \n to \r\n automatically
+      convertEol: true,
     });
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     
     term.open(terminalRef.current);
     
-    // Slight delay to allow DOM to compute dimensions before fitting
     setTimeout(() => {
       try { fitAddon.fit(); } catch(e) {}
     }, 10);
@@ -60,7 +56,7 @@ export default function ScanLogs({
   useEffect(() => {
     if (!termInstance.current) return;
     for (let i = renderedLines.current; i < logs.length; i++) {
-      termInstance.current.write(stripAnsi(logs[i]));
+      termInstance.current.write(logs[i]);
     }
     renderedLines.current = logs.length;
   }, [logs]);
@@ -68,7 +64,7 @@ export default function ScanLogs({
   return (
     <div className={`glass-panel ${styles.terminalContainer}`} style={{ display: 'flex', flexDirection: 'column' }}>
       <div className={styles.terminalHeader} style={{ flexShrink: 0 }}>
-        <span className={styles.terminalTitle}>Agent Execution Logs</span>
+        <span className={styles.terminalTitle}>Strix Live TUI</span>
         {status === "running" && (
           <span className={styles.liveIndicator}>Live</span>
         )}
@@ -80,10 +76,10 @@ export default function ScanLogs({
         {logs.length === 0 && (
           <div className={styles.emptyState} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
             <div className={styles.spinner} />
-            <span>Waiting for agent output...</span>
+            <span>Waiting for TUI render...</span>
           </div>
         )}
-        <div ref={terminalRef} style={{ width: '100%', height: '100%', minHeight: '400px', display: logs.length === 0 ? 'none' : 'block' }} />
+        <div ref={terminalRef} style={{ width: '100%', height: '100%', minHeight: '500px', display: logs.length === 0 ? 'none' : 'block' }} />
       </div>
     </div>
   );

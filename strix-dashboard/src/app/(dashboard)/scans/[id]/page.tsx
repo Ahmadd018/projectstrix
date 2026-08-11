@@ -8,6 +8,7 @@ import { ScanDetail, Vulnerability, SEVERITY_ORDER } from "./types";
 import ScanOverview from "./components/ScanOverview";
 import ScanFindings from "./components/ScanFindings";
 import ScanLogs from "./components/ScanLogs";
+import ScanTui from "./components/ScanTui";
 import ScanRaw from "./components/ScanRaw";
 
 export default function ScanDetailPage() {
@@ -17,7 +18,7 @@ export default function ScanDetailPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [vulns, setVulns] = useState<Vulnerability[]>([]);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "vulns" | "logs" | "raw"
+    "overview" | "vulns" | "tui" | "logs" | "raw"
   >("overview");
   const [elapsed, setElapsed] = useState("");
   const esRef = useRef<EventSource | null>(null);
@@ -165,6 +166,12 @@ export default function ScanDetailPage() {
           )}
         </button>
         <button
+          className={`${styles.navTab} ${activeTab === "tui" ? styles.navTabActive : ""}`}
+          onClick={() => setActiveTab("tui")}
+        >
+          TUI Live
+        </button>
+        <button
           className={`${styles.navTab} ${activeTab === "logs" ? styles.navTabActive : ""}`}
           onClick={() => setActiveTab("logs")}
         >
@@ -184,6 +191,7 @@ export default function ScanDetailPage() {
           <ScanOverview scan={scan} vulns={vulns} elapsed={elapsed} />
         )}
         {activeTab === "vulns" && <ScanFindings vulns={vulns} />}
+        {activeTab === "tui" && <ScanTui logs={logs} status={scan.status} />}
         {activeTab === "logs" && <ScanLogs logs={logs} status={scan.status} />}
         {activeTab === "raw" && <ScanRaw scan={scan} />}
       </div>
