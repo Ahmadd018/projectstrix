@@ -196,7 +196,8 @@ export async function POST(req: NextRequest) {
   let session = null;
   let isScheduler = false;
 
-  if (schedulerKey === "internal_scheduler_secret") {
+  const expectedSchedulerKey = process.env.SCHEDULER_SECRET || "internal_scheduler_secret";
+  if (schedulerKey === expectedSchedulerKey) {
     isScheduler = true;
     session = { userId: "scheduler", role: "ADMIN" };
   } else {

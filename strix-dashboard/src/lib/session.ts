@@ -1,9 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-// In production, this should be an environment variable. 
-// We use a fallback so it works out-of-the-box for Strix users.
-const secretKey = process.env.JWT_SECRET || "strix-super-secret-key-change-in-prod";
+// Fallback is only used during build time or if .env is missing. deploy.py generates a secure one.
+const secretKey = process.env.SESSION_SECRET || "strix-fallback-secret-change-me";
 const encodedKey = new TextEncoder().encode(secretKey);
 
 export async function createSession(userId: string, username: string, role: string = "USER") {
@@ -18,7 +17,7 @@ export async function createSession(userId: string, username: string, role: stri
   const cookieStore = await cookies();
   cookieStore.set("strix_session", session, {
     httpOnly: true,
-    secure: false, // Force false for simple local/IP access without HTTPS
+    secure: process.env.NODE_ENV === "production", // Secure in prod
     expires: expiresAt,
     sameSite: "strict",
     path: "/",

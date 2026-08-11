@@ -201,11 +201,14 @@ def setup_dashboard():
     pg_port = out.strip() if code == 0 and out.strip().isdigit() else "5432"
     
     if not os.path.exists(env_file):
-        print("Creating .env file...")
+        import secrets
+        print("Creating .env file with randomly generated secrets...")
+        session_secret = secrets.token_hex(32)
+        scheduler_secret = secrets.token_hex(32)
         with open(env_file, "w") as f:
             f.write(f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\"\n")
-            f.write("SESSION_SECRET=\"super-secret-key-12345\"\n")
-            f.write("WEBHOOK_SECRET=\"strix-webhook-secret\"\n")
+            f.write(f"SESSION_SECRET=\"{session_secret}\"\n")
+            f.write(f"SCHEDULER_SECRET=\"{scheduler_secret}\"\n")
     else:
         # If it exists, ensure we fix the DATABASE_URL to use the correct port
         import re

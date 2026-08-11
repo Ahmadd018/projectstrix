@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
-const secretKey = process.env.JWT_SECRET || "strix-super-secret-key-change-in-prod";
+const secretKey = process.env.SESSION_SECRET || "strix-fallback-secret-change-me";
 const encodedKey = new TextEncoder().encode(secretKey);
 
 const protectedApiPrefix = '/api'
@@ -68,7 +68,8 @@ export async function middleware(request: NextRequest) {
   let isAuthenticated = false
   let userRole = 'USER'
 
-  if (schedulerKey === "internal_scheduler_secret") {
+  const expectedSchedulerKey = process.env.SCHEDULER_SECRET || "internal_scheduler_secret"
+  if (schedulerKey === expectedSchedulerKey) {
     isAuthenticated = true
     userRole = 'ADMIN' // Allow scheduler to act as ADMIN
   } else if (sessionToken) {
