@@ -14,7 +14,24 @@ const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
   const codeString = String(children).replace(/\n$/, "");
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(codeString);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(codeString);
+    } else {
+      // Fallback for non-HTTPS environments
+      const textArea = document.createElement("textarea");
+      textArea.value = codeString;
+      textArea.style.position = "absolute";
+      textArea.style.left = "-999999px";
+      document.body.prepend(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (error) {
+        console.error(error);
+      } finally {
+        textArea.remove();
+      }
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
