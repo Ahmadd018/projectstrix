@@ -1,8 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import styles from "../detail.module.css";
-import { Terminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
-import "xterm/css/xterm.css";
 
 export default function ScanTui({
   logs,
@@ -11,75 +8,125 @@ export default function ScanTui({
   logs: string[];
   status: string;
 }) {
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const termInstance = useRef<Terminal | null>(null);
-  const renderedLines = useRef(0);
-
-  useEffect(() => {
-    if (!terminalRef.current) return;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Parse logs to simulate TUI data
+  const parsedData = useMemo(() => {
+    let toolsExecuted = 0;
+    let activeAgents = new Set<string>();
+    activeAgents.add("Orchestrator"); // Always active
     
-    const term = new Terminal({
-      theme: {
-        background: '#111111',
-        foreground: '#f8f8f2',
-        cursor: '#ff0000',
-        selectionBackground: 'rgba(220, 38, 38, 0.3)' // Strix red selection
-      },
-      fontFamily: 'var(--font-mono)',
-      fontSize: 14,
-      disableStdin: true,
-      convertEol: true,
+    const parsedLogs: { type: string; text: string; id: number }[] = [];
+    
+    logs.forEach((log, index) => {
+      // Strip ANSI just for our string matching if any leaked
+      const cleanLog = log.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+      const lower = cleanLog.toLowerCase();
+      
+      let type = "normal";
+      if (lower.includes("tool:") || lower.includes("executing tool") || lower.includes("using tool")) {
+        type = "tool";
+        toolsExecuted++;
+      } else if (lower.includes("error") || lower.includes("failed")) {
+        type = "error";
+      } else if (lower.includes("thought:") || lower.includes("thinking") || lower.includes("reasoning")) {
+        type = "thinking";
+      } else if (lower.includes("[+]") || lower.includes("found") || lower.includes("success")) {
+        type = "action";
+      }
+      
+      // Infer active agents
+      if (lower.includes("recon")) activeAgents.add("Recon Agent");
+      if (lower.includes("exploit") || lower.includes("payload")) activeAgents.add("Exploit Agent");
+      if (lower.includes("crawl") || lower.includes("spider")) activeAgents.add("Crawler");
+
+      if (cleanLog.trim().length > 0) {
+        parsedLogs.push({ type, text: cleanLog.trim(), id: index });
+      }
     });
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    
-    term.open(terminalRef.current);
-    
-    setTimeout(() => {
-      try { fitAddon.fit(); } catch(e) {}
-    }, 10);
-    
-    termInstance.current = term;
 
-    const handleResize = () => {
-      try { fitAddon.fit(); } catch(e) {}
+    return {
+      toolsExecuted,
+      activeAgents: Array.from(activeAgents),
+      parsedLogs
     };
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      term.dispose();
-      termInstance.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!termInstance.current) return;
-    for (let i = renderedLines.current; i < logs.length; i++) {
-      termInstance.current.write(logs[i]);
-    }
-    renderedLines.current = logs.length;
   }, [logs]);
 
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [parsedData.parsedLogs]);
+
   return (
-    <div className={`glass-panel ${styles.terminalContainer}`} style={{ display: 'flex', flexDirection: 'column' }}>
-      <div className={styles.terminalHeader} style={{ flexShrink: 0 }}>
-        <span className={styles.terminalTitle}>Strix Live TUI</span>
-        {status === "running" && (
-          <span className={styles.liveIndicator}>Live</span>
-        )}
-      </div>
-      <div 
-        className={styles.terminalBody} 
-        style={{ padding: '8px', overflow: 'hidden', flex: 1, position: 'relative' }}
-      >
-        {logs.length === 0 && (
-          <div className={styles.emptyState} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
-            <div className={styles.spinner} />
-            <span>Waiting for TUI render...</span>
+    <div className={styles.tuiContainer}>
+      {/* HEADER: Live Statistics */}
+      <div className={styles.tuiHeader}>
+        <div className={styles.tuiStats}>
+          <div className={styles.tuiStatBox}>
+            <span className={styles.tuiStatLabel}>Status</span>
+            <span className={`${styles.tuiStatValue} ${status === 'running' ? styles.tuiStatValueHighlight : ''}`}>
+              {status.toUpperCase()}
+            </span>
           </div>
-        )}
-        <div ref={terminalRef} style={{ width: '100%', height: '100%', minHeight: '500px', display: logs.length === 0 ? 'none' : 'block' }} />
+          <div className={styles.tuiStatBox}>
+            <span className={styles.tuiStatLabel}>Tools Executed</span>
+            <span className={styles.tuiStatValue}>{parsedData.toolsExecuted}</span>
+          </div>
+          <div className={styles.tuiStatBox}>
+            <span className={styles.tuiStatLabel}>Active Agents</span>
+            <span className={styles.tuiStatValue}>{parsedData.activeAgents.length}</span>
+          </div>
+        </div>
+        <div style={{ color: '#444', fontSize: '12px' }}>
+          Strix AI TUI Simulator v1.0
+        </div>
+      </div>
+
+      {/* LEFT PANE: Agent Tree View */}
+      <div className={styles.tuiSidebar}>
+        <div className={styles.tuiPaneTitle}>Agent Tree</div>
+        <div className={styles.tuiAgentTree}>
+          {parsedData.activeAgents.map((agent, i) => (
+            <div key={agent} className={styles.tuiAgentNode} style={{ marginLeft: i === 0 ? 0 : 16 }}>
+              {i > 0 && <div className={styles.tuiAgentLine} />}
+              <span className={styles.tuiAgentIcon}>■</span>
+              <span style={{ color: i === parsedData.activeAgents.length - 1 && status === 'running' ? '#fff' : '#aaa' }}>
+                {agent}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* MAIN PANE: Interactive Tool Stream */}
+      <div className={styles.tuiMain}>
+        <div className={styles.tuiPaneTitle}>Live Execution Stream</div>
+        <div className={styles.tuiLogStream} ref={scrollRef}>
+          {parsedData.parsedLogs.map((log) => {
+            let colorClass = "";
+            switch (log.type) {
+              case "tool": colorClass = styles.tuiLogTool; break;
+              case "action": colorClass = styles.tuiLogAction; break;
+              case "error": colorClass = styles.tuiLogError; break;
+              case "thinking": colorClass = styles.tuiLogThinking; break;
+            }
+            return (
+              <div key={log.id} className={`${styles.tuiLogLine} ${colorClass}`}>
+                <span className={styles.tuiTerminalCaret}>❯</span>
+                {log.text}
+              </div>
+            );
+          })}
+          {status === "running" && (
+            <div className={styles.tuiLogLine} style={{ opacity: 0.7 }}>
+              <span className={styles.tuiTerminalCaret}>❯</span>
+              <span className={styles.spinner} style={{ width: '12px', height: '12px', display: 'inline-block', borderTopColor: '#dc2626' }} />
+              <span style={{ marginLeft: '8px' }}>Waiting for agent response...</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
