@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.userId as string,
         title: title.trim(),
-        content: content.trim(),
+        content: content,
       },
     });
 

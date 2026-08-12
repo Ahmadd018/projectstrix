@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id },
       data: {
         title: title !== undefined ? title.trim() : existing.title,
-        content: content !== undefined ? content.trim() : existing.content,
+        content: content !== undefined ? content : existing.content,
       },
     });
 
