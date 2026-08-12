@@ -148,10 +148,10 @@ export async function GET() {
              data: { status: newStatus, vulnCount: newVulnCount } 
            });
          } catch(e) {}
-         return { ...scan, status: newStatus, vulnCount: newVulnCount };
+         return { ...scan, status: newStatus, vulnCount: newVulnCount, scanName: (scan.payload as any)?.scanName || "" };
       }
       
-      return scan;
+      return { ...scan, scanName: (scan.payload as any)?.scanName || "" };
     }));
 
     return NextResponse.json({ scans: syncedScans });
