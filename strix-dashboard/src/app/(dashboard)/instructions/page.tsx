@@ -304,15 +304,14 @@ export default function InstructionsPage() {
                     remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
-                      code({ node, inline, className, children, ...props }: any) {
-                        const match = /language-(\w+)/.exec(className || "");
+                      pre: ({ children }: any) => {
+                        const codeChild = React.Children.toArray(children)[0] as any;
+                        const className = codeChild?.props?.className || "";
+                        const match = /language-(\w+)/.exec(className);
                         const language = match ? match[1] : "";
-                        const codeString = String(children).replace(/\n$/, "");
+                        const codeString = String(codeChild?.props?.children || "").replace(/\n$/, "");
                         
-                        // Treat as block if it has a language tag or contains newlines.
-                        const isBlock = match || codeString.includes("\n");
-                        
-                        return isBlock ? (
+                        return (
                           <div style={{ background: "#1e1e1e", borderRadius: 8, overflow: "hidden", margin: "16px 0", border: "1px solid var(--border)" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", background: "#252526", borderBottom: "1px solid var(--border)" }}>
                               <span style={{ color: "#858585", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -333,13 +332,15 @@ export default function InstructionsPage() {
                                 language={language || "text"}
                                 PreTag="div"
                                 customStyle={{ background: "transparent", padding: 0, margin: 0, overflow: "visible" }}
-                                {...props}
                               >
                                 {codeString}
                               </SyntaxHighlighter>
                             </div>
                           </div>
-                        ) : (
+                        );
+                      },
+                      code: ({ node, className, children, ...props }: any) => {
+                        return (
                           <code className={className} style={{ color: "var(--brand)", background: "rgba(229, 9, 20, 0.1)", padding: "3px 6px", borderRadius: 4, fontFamily: "monospace", fontSize: "0.9em" }} {...props}>
                             {children}
                           </code>
