@@ -38,7 +38,7 @@ export const MarkdownRenderer = ({ content }: { content: string }) => {
                     <Copy size={13} /> Copy
                   </button>
                 </div>
-                <div style={{ padding: "12px" }}>
+                <div style={{ padding: "12px", overflowX: "auto" }}>
                   <SyntaxHighlighter
                     style={vscDarkPlus}
                     language={language || "text"}
