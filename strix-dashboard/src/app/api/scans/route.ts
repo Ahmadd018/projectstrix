@@ -52,6 +52,19 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
   if (event === "start" && !config.notifyOnStart) return;
   if (event === "finish" && !config.notifyOnFinish) return;
 
+  // SSRF protection: only allow http/https to external non-private addresses
+  try {
+    const parsed = new URL(config.webhookUrl);
+    if (!["http:", "https:"].includes(parsed.protocol)) return;
+    const host = parsed.hostname;
+    if (/^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|localhost|::1|0\.0\.0\.0)/i.test(host)) {
+      log.warn("WEBHOOK", `Blocked SSRF attempt to private/loopback address: ${host}`);
+      return;
+    }
+  } catch {
+    return;
+  }
+
   let message = "";
   let color = "#36a64f"; // default green
 
@@ -196,8 +209,8 @@ export async function POST(req: NextRequest) {
   let session = null;
   let isScheduler = false;
 
-  const expectedSchedulerKey = process.env.SCHEDULER_SECRET || "internal_scheduler_secret";
-  if (schedulerKey === expectedSchedulerKey) {
+  const expectedSchedulerKey = process.env.SCHEDULER_SECRET;
+  if (schedulerKey && expectedSchedulerKey && schedulerKey === expectedSchedulerKey) {
     isScheduler = true;
     session = { userId: "scheduler", role: "ADMIN" };
   } else {
@@ -209,6 +222,10 @@ export async function POST(req: NextRequest) {
   if (resumeRun) {
     const oldScan = await prisma.scan.findUnique({ where: { id: resumeRun } });
     if (oldScan) {
+      // H-1: IDOR check — user must own the scan or be an admin
+      if (!isScheduler && session.role !== "ADMIN" && oldScan.userId !== session.userId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       target = oldScan.target;
       llmModel = overrideLlm && body.llmModel ? body.llmModel : oldScan.llmModel;
       scanMode = oldScan.scanMode;
@@ -221,6 +238,20 @@ export async function POST(req: NextRequest) {
   if (!target && !targetList) {
     log.warn("POST /api/scans", "Rejected: target or targetList is required");
     return NextResponse.json({ error: "target or targetList is required" }, { status: 400 });
+  }
+
+  // M-4: Input length limits
+  if (instruction && instruction.length > 8000) {
+    return NextResponse.json({ error: "Instruction too long (max 8000 chars)" }, { status: 400 });
+  }
+  if (targetList && targetList.length > 100000) {
+    return NextResponse.json({ error: "Target list too large (max 100 000 chars)" }, { status: 400 });
+  }
+  if (maxBudget && String(maxBudget).length > 20) {
+    return NextResponse.json({ error: "Invalid maxBudget value" }, { status: 400 });
+  }
+  if (maxTurns && String(maxTurns).length > 10) {
+    return NextResponse.json({ error: "Invalid maxTurns value" }, { status: 400 });
   }
 
   let displayTarget = (target || "").replace(/ /g, '_');
@@ -291,7 +322,8 @@ export async function POST(req: NextRequest) {
            scanMode: scanMode || "standard",
            status: isScheduled ? "scheduled" : "running",
            startedAt: isScheduled ? new Date(body.scheduledAt) : new Date(),
-           payload: body as any, // Always save the payload to maintain config for future schedules
+           // L-1: Strip the resolved API key before persisting — keys are fetched fresh from DB on each run
+           payload: { ...body, apiKey: undefined } as any,
          }
        });
     } else if (isScheduler || resumeRun) {
@@ -395,8 +427,29 @@ export async function POST(req: NextRequest) {
     if (instruction?.trim()) args.push("--instruction", instruction.trim());
     
     if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
-    if (diffBase?.trim()) args.push("--diff-base", diffBase.trim());
-    if (configFile?.trim()) args.push("--config", configFile.trim());
+
+    // C-4: Path traversal protection for diffBase
+    if (diffBase?.trim()) {
+      const resolvedDiff = path.resolve(diffBase.trim());
+      // Only allow absolute paths that don't escape the scan's parent directory
+      const allowedDiffBase = RUNS_DIR;
+      if (!resolvedDiff.startsWith("/") || resolvedDiff.includes("..")) {
+        log.warn("POST /api/scans", "Rejected suspicious diffBase path", { diffBase });
+      } else {
+        args.push("--diff-base", resolvedDiff);
+      }
+    }
+
+    // C-3: Path traversal protection for configFile
+    if (configFile?.trim()) {
+      const resolvedConfig = path.resolve(configFile.trim());
+      if (resolvedConfig.includes("..")) {
+        log.warn("POST /api/scans", "Rejected suspicious configFile path", { configFile });
+      } else {
+        args.push("--config", resolvedConfig);
+      }
+    }
+
     if (maxBudget?.trim()) args.push("--max-budget", maxBudget.trim());
     if (maxTurns?.trim()) args.push("--max-turns", maxTurns.trim());
   }

@@ -30,9 +30,12 @@ export async function createUser(username: string, passwordPlain: string): Promi
 
   const passwordHash = await bcrypt.hash(passwordPlain, 10);
   
+  // M-5: Only the first ever user gets ADMIN. Username-based promotion is removed
+  // to prevent account takeover via the "admin" username trick.
   const totalUsers = await prisma.user.count();
-  const role = (totalUsers === 0 || username === "admin") ? "ADMIN" : "USER";
-  const status = (totalUsers === 0 || username === "admin") ? "APPROVED" : "PENDING";
+  const isFirstUser = totalUsers === 0;
+  const role = isFirstUser ? "ADMIN" : "USER";
+  const status = isFirstUser ? "APPROVED" : "PENDING";
 
   const newUser = await prisma.user.create({
     data: {

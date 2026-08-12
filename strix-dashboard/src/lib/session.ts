@@ -1,8 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-// Fallback is only used during build time or if .env is missing. deploy.py generates a secure one.
-const secretKey = process.env.SESSION_SECRET || "strix-fallback-secret-change-me";
+// SESSION_SECRET must be set by deploy.py before startup.
+// No fallback: missing secret means auth is broken — fail loudly.
+const secretKey = process.env.SESSION_SECRET;
+if (!secretKey) throw new Error("[FATAL] SESSION_SECRET environment variable is not set. Run deploy.py to generate it.");
 const encodedKey = new TextEncoder().encode(secretKey);
 
 export async function createSession(userId: string, username: string, role: string = "USER", status: string = "APPROVED") {

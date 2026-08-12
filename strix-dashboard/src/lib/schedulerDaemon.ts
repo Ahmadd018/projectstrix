@@ -43,11 +43,17 @@ async function triggerScan(scan: any) {
 
     log.info("SCHEDULER", `Triggering scan ${scan.id} for target: ${payload.target}`);
 
+    const schedulerSecret = process.env.SCHEDULER_SECRET;
+    if (!schedulerSecret) {
+      log.error("SCHEDULER", "SCHEDULER_SECRET env var is not set — cannot trigger scans");
+      return;
+    }
+
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-scheduler-secret": "internal_scheduler_secret",
+        "x-scheduler-secret": schedulerSecret,
       },
       body: JSON.stringify(payload),
     });
@@ -107,14 +113,14 @@ async function checkScheduledScans() {
       else if (scan.period === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
       else if (scan.period === "3_minutes") nextDate.setMinutes(nextDate.getMinutes() + 3);
 
-      // Rescan the same scan ID as requested by user
-      await triggerScan(scan);
-
-      // Update nextRunAt on the original scan record
+      // L-3: Update nextRunAt BEFORE triggering to prevent double-fire on concurrent scheduler instances
       await prisma.scan.update({
         where: { id: scan.id },
         data: { nextRunAt: nextDate },
       });
+
+      // Now trigger the scan
+      await triggerScan(scan);
 
       await new Promise((r) => setTimeout(r, 1000));
     }

@@ -41,11 +41,16 @@ async function triggerScan(scan) {
 
     console.log(`[Scheduler] Triggering API for scan ${scan.id} (target: ${payload.target}, user: ${scan.userId})`);
     
+    const schedulerSecret = process.env.SCHEDULER_SECRET;
+    if (!schedulerSecret) {
+      console.error('[Scheduler] SCHEDULER_SECRET env var is not set — cannot trigger scans');
+      return;
+    }
     const res = await fetch('http://127.0.0.1:80/api/scans', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'x-scheduler-secret': 'internal_scheduler_secret'
+        'x-scheduler-secret': schedulerSecret
       },
       body: JSON.stringify(payload)
     });

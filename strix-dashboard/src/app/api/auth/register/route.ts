@@ -13,12 +13,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
-        { status: 400 }
-      );
-    }
+  // H-3: Enterprise-grade password requirements
+  if (password.length < 12) {
+    return NextResponse.json(
+      { error: "Password must be at least 12 characters" },
+      { status: 400 }
+    );
+  }
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+    return NextResponse.json(
+      { error: "Password must contain uppercase, lowercase, and a number" },
+      { status: 400 }
+    );
+  }
 
     const user = await createUser(username, password);
     

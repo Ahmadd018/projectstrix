@@ -9,14 +9,20 @@ export async function GET() {
   const user = await prisma.user.findUnique({ where: { id: session.userId as string } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  let keys = {};
+  let keys: Record<string, string> = {};
   if (user.apiKeys) {
     try {
       keys = JSON.parse(user.apiKeys);
     } catch (e) {}
   }
 
-  return NextResponse.json(keys);
+  // H-2: Never expose raw API keys to the client. Return masked indicators only.
+  const masked: Record<string, boolean> = {};
+  for (const [provider, key] of Object.entries(keys)) {
+    masked[provider] = typeof key === "string" && key.length > 0;
+  }
+
+  return NextResponse.json(masked);
 }
 
 export async function POST(req: Request) {
