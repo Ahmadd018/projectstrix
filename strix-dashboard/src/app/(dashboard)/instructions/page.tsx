@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Edit2, FileText } from "lucide-react";
+import { Plus, Trash2, Edit2, FileText, Loader2, Play } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
-import Header from "@/components/Header";
 
 interface Instruction {
   id: string;
@@ -96,22 +95,16 @@ export default function InstructionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-strix-bg text-strix-text">
-      <Header />
-      <main className="max-w-7xl mx-auto p-4 md:p-8 pt-24 md:pt-32">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-strix-blue to-strix-cyan">
-              Instruction Pool
-            </h1>
-            <p className="text-strix-text/70 mt-1">
-              Manage custom prompts and notes to pass to Strix AI Agents.
-            </p>
-          </div>
-          <button onClick={openNew} className="btn-primary flex items-center justify-center gap-2">
-            <Plus size={18} /> New Instruction
-          </button>
+    <div className="page" style={{ height: "100%", maxWidth: "none", gap: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <h1 className="page-heading">Instruction Pool</h1>
+          <p className="page-desc">Manage custom prompts and notes to pass to Strix AI Agents.</p>
         </div>
+        <button onClick={openNew} className="btn-primary" style={{ gap: 8 }}>
+          <Plus size={16} /> New Instruction
+        </button>
+      </div>
 
         {loading ? (
           <div className="text-center text-strix-text/50 py-12">Loading...</div>
@@ -126,77 +119,71 @@ export default function InstructionsPage() {
               Create First Instruction
             </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
             {instructions.map((inst) => (
-              <div key={inst.id} className="bg-strix-card border border-strix-border rounded-xl p-6 relative group hover:border-strix-blue/50 transition-colors">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-semibold pr-16 line-clamp-1" title={inst.title}>
+              <div key={inst.id} className="status-badge" style={{ display: "flex", flexDirection: "column", alignItems: "stretch", padding: 16, gap: 12, background: "var(--bg-2)", border: "1px solid var(--border)", position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 40 }}>
                     {inst.title}
                   </h3>
-                  <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEdit(inst)}
-                      className="p-2 bg-strix-blue/10 text-strix-blue rounded-lg hover:bg-strix-blue/20 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit2 size={14} />
+                  <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 4 }}>
+                    <button onClick={() => openEdit(inst)} className="btn-icon" title="Edit">
+                      <Edit2 size={13} />
                     </button>
-                    <button
-                      onClick={() => deleteInstruction(inst.id)}
-                      className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
+                    <button onClick={() => deleteInstruction(inst.id)} className="btn-icon" style={{ color: "var(--sev-critical)" }} title="Delete">
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
-                <div className="bg-strix-bg/50 rounded-lg p-3 text-sm text-strix-text/70 line-clamp-4 h-24 mb-4 font-mono">
+                <div style={{ background: "var(--bg-1)", padding: 12, borderRadius: "var(--r-sm)", fontSize: 12, color: "var(--fg-2)", fontFamily: "monospace", minHeight: 80, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}>
                   {inst.content}
                 </div>
-                <div className="text-xs text-strix-text/40">
+                <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
                   Last updated: {new Date(inst.updatedAt).toLocaleString()}
                 </div>
               </div>
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-strix-card border border-strix-border rounded-2xl w-full max-w-xl p-6 shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6">{editing ? "Edit Instruction" : "New Instruction"}</h2>
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
+          <div className="modal" style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <div className="modal-title">{editing ? "Edit Instruction" : "New Instruction"}</div>
+            </div>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Title</label>
+            <div className="modal-body">
+              <div className="field">
+                <label className="field-label">Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Aggressive SQLi Check"
-                  className="w-full bg-strix-bg border border-strix-border rounded-lg px-4 py-2 focus:outline-none focus:border-strix-blue"
+                  className="field-input"
                   disabled={saving}
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-1">Content (Prompt)</label>
+              <div className="field">
+                <label className="field-label">Content (Prompt)</label>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="e.g. Focus exclusively on testing parameter 'id' for blind SQL injection..."
-                  className="w-full bg-strix-bg border border-strix-border rounded-lg px-4 py-3 h-48 focus:outline-none focus:border-strix-blue font-mono text-sm"
+                  className="field-input"
+                  style={{ minHeight: 160, fontFamily: "monospace", resize: "vertical" }}
                   disabled={saving}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-8">
+            <div className="modal-footer">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2 rounded-lg border border-strix-border hover:bg-strix-border/50 transition-colors"
+                className="btn-ghost"
                 disabled={saving}
               >
                 Cancel
