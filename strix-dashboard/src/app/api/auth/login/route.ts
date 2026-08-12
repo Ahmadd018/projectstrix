@@ -13,6 +13,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Input length limits to prevent DoS via oversized payloads
+    if (typeof username !== "string" || username.length > 64 || username.length < 2) {
+      return NextResponse.json({ error: "Invalid username" }, { status: 400 });
+    }
+    if (typeof password !== "string" || password.length > 256) {
+      return NextResponse.json({ error: "Invalid password" }, { status: 400 });
+    }
+
     const user = await verifyUser(username, password);
     if (!user) {
       return NextResponse.json(
