@@ -235,6 +235,7 @@ def setup_dashboard(db_pass):
             f.write(f"DATABASE_URL=\"postgresql://strix_user:{db_pass}@127.0.0.1:{pg_port}/strix?schema=public\"\n")
             f.write(f"SESSION_SECRET=\"{session_secret}\"\n")
             f.write(f"SCHEDULER_SECRET=\"{scheduler_secret}\"\n")
+            f.write("INSECURE_HTTP=true\n")
     else:
         # If it exists, ensure we fix the DATABASE_URL to use the correct port
         import re
@@ -246,6 +247,9 @@ def setup_dashboard(db_pass):
             content = re.sub(r'DATABASE_URL=.*', new_db_url, content)
         else:
             content += f"\n{new_db_url}\n"
+            
+        if "INSECURE_HTTP" not in content:
+            content += "INSECURE_HTTP=true\n"
             
         with open(env_file, "w") as f:
             f.write(content)
