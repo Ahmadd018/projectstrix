@@ -224,11 +224,12 @@ export default function Sidebar() {
               background: "var(--bg-1)",
               border: "1px solid var(--border)",
               borderRadius: 20,
-              padding: 32,
-              width: 420,
+              padding: 40,
+              width: 520,
+              maxWidth: "90vw",
               display: "flex",
               flexDirection: "column",
-              gap: 24,
+              gap: 28,
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
               animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards"
             }}
@@ -258,7 +259,7 @@ export default function Sidebar() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: "var(--bg-2)", padding: 16, borderRadius: 12 }}>
                 <div style={{ color: "var(--fg-3)", fontSize: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>User ID</div>
-                <div style={{ fontFamily: "monospace", fontSize: 13, color: "var(--fg)" }}>{user?.id.split("-")[0]}</div>
+                <div style={{ fontFamily: "monospace", fontSize: 13, color: "var(--fg)" }}>{user?.id ? user.id.split("-")[0] : "—"}</div>
               </div>
               <div style={{ background: "var(--bg-2)", padding: 16, borderRadius: 12 }}>
                 <div style={{ color: "var(--fg-3)", fontSize: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Account Tier</div>
@@ -275,27 +276,54 @@ export default function Sidebar() {
             </div>
 
             {/* Actions */}
-            <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 14, marginTop: 4 }}>
               <Link 
                 href="/settings" 
                 onClick={() => setShowProfile(false)}
-                style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--fg)", cursor: "pointer", fontWeight: 600, transition: "background 0.2s", textAlign: "center", textDecoration: "none" }}
-                onMouseOver={e => e.currentTarget.style.background = "var(--bg-2)"}
-                onMouseOut={e => e.currentTarget.style.background = "transparent"}
+                style={{ 
+                  flex: 1, padding: "14px 0", borderRadius: 12, 
+                  border: "1px solid var(--border-hi)", background: "var(--bg-2)", 
+                  color: "var(--fg)", cursor: "pointer", fontWeight: 600, fontSize: 14,
+                  transition: "all 0.2s ease", textAlign: "center", textDecoration: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center"
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = "var(--bg-3)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = "var(--bg-2)";
+                  e.currentTarget.style.borderColor = "var(--border-hi)";
+                }}
               >
                 Settings
               </Link>
               <button 
-                className="btn-danger" 
-                style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: "var(--sev-critical-bg)", color: "var(--sev-critical)", cursor: "pointer", fontWeight: 600, transition: "background 0.2s" }}
-                onMouseOver={e => e.currentTarget.style.background = "var(--sev-critical-bd)"}
-                onMouseOut={e => e.currentTarget.style.background = "var(--sev-critical-bg)"}
+                style={{ 
+                  flex: 1, padding: "14px 0", borderRadius: 12, 
+                  border: "1px solid rgba(255, 59, 59, 0.4)", 
+                  background: "rgba(255, 59, 59, 0.15)", 
+                  color: "#ff6b6b", cursor: "pointer", fontWeight: 600, fontSize: 14,
+                  transition: "all 0.2s ease",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = "rgba(255, 59, 59, 0.3)";
+                  e.currentTarget.style.color = "#ffffff";
+                  e.currentTarget.style.borderColor = "rgba(255, 59, 59, 0.8)";
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = "rgba(255, 59, 59, 0.15)";
+                  e.currentTarget.style.color = "#ff6b6b";
+                  e.currentTarget.style.borderColor = "rgba(255, 59, 59, 0.4)";
+                }}
                 onClick={() => {
                   fetch("/api/auth/logout", { method: "POST" }).then(() => {
                     window.location.href = "/login";
                   });
                 }}
               >
+                <LogOut size={16} />
                 Sign Out
               </button>
             </div>
