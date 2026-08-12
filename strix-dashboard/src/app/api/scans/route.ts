@@ -448,13 +448,6 @@ export async function POST(req: NextRequest) {
     if (maxBudget?.trim()) args.push("--max-budget", maxBudget.trim());
     if (maxTurns?.trim()) args.push("--max-turns", maxTurns.trim());
     
-    // Add User Settings: Agent Behavior
-    if (userSettings.aggressiveness !== undefined) {
-      args.push("--aggressiveness", String(userSettings.aggressiveness));
-    }
-    if (userSettings.maxThreads !== undefined) {
-      args.push("--threads", String(userSettings.maxThreads));
-    }
   }
 
   const env = {
