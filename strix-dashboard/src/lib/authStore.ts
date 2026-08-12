@@ -8,6 +8,7 @@ export interface User {
   role: string;
   status: string;
   apiKeys: string | null;
+  tokenVersion: number;
   createdAt: Date;
 }
 

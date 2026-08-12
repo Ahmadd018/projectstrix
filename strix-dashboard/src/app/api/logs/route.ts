@@ -1,8 +1,16 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getSession } from "@/lib/session";
 
 export async function GET() {
+  // H-3: authoritative admin check (middleware trusts the JWT; this re-checks the
+  // live role from the DB so a demoted admin is denied immediately).
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const LOG_FILE = path.join(process.cwd(), "logs", "app.log");
 
   try {
@@ -36,9 +44,7 @@ export async function GET() {
 
     return NextResponse.json({ logs: lastLines });
   } catch (err) {
-    return NextResponse.json(
-      { error: "Failed to read logs", details: String(err) },
-      { status: 500 },
-    );
+    // L-4: don't leak internal error details/paths to the client.
+    return NextResponse.json({ error: "Failed to read logs" }, { status: 500 });
   }
 }

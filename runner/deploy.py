@@ -80,7 +80,26 @@ def install_system_packages():
     run_cmd("systemctl enable docker", fail_on_error=False)
     run_cmd("systemctl start docker", fail_on_error=False)
 
-def setup_postgresql():
+def get_db_password():
+    """H-2: Return a stable DB password — reuse the one already in .env if present,
+    otherwise generate a fresh random one. Never use a hardcoded default."""
+    import secrets
+    import re
+    dashboard_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "strix-dashboard")
+    env_file = os.path.join(dashboard_dir, ".env")
+    if os.path.exists(env_file):
+        try:
+            with open(env_file) as f:
+                content = f.read()
+            m = re.search(r'postgresql://strix_user:([^@]+)@', content)
+            if m:
+                return m.group(1)
+        except Exception:
+            pass
+    # token_urlsafe yields only URL-safe chars (A-Za-z0-9_-), safe in a DATABASE_URL.
+    return secrets.token_urlsafe(24)
+
+def setup_postgresql(db_pass):
     print_step("Setting up PostgreSQL...")
     run_cmd("systemctl enable postgresql")
     run_cmd("systemctl start postgresql")
@@ -100,15 +119,22 @@ def setup_postgresql():
         
     db_name = "strix"
     db_user = "strix_user"
-    db_pass = "strix_password_123"
-    
+    # db_pass is generated/reused by get_db_password() — never hardcoded (H-2).
+
     print("Configuring Database and User...")
+    # Use SCRAM password hashing (stronger than md5) for any password we set below.
+    run_cmd("sudo -u postgres psql -c \"ALTER SYSTEM SET password_encryption = 'scram-sha-256';\"", fail_on_error=False)
+    run_cmd("sudo -u postgres psql -c \"SELECT pg_reload_conf();\"", fail_on_error=False)
+
     # Using psql as postgres user
     run_cmd(f"sudo -u postgres psql -tc \"SELECT 1 FROM pg_database WHERE datname = '{db_name}'\" | grep -q 1 || sudo -u postgres psql -c \"CREATE DATABASE {db_name}\"", fail_on_error=False)
     run_cmd(f"sudo -u postgres psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='{db_user}'\" | grep -q 1 || sudo -u postgres psql -c \"CREATE USER {db_user} WITH ENCRYPTED PASSWORD '{db_pass}'\"", fail_on_error=False)
+    # Force the password to the intended value (idempotent across re-runs; also
+    # re-hashes an existing md5 password as scram-sha-256).
+    run_cmd(f"sudo -u postgres psql -c \"ALTER USER {db_user} WITH ENCRYPTED PASSWORD '{db_pass}'\"", fail_on_error=False)
     run_cmd(f"sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user}\"", fail_on_error=False)
     run_cmd(f"sudo -u postgres psql -c \"ALTER DATABASE {db_name} OWNER TO {db_user}\"", fail_on_error=False)
-    
+
     # Force PostgreSQL to listen on TCP for Prisma to connect
     run_cmd("sudo -u postgres psql -c \"ALTER SYSTEM SET listen_addresses = '127.0.0.1';\"", fail_on_error=False)
     
@@ -116,7 +142,7 @@ def setup_postgresql():
     code, out = run_cmd("sudo -u postgres psql -t -c 'SHOW hba_file;'", fail_on_error=False)
     hba_path = out.strip()
     if code == 0 and hba_path and os.path.exists(hba_path):
-        run_cmd(f"grep -q 'host all all 127.0.0.1/32 md5' {hba_path} || echo 'host all all 127.0.0.1/32 md5' | sudo tee -a {hba_path}", fail_on_error=False)
+        run_cmd(f"grep -q 'host all all 127.0.0.1/32 scram-sha-256' {hba_path} || echo 'host all all 127.0.0.1/32 scram-sha-256' | sudo tee -a {hba_path}", fail_on_error=False)
         
     print("Restarting PostgreSQL...")
     run_cmd("systemctl restart postgresql", fail_on_error=False)
@@ -189,7 +215,7 @@ def install_strix():
         print_error("Failed to verify Strix installation (strix command not found).")
         sys.exit(1)
 
-def setup_dashboard():
+def setup_dashboard(db_pass):
     print_step("Setting up Strix Dashboard...")
     dashboard_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "strix-dashboard")
     if not os.path.exists(dashboard_dir):
@@ -206,7 +232,7 @@ def setup_dashboard():
         session_secret = secrets.token_hex(32)
         scheduler_secret = secrets.token_hex(32)
         with open(env_file, "w") as f:
-            f.write(f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\"\n")
+            f.write(f"DATABASE_URL=\"postgresql://strix_user:{db_pass}@127.0.0.1:{pg_port}/strix?schema=public\"\n")
             f.write(f"SESSION_SECRET=\"{session_secret}\"\n")
             f.write(f"SCHEDULER_SECRET=\"{scheduler_secret}\"\n")
     else:
@@ -215,7 +241,7 @@ def setup_dashboard():
         with open(env_file, "r") as f:
             content = f.read()
             
-        new_db_url = f"DATABASE_URL=\"postgresql://strix_user:strix_password_123@127.0.0.1:{pg_port}/strix?schema=public\""
+        new_db_url = f"DATABASE_URL=\"postgresql://strix_user:{db_pass}@127.0.0.1:{pg_port}/strix?schema=public\""
         if "DATABASE_URL" in content:
             content = re.sub(r'DATABASE_URL=.*', new_db_url, content)
         else:
@@ -261,10 +287,11 @@ def main():
     print(f"\n{Colors.OKCYAN}{Colors.BOLD}=== STRIX GLOBAL AUTO-DEPLOYER ==={Colors.ENDC}\n")
     check_root()
     install_system_packages()
-    setup_postgresql()
+    db_pass = get_db_password()
+    setup_postgresql(db_pass)
     install_nodejs()
     install_strix()
-    setup_dashboard()
+    setup_dashboard(db_pass)
     deploy_service()
     
     print(f"\n{Colors.OKGREEN}{Colors.BOLD}🎉 ALL DONE! Strix is now live.{Colors.ENDC}")

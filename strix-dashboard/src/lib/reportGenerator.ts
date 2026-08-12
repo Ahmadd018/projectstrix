@@ -135,29 +135,39 @@ export function generateMarkdown(details: ScanDetails) {
 export function generateHTML(details: ScanDetails) {
   const { scan, vulnerabilities } = details;
   const date = new Date(scan.startedAt).toLocaleString();
-  
+
+  // M-4: escape every interpolated field. Vulnerability content is derived from
+  // target-influenced agent output, so raw HTML here is a stored/exported XSS sink.
+  const esc = (s: unknown = "") =>
+    String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  const nl = (s: unknown = "") => esc(s).replace(/\r?\n|\\n/g, "<br>");
+
   const vulnsHtml = vulnerabilities.sort((a, b) => {
     const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
     return (order[a.severity] ?? 99) - (order[b.severity] ?? 99);
   }).map((v, i) => `
-    <div class="vuln-card sev-${v.severity}">
+    <div class="vuln-card sev-${esc(v.severity)}">
       <div class="vuln-header">
-        <h3>${i + 1}. ${v.title}</h3>
-        <span class="badge sev-${v.severity}">${v.severity.toUpperCase()}</span>
+        <h3>${i + 1}. ${esc(v.title)}</h3>
+        <span class="badge sev-${esc(v.severity)}">${esc(v.severity.toUpperCase())}</span>
       </div>
-      <p><strong>Endpoint:</strong> <code>${v.method || 'GET'} ${v.endpoint}</code></p>
-      ${v.cvss ? `<p><strong>CVSS:</strong> ${v.cvss}</p>` : ''}
-      ${v.cwe ? `<p><strong>CWE:</strong> ${v.cwe}</p>` : ''}
-      ${v.fix_effort ? `<p><strong>Fix Effort:</strong> ${v.fix_effort}</p>` : ''}
+      <p><strong>Endpoint:</strong> <code>${esc(v.method || 'GET')} ${esc(v.endpoint)}</code></p>
+      ${v.cvss ? `<p><strong>CVSS:</strong> ${esc(v.cvss)}</p>` : ''}
+      ${v.cwe ? `<p><strong>CWE:</strong> ${esc(v.cwe)}</p>` : ''}
+      ${v.fix_effort ? `<p><strong>Fix Effort:</strong> ${esc(v.fix_effort)}</p>` : ''}
       <h4>Description</h4>
-      <p>${v.description.replace(/\\n/g, '<br>')}</p>
-      ${v.impact ? `<h4>Impact</h4><p>${v.impact.replace(/\\n/g, '<br>')}</p>` : ''}
-      ${v.technical_analysis ? `<h4>Technical Analysis</h4><p>${v.technical_analysis.replace(/\\n/g, '<br>')}</p>` : ''}
-      ${v.poc_description ? `<h4>PoC Description</h4><p>${v.poc_description.replace(/\\n/g, '<br>')}</p>` : ''}
-      ${v.poc_script_code ? `<h4>PoC Script / Code</h4><pre><code>${v.poc_script_code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>` : ''}
-      ${v.evidence ? `<h4>Evidence</h4><pre><code>${v.evidence.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>` : ''}
-      ${v.remediation_steps ? `<h4>Remediation Steps</h4><p>${v.remediation_steps.replace(/\\n/g, '<br>')}</p>` : ''}
-      ${v.assumptions ? `<h4>Assumptions</h4><p>${v.assumptions.replace(/\\n/g, '<br>')}</p>` : ''}
+      <p>${nl(v.description)}</p>
+      ${v.impact ? `<h4>Impact</h4><p>${nl(v.impact)}</p>` : ''}
+      ${v.technical_analysis ? `<h4>Technical Analysis</h4><p>${nl(v.technical_analysis)}</p>` : ''}
+      ${v.poc_description ? `<h4>PoC Description</h4><p>${nl(v.poc_description)}</p>` : ''}
+      ${v.poc_script_code ? `<h4>PoC Script / Code</h4><pre><code>${esc(v.poc_script_code)}</code></pre>` : ''}
+      ${v.evidence ? `<h4>Evidence</h4><pre><code>${esc(v.evidence)}</code></pre>` : ''}
+      ${v.remediation_steps ? `<h4>Remediation Steps</h4><p>${nl(v.remediation_steps)}</p>` : ''}
+      ${v.assumptions ? `<h4>Assumptions</h4><p>${nl(v.assumptions)}</p>` : ''}
     </div>
   `).join('');
 
@@ -166,7 +176,7 @@ export function generateHTML(details: ScanDetails) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Strix Security Report - ${scan.target}</title>
+  <title>Strix Security Report - ${esc(scan.target)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px 20px; background: #f9f9f9; }
     .header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eaeaea; }
@@ -194,16 +204,16 @@ export function generateHTML(details: ScanDetails) {
 <body>
   <div class="header">
     <h1>Security Scan Report</h1>
-    <p>Target: <strong>${scan.target}</strong></p>
+    <p>Target: <strong>${esc(scan.target)}</strong></p>
   </div>
   <div class="meta">
     <div>
-      <p><strong>Project:</strong> ${scan.projectName || 'Default'}</p>
-      <p><strong>Date:</strong> ${date}</p>
+      <p><strong>Project:</strong> ${esc(scan.projectName || 'Default')}</p>
+      <p><strong>Date:</strong> ${esc(date)}</p>
     </div>
     <div>
-      <p><strong>Total Findings:</strong> ${scan.vulnCount}</p>
-      <p><strong>Mode/Model:</strong> ${scan.scanMode} - ${scan.llmModel.split('/').pop()}</p>
+      <p><strong>Total Findings:</strong> ${esc(scan.vulnCount)}</p>
+      <p><strong>Mode/Model:</strong> ${esc(scan.scanMode)} - ${esc(scan.llmModel.split('/').pop())}</p>
     </div>
   </div>
   <h2>Detailed Findings</h2>

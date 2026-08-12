@@ -37,35 +37,55 @@ export async function POST(req: NextRequest) {
     const userId = session.userId as string;
 
     if (body.type === "settings") {
-      const { aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish } = body.data;
-      
+      // L-2: validate and clamp all fields server-side.
+      const d = body.data || {};
+      const clamp = (v: any, min: number, max: number, def: number) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : def;
+      };
+      const aggressiveness = clamp(d.aggressiveness, 0, 100, 50);
+      const maxThreads = clamp(d.maxThreads, 1, 32, 4);
+      const webhookUrl = typeof d.webhookUrl === "string" ? d.webhookUrl.trim() : "";
+      if (webhookUrl.length > 2048) {
+        return NextResponse.json({ error: "webhookUrl too long" }, { status: 400 });
+      }
+      if (webhookUrl && !/^https?:\/\//i.test(webhookUrl)) {
+        return NextResponse.json({ error: "webhookUrl must be an http(s) URL" }, { status: 400 });
+      }
+      const notifyOnStart = !!d.notifyOnStart;
+      const notifyOnFinish = !!d.notifyOnFinish;
+
       const settings = await prisma.userSettings.upsert({
         where: { userId },
         update: { aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish },
         create: { userId, aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish }
       });
-      
+
       return NextResponse.json({ success: true, settings });
-    } 
-    
+    }
+
     if (body.type === "customModels") {
-      // The frontend sends the entire array of custom models
-      const models = body.data; // Array of { value, label }
-      
+      // L-2: cap count and length, and drop malformed entries.
+      const models = Array.isArray(body.data) ? body.data : [];
+      if (models.length > 50) {
+        return NextResponse.json({ error: "Too many custom models (max 50)" }, { status: 400 });
+      }
+      const clean: { userId: string; value: string; label: string }[] = [];
+      for (const m of models) {
+        if (!m || typeof m !== "object") continue;
+        const value = typeof m.value === "string" ? m.value.trim().slice(0, 200) : "";
+        const label = typeof m.label === "string" ? m.label.trim().slice(0, 200) : "";
+        if (value && label) clean.push({ userId, value, label });
+      }
+
       // Delete existing
       await prisma.customModel.deleteMany({ where: { userId } });
-      
+
       // Create new
-      if (models && models.length > 0) {
-        await prisma.customModel.createMany({
-          data: models.map((m: any) => ({
-            userId,
-            value: m.value,
-            label: m.label
-          }))
-        });
+      if (clean.length > 0) {
+        await prisma.customModel.createMany({ data: clean });
       }
-      
+
       const updatedModels = await prisma.customModel.findMany({ where: { userId } });
       return NextResponse.json({ success: true, customModels: updatedModels });
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { readApiKeys } from "@/lib/apiKeys";
 
 export async function GET() {
   const session = await getSession();
@@ -28,13 +29,11 @@ export async function GET() {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
-  let configuredKeysCount = 0;
-  if (dbUser.apiKeys) {
-    try {
-      const keys = JSON.parse(dbUser.apiKeys);
-      configuredKeysCount = Object.values(keys).filter(k => typeof k === 'string' && k.trim().length > 0).length;
-    } catch (e) {}
-  }
+  // M-5: keys are encrypted at rest — decrypt to count configured providers.
+  const keys = readApiKeys(dbUser.apiKeys);
+  const configuredKeysCount = Object.values(keys).filter(
+    (k) => typeof k === "string" && k.trim().length > 0
+  ).length;
 
   return NextResponse.json({ 
     authenticated: true, 
