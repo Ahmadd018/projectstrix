@@ -6,6 +6,7 @@ import { useDialog } from "@/components/DialogProvider";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import remarkBreaks from "remark-breaks";
 import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -298,9 +299,9 @@ export default function InstructionsPage() {
                   }}
                 />
               ) : (
-                <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }} className="markdown-body">
+                <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6 }} className="markdown-body">
                   <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
+                    remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
                       code({ node, inline, className, children, ...props }: any) {
@@ -308,7 +309,10 @@ export default function InstructionsPage() {
                         const language = match ? match[1] : "";
                         const codeString = String(children).replace(/\n$/, "");
                         
-                        return !inline ? (
+                        // Treat as block if it has a language tag or contains newlines.
+                        const isBlock = match || codeString.includes("\n");
+                        
+                        return isBlock ? (
                           <div style={{ background: "#1e1e1e", borderRadius: 8, overflow: "hidden", margin: "16px 0", border: "1px solid var(--border)" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", background: "#252526", borderBottom: "1px solid var(--border)" }}>
                               <span style={{ color: "#858585", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
