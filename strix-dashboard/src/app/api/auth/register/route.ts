@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
     if (typeof username !== "string" || username.length < 2 || username.length > 32) {
       return NextResponse.json({ error: "Username must be 2–32 characters" }, { status: 400 });
     }
-    if (!/^[a-zA-Z0-9_\-\.]+$/.test(username)) {
-      return NextResponse.json({ error: "Username may only contain letters, numbers, _ - ." }, { status: 400 });
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return NextResponse.json({ error: "Username may only contain letters, numbers, and underscores (_)" }, { status: 400 });
     }
     if (typeof password !== "string" || password.length > 256) {
       return NextResponse.json({ error: "Password too long" }, { status: 400 });

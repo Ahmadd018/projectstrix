@@ -112,7 +112,7 @@ const spec = {
         description:
           "Creates a new user account. The first registered user becomes ADMIN (auto-approved). Subsequent users start as PENDING and must be approved by an admin.\n\n" +
           "**Password requirements:** minimum 12 characters, must include uppercase, lowercase, and a digit.\n\n" +
-          "**Username rules:** 2–32 chars, letters/numbers/`_`/`-`/`.` only.\n\n" +
+          "**Username rules:** 2–32 chars, letters/numbers/`_` only.\n\n" +
           "**Rate limited:** 10 attempts/min per IP.",
         operationId: "registerUser",
         requestBody: {
