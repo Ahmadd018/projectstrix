@@ -614,14 +614,9 @@ function ScansContent() {
                             Unknown
                           </span>
                         ) : (
-                          <>
-                            <span className="tag" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#6ee7b7", border: "1px solid rgba(16, 185, 129, 0.3)", fontWeight: 600 }}>
-                              Single
-                            </span>
-                            <span className="tag" style={{ background: "var(--bg-3)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={scan.target}>
-                              {scan.target.replace(/^https?:\/\//, "")}
-                            </span>
-                          </>
+                          <span className="tag" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#6ee7b7", border: "1px solid rgba(16, 185, 129, 0.3)", fontWeight: 600 }}>
+                            Single
+                          </span>
                         )}
                       </div>
                       <div>
