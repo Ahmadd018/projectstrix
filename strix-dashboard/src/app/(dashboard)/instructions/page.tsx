@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Trash2, Search, FileText, Loader2, Check, AlertCircle, Edit3, Eye } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface Instruction {
   id: string;
@@ -293,7 +295,29 @@ export default function InstructionsPage() {
                 />
               ) : (
                 <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6 }} className="markdown-body">
-                  <ReactMarkdown>{content || "*Nothing to preview*"}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      code({ node, inline, className, children, ...props }: any) {
+                        const match = /language-(\w+)/.exec(className || "");
+                        return !inline && match ? (
+                          <SyntaxHighlighter
+                            style={vscDarkPlus}
+                            language={match[1]}
+                            PreTag="div"
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, "")}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code className={className} style={{ background: "var(--bg-2)", padding: "2px 4px", borderRadius: 4, fontFamily: "monospace", fontSize: "0.9em" }} {...props}>
+                            {children}
+                          </code>
+                        );
+                      }
+                    }}
+                  >
+                    {content || "*Nothing to preview*"}
+                  </ReactMarkdown>
                 </div>
               )}
             </div>
