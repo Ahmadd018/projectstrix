@@ -481,7 +481,7 @@ function ScansContent() {
         {/* Table header */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: selectionMode ? "30px 2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px" : "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
+          gridTemplateColumns: selectionMode ? "30px 2fr 1fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px" : "2fr 1fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
           gap: 12,
           padding: "10px 20px",
           borderBottom: "1px solid var(--border)",
@@ -509,6 +509,7 @@ function ScansContent() {
             </div>
           )}
           <div>Target</div>
+          <div>Tags</div>
           <div>Mode</div>
           <div>Model</div>
           <div>Status</div>
@@ -577,7 +578,7 @@ function ScansContent() {
                       }}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: selectionMode ? "30px 2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px" : "2fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
+                        gridTemplateColumns: selectionMode ? "30px 2fr 1fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px" : "2fr 1fr 1fr 1.5fr 1fr 1.5fr 100px 60px 80px",
                         gap: 12,
                         padding: "12px 20px",
                         borderBottom: "1px solid var(--border)",
@@ -601,7 +602,18 @@ function ScansContent() {
                         </div>
                       )}
                       <div style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {scan.scanName ? <span style={{ fontWeight: 600 }}>{scan.scanName} <span style={{ fontWeight: 400, color: "var(--fg-3)" }}>({scan.target})</span></span> : scan.target}
+                        {scan.scanName ? <span style={{ fontWeight: 600 }}>{scan.scanName}</span> : scan.target}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", overflow: "hidden", alignItems: "center" }}>
+                        {scan.target.startsWith("Multiple_Targets") ? (
+                          <span className="tag" style={{ background: "var(--bg-3)", color: "var(--brand)" }}>
+                            {scan.target.replace(/_/g, " ")}
+                          </span>
+                        ) : (
+                          <span className="tag" style={{ background: "var(--bg-3)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={scan.target}>
+                            {scan.target.replace(/^https?:\/\//, "")}
+                          </span>
+                        )}
                       </div>
                       <div>
                         <span className="tag" style={{ textTransform: "capitalize" }}>{scan.scanMode}</span>
