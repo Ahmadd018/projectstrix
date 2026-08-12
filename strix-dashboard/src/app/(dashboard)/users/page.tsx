@@ -110,12 +110,13 @@ export default function UsersPage() {
                 <td style={{ padding: "16px 20px" }}>
                   <span style={{ 
                     padding: "4px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600,
-                    background: user.role === "ADMIN" ? "rgba(168,85,247,0.1)" : "var(--bg-3)",
-                    color: user.role === "ADMIN" ? "#a855f7" : "var(--fg-2)",
+                    background: user.username === "admin" ? "rgba(234,179,8,0.15)" : user.role === "ADMIN" ? "rgba(168,85,247,0.1)" : "var(--bg-3)",
+                    color: user.username === "admin" ? "#eab308" : user.role === "ADMIN" ? "#a855f7" : "var(--fg-2)",
+                    border: user.username === "admin" ? "1px solid rgba(234,179,8,0.3)" : "none",
                     display: "inline-flex", alignItems: "center", gap: 4
                   }}>
                     {user.role === "ADMIN" ? <Shield size={12} /> : null}
-                    {user.role}
+                    {user.username === "admin" ? "SUPER ADMIN" : user.role}
                   </span>
                 </td>
                 <td style={{ padding: "16px 20px" }}>
@@ -132,41 +133,49 @@ export default function UsersPage() {
                 </td>
                 <td style={{ padding: "16px 20px", textAlign: "right" }}>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                    {user.status === "PENDING" && (
+                    {user.username === "admin" ? (
+                      <span style={{ fontSize: 12, color: "var(--fg-3)", fontStyle: "italic", padding: "6px 8px" }}>
+                        Protected Super Admin
+                      </span>
+                    ) : (
                       <>
-                        <button className="btn-primary" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: "#4ade80", color: "#000", border: "none" }} onClick={() => updateUser(user.id, { status: "APPROVED" })}>
-                          <UserCheck size={14} /> Approve
-                        </button>
-                        <button className="btn-danger" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }} onClick={() => updateUser(user.id, { status: "REJECTED" })}>
-                          <UserX size={14} /> Reject
-                        </button>
-                      </>
-                    )}
-                    {user.status === "APPROVED" && (
-                      <>
-                        {user.role === "USER" ? (
-                          <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "#a855f7" }} onClick={() => updateUser(user.id, { role: "ADMIN" })} title="Make Admin">
-                            <Shield size={14} /> Make Admin
-                          </button>
-                        ) : (
-                          <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--fg-3)" }} onClick={() => updateUser(user.id, { role: "USER" })} title="Remove Admin">
-                            <ShieldOff size={14} /> Demote
+                        {user.status === "PENDING" && (
+                          <>
+                            <button className="btn-primary" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: "#4ade80", color: "#000", border: "none" }} onClick={() => updateUser(user.id, { status: "APPROVED" })}>
+                              <UserCheck size={14} /> Approve
+                            </button>
+                            <button className="btn-danger" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }} onClick={() => updateUser(user.id, { status: "REJECTED" })}>
+                              <UserX size={14} /> Reject
+                            </button>
+                          </>
+                        )}
+                        {user.status === "APPROVED" && (
+                          <>
+                            {user.role === "USER" ? (
+                              <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "#a855f7" }} onClick={() => updateUser(user.id, { role: "ADMIN" })} title="Make Admin">
+                                <Shield size={14} /> Make Admin
+                              </button>
+                            ) : (
+                              <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--fg-3)" }} onClick={() => updateUser(user.id, { role: "USER" })} title="Remove Admin">
+                                <ShieldOff size={14} /> Demote
+                              </button>
+                            )}
+                            <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { confirm("Reject and disable this user?", () => updateUser(user.id, { status: "REJECTED" })) }}>
+                              <UserX size={14} /> Disable
+                            </button>
+                          </>
+                        )}
+                        {user.status === "REJECTED" && (
+                          <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "#4ade80" }} onClick={() => updateUser(user.id, { status: "APPROVED" })}>
+                            <UserCheck size={14} /> Restore
                           </button>
                         )}
-                        <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { confirm("Reject and disable this user?", () => updateUser(user.id, { status: "REJECTED" })) }}>
-                          <UserX size={14} /> Disable
+                        {/* Permanent Delete Button */}
+                        <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { confirm("Are you sure you want to PERMANENTLY delete this user? This action cannot be undone.", () => deleteUser(user.id)) }} title="Permanently Delete">
+                          <Trash2 size={14} />
                         </button>
                       </>
                     )}
-                    {user.status === "REJECTED" && (
-                      <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "#4ade80" }} onClick={() => updateUser(user.id, { status: "APPROVED" })}>
-                        <UserCheck size={14} /> Restore
-                      </button>
-                    )}
-                    {/* Permanent Delete Button */}
-                    <button className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, color: "var(--sev-critical)" }} onClick={() => { confirm("Are you sure you want to PERMANENTLY delete this user? This action cannot be undone.", () => deleteUser(user.id)) }} title="Permanently Delete">
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 </td>
               </tr>

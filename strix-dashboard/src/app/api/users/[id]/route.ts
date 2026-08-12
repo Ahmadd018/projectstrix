@@ -12,6 +12,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const { status, role } = await req.json();
 
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Super Admin protection: 'admin' user cannot be demoted or rejected
+    if (targetUser.username === "admin") {
+      if (role === "USER" || status === "REJECTED") {
+        return NextResponse.json({ error: "The primary 'admin' user (Super Admin) cannot be demoted or rejected" }, { status: 400 });
+      }
+    }
+
     const dataToUpdate: any = {};
     if (status) dataToUpdate.status = status;
     if (role) dataToUpdate.role = role;
@@ -21,9 +33,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const adminCount = await prisma.user.count({
         where: { role: "ADMIN", status: "APPROVED" }
       });
-      const targetUser = await prisma.user.findUnique({ where: { id } });
       
-      if (adminCount <= 1 && targetUser?.role === "ADMIN") {
+      if (adminCount <= 1 && targetUser.role === "ADMIN") {
         return NextResponse.json({ error: "Cannot demote or reject the last administrator" }, { status: 400 });
       }
     }
@@ -52,6 +63,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const targetUser = await prisma.user.findUnique({ where: { id } });
     if (!targetUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Super Admin protection: 'admin' user cannot be deleted
+    if (targetUser.username === "admin") {
+      return NextResponse.json({ error: "The primary 'admin' user (Super Admin) cannot be deleted" }, { status: 400 });
     }
 
     // Prevent deleting the last admin

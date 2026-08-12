@@ -24,9 +24,7 @@ export async function createUser(username: string, passwordPlain: string): Promi
     throw new Error("Username already exists");
   }
 
-  if (username.toLowerCase() === "admin" && username !== "admin") {
-    throw new Error("Variations of 'admin' are not allowed");
-  }
+// Username is case-sensitive and stored exactly as entered by the user.
 
   const passwordHash = await bcrypt.hash(passwordPlain, 10);
   
