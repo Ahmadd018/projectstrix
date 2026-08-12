@@ -53,7 +53,7 @@ export const MarkdownRenderer = ({ content }: { content: string }) => {
           },
           code: ({ node, className, children, ...props }: any) => {
             return (
-              <code className={className} style={{ color: "var(--brand)", background: "rgba(229, 9, 20, 0.1)", padding: "3px 6px", borderRadius: 4, fontFamily: "monospace", fontSize: "0.9em" }} {...props}>
+              <code className={className} style={{ color: "#ff4d4d", background: "rgba(255, 77, 77, 0.15)", padding: "3px 6px", borderRadius: 4, fontFamily: "monospace", fontSize: "0.9em", border: "1px solid rgba(255, 77, 77, 0.3)" }} {...props}>
                 {children}
               </code>
             );
