@@ -247,7 +247,7 @@ export default function Header() {
           <button 
             className="header-icon-btn" 
             title="API Documentation"
-            onClick={() => router.push("/api-docs")}
+            onClick={() => window.open("https://infat0x.github.io/ProjectStrix/guide/what-is-strix.html", "_blank")}
           >
             <Book size={16} />
           </button>
