@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Search, FileText, Loader2, Check, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Search, FileText, Loader2, Check, AlertCircle, Edit3, Eye } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import ReactMarkdown from "react-markdown";
 
@@ -27,8 +27,8 @@ export default function InstructionsPage() {
   const [lastSaved, setLastSaved] = useState({ title: "", content: "" });
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   
-  // Seamless Editor state
-  const [isEditing, setIsEditing] = useState(false);
+  // Editor mode
+  const [previewMode, setPreviewMode] = useState(false);
 
   const { confirm, alert } = useDialog();
 
@@ -57,7 +57,7 @@ export default function InstructionsPage() {
 
   // Update editor when selected instruction changes
   useEffect(() => {
-    setIsEditing(false);
+    setPreviewMode(false);
     if (selectedId === "new") {
       setTitle("");
       setContent("");
@@ -232,6 +232,20 @@ export default function InstructionsPage() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ display: "flex", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", overflow: "hidden" }}>
+                  <button 
+                    onClick={() => setPreviewMode(false)}
+                    style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: !previewMode ? "var(--bg-3)" : "transparent", color: !previewMode ? "var(--fg)" : "var(--fg-3)", border: "none", cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    <Edit3 size={13}/> Edit
+                  </button>
+                  <button 
+                    onClick={() => setPreviewMode(true)}
+                    style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: previewMode ? "var(--bg-3)" : "transparent", color: previewMode ? "var(--fg)" : "var(--fg-3)", border: "none", cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    <Eye size={13}/> Preview
+                  </button>
+                </div>
                 {selectedId !== "new" && (
                   <button 
                     onClick={() => handleDelete(selectedId)} 
@@ -261,34 +275,27 @@ export default function InstructionsPage() {
                   width: "100%" 
                 }}
               />
-              {isEditing || !content ? (
+              {!previewMode ? (
                 <textarea
-                  autoFocus
                   placeholder="Write your custom prompt or logic here... (Markdown supported)"
                   value={content}
                   onChange={e => setContent(e.target.value)}
-                  onBlur={() => setIsEditing(false)}
                   style={{ 
                     flex: 1, 
                     fontSize: 14, 
-                    color: "var(--fg)", 
+                    color: "var(--fg-2)", 
                     background: "transparent", 
                     border: "none", 
                     outline: "none", 
                     resize: "none", 
                     fontFamily: "monospace", 
                     lineHeight: 1.6,
-                    width: "100%",
-                    minHeight: "500px"
+                    width: "100%"
                   }}
                 />
               ) : (
-                <div 
-                  onClick={() => setIsEditing(true)}
-                  style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6, cursor: "text", minHeight: "500px" }} 
-                  className="markdown-body"
-                >
-                  <ReactMarkdown>{content}</ReactMarkdown>
+                <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6 }} className="markdown-body">
+                  <ReactMarkdown>{content || "*Nothing to preview*"}</ReactMarkdown>
                 </div>
               )}
             </div>
