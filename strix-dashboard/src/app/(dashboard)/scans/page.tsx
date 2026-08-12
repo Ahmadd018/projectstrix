@@ -259,7 +259,7 @@ function ScansContent() {
   const groupedScans = useMemo(() => {
     const groups: Record<string, Scan[]> = {};
     for (const scan of filteredScans) {
-      let group = scan.projectName || scan.scanName;
+      let group = scan.projectName;
       if (!group) {
         try {
           group = new URL(scan.target.startsWith("http") ? scan.target : `http://${scan.target}`).hostname;
