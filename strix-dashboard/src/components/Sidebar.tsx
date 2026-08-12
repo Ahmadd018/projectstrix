@@ -28,7 +28,8 @@ import {
   Calendar,
   Layers,
   UserCheck,
-  HardDrive
+  HardDrive,
+  BookText
 } from "lucide-react";
 
 const navItems = [
@@ -38,6 +39,7 @@ const navItems = [
   { name: "Live Graph",       path: "/graph",           icon: Activity },
   { name: "Reports",          path: "/reports",         icon: FileText },
   { name: "System Logs",      path: "/logs",            icon: TerminalSquare },
+  { name: "Instructions",     path: "/instructions",    icon: BookText },
   { name: "API Docs",         path: "/api-docs",        icon: BookOpen },
   { name: "Settings",         path: "/settings",        icon: Settings },
 ];

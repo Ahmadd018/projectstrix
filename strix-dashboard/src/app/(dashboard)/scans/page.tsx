@@ -179,6 +179,7 @@ function ScansContent() {
   const [scheduleModal, setScheduleModal] = useState<{ scanId: string, period: string, llmModel: string } | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
+  const [savedInstructions, setSavedInstructions] = useState<{id: string, title: string, content: string}[]>([]);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -236,6 +237,15 @@ function ScansContent() {
       .then(data => {
         if (!data.error && data.customModels) {
           setCustomModels(data.customModels);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/instructions")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error && Array.isArray(data)) {
+          setSavedInstructions(data);
         }
       })
       .catch(() => {});
@@ -810,7 +820,25 @@ function ScansContent() {
                 </div>
 
                 <div className="field">
-                  <label className="field-label">Custom Instructions (Optional)</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                    <label className="field-label" style={{ margin: 0 }}>Custom Instructions (Optional)</label>
+                    {savedInstructions.length > 0 && (
+                      <select
+                        className="field-select"
+                        style={{ width: "auto", padding: "2px 8px", fontSize: 11, background: "var(--bg-2)" }}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setForm({ ...form, instruction: e.target.value });
+                          }
+                        }}
+                      >
+                        <option value="">Load from Pool...</option>
+                        {savedInstructions.map(inst => (
+                          <option key={inst.id} value={inst.content}>{inst.title}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                   <textarea
                     className="field-input"
                     style={{ minHeight: 60, resize: "vertical" }}
