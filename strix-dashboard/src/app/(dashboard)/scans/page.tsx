@@ -606,13 +606,22 @@ function ScansContent() {
                       </div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", overflow: "hidden", alignItems: "center" }}>
                         {scan.target.startsWith("Multiple_Targets") ? (
-                          <span className="tag" style={{ background: "var(--bg-3)", color: "var(--brand)" }}>
-                            {scan.target.replace(/_/g, " ")}
+                          <span className="tag" style={{ background: "rgba(139, 92, 246, 0.15)", color: "#d8b4fe", border: "1px solid rgba(139, 92, 246, 0.3)", fontWeight: 600 }}>
+                            Multiple ({scan.target.match(/\d+/)?.[0] || "?"})
+                          </span>
+                        ) : scan.target === "Unknown_Target" ? (
+                          <span className="tag" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#fca5a5", border: "1px solid rgba(239, 68, 68, 0.3)", fontWeight: 600 }}>
+                            Unknown
                           </span>
                         ) : (
-                          <span className="tag" style={{ background: "var(--bg-3)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={scan.target}>
-                            {scan.target.replace(/^https?:\/\//, "")}
-                          </span>
+                          <>
+                            <span className="tag" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#6ee7b7", border: "1px solid rgba(16, 185, 129, 0.3)", fontWeight: 600 }}>
+                              Single
+                            </span>
+                            <span className="tag" style={{ background: "var(--bg-3)", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={scan.target}>
+                              {scan.target.replace(/^https?:\/\//, "")}
+                            </span>
+                          </>
                         )}
                       </div>
                       <div>
