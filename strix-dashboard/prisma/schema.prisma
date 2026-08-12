@@ -60,6 +60,9 @@ model UserSettings {
   webhookUrl         String  @default("")
   notifyOnStart      Boolean @default(false)
   notifyOnFinish     Boolean @default(true)
+  theme              String  @default("dark")
+  defaultModel       String  @default("openai/gpt-4o")
+  autoDeleteDays     Int     @default(0)
 }
 
 model CustomModel {

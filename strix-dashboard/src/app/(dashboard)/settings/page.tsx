@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Key, Bot, BellRing, Save, CheckCircle2, ChevronRight } from "lucide-react";
+import { Key, Bot, BellRing, Save, CheckCircle2, ChevronRight, Settings2 } from "lucide-react";
 
 const TABS = [
   { id: "api",           label: "API Keys",      icon: Key },
   { id: "agent",         label: "Agent Behavior", icon: Bot },
   { id: "notifications", label: "Notifications",  icon: BellRing },
+  { id: "preferences",   label: "Preferences",    icon: Settings2 },
 ];
 
 export default function Settings() {
@@ -15,6 +16,7 @@ export default function Settings() {
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
+  const [preferencesConfig, setPreferencesConfig] = useState({ theme: "dark", defaultModel: "openai/gpt-4o", autoDeleteDays: 0 });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -34,6 +36,11 @@ export default function Settings() {
           if (data.settings) {
             setAgentConfig({ aggressiveness: data.settings.aggressiveness, maxThreads: data.settings.maxThreads });
             setNotificationConfig({ webhookUrl: data.settings.webhookUrl || "", notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
+            setPreferencesConfig({ 
+              theme: data.settings.theme || "dark", 
+              defaultModel: data.settings.defaultModel || "openai/gpt-4o", 
+              autoDeleteDays: data.settings.autoDeleteDays || 0 
+            });
           }
           if (data.customModels) {
             setCustomModels(data.customModels.map((m: any) => ({ value: m.value, label: m.label })));
@@ -43,7 +50,7 @@ export default function Settings() {
       .catch(() => {});
   }, []);
 
-  const handleSave = async (tab: "api" | "agent" | "notifications") => {
+  const handleSave = async (tab: "api" | "agent" | "notifications" | "preferences") => {
     if (tab === "api") {
       await fetch("/api/user/keys", {
         method: "POST",
@@ -57,13 +64,13 @@ export default function Settings() {
         body: JSON.stringify({ type: "customModels", data: validModels })
       });
     }
-    else if (tab === "agent" || tab === "notifications") {
+    else if (tab === "agent" || tab === "notifications" || tab === "preferences") {
       await fetch("/api/user/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "settings",
-          data: { ...agentConfig, ...notificationConfig }
+          data: { ...agentConfig, ...notificationConfig, ...preferencesConfig }
         })
       });
     }
@@ -351,6 +358,84 @@ export default function Settings() {
                   </div>
                 )}
                 <button className="btn-primary" onClick={() => handleSave("notifications")}>
+                  <Save size={13} /> Save Configuration
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preferences */}
+          {activeTab === "preferences" && (
+            <div style={s.card}>
+              <div style={s.cardHead}>
+                <div style={s.cardTitle}>Global Preferences</div>
+                <div style={s.cardDesc}>Configure default workspace and interface settings.</div>
+              </div>
+              <div style={s.cardBody}>
+                <div style={s.field}>
+                  <label style={s.label}>Theme</label>
+                  <select
+                    style={s.input}
+                    value={preferencesConfig.theme}
+                    onChange={(e) => {
+                      setPreferencesConfig({ ...preferencesConfig, theme: e.target.value });
+                      if (e.target.value === "light") {
+                        document.documentElement.style.setProperty("--bg-base", "#f8f9fa");
+                        document.documentElement.style.setProperty("--bg-1", "#ffffff");
+                        document.documentElement.style.setProperty("--fg", "#111827");
+                      } else {
+                        document.documentElement.style.setProperty("--bg-base", "#050505");
+                        document.documentElement.style.setProperty("--bg-1", "#0a0a0a");
+                        document.documentElement.style.setProperty("--fg", "#ffffff");
+                      }
+                    }}
+                  >
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="system">System Default</option>
+                  </select>
+                  <span style={s.hint}>Changes the appearance of the Strix dashboard.</span>
+                </div>
+
+                <div style={s.field}>
+                  <label style={s.label}>Default LLM Model</label>
+                  <select
+                    style={s.input}
+                    value={preferencesConfig.defaultModel}
+                    onChange={(e) => setPreferencesConfig({ ...preferencesConfig, defaultModel: e.target.value })}
+                  >
+                    <option value="openai/gpt-4o">OpenAI GPT-4o</option>
+                    <option value="anthropic/claude-3-5-sonnet-latest">Anthropic Claude 3.5 Sonnet</option>
+                    <option value="google/gemini-2.5-pro">Google Gemini 2.5 Pro</option>
+                    <option value="deepseek/deepseek-v3">DeepSeek v3</option>
+                    <option value="groq/llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
+                    <option value="openrouter/auto">OpenRouter Auto</option>
+                  </select>
+                  <span style={s.hint}>The standard model selected automatically when starting a new scan.</span>
+                </div>
+
+                <div style={s.field}>
+                  <label style={s.label}>Auto-Delete Scans</label>
+                  <select
+                    style={s.input}
+                    value={preferencesConfig.autoDeleteDays}
+                    onChange={(e) => setPreferencesConfig({ ...preferencesConfig, autoDeleteDays: Number(e.target.value) })}
+                  >
+                    <option value={0}>Never Delete</option>
+                    <option value={7}>After 7 Days</option>
+                    <option value={30}>After 30 Days</option>
+                    <option value={90}>After 90 Days</option>
+                  </select>
+                  <span style={s.hint}>Scans older than this duration will be automatically deleted from the database to save space.</span>
+                </div>
+              </div>
+              <div style={s.cardFoot}>
+                {saved && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
+                    <CheckCircle2 size={13} /> Saved
+                  </div>
+                )}
+                <button className="btn-primary" onClick={() => handleSave("preferences")}>
                   <Save size={13} /> Save Configuration
                 </button>
               </div>

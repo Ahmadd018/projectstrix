@@ -19,7 +19,16 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     return NextResponse.json({
-      settings: user.settings || { aggressiveness: 50, maxThreads: 4, webhookUrl: "", notifyOnStart: false, notifyOnFinish: true },
+      settings: user.settings || { 
+        aggressiveness: 50, 
+        maxThreads: 4, 
+        webhookUrl: "", 
+        notifyOnStart: false, 
+        notifyOnFinish: true,
+        theme: "dark",
+        defaultModel: "openai/gpt-4o",
+        autoDeleteDays: 0
+      },
       customModels: user.customModels
     });
   } catch (e: any) {
@@ -55,10 +64,14 @@ export async function POST(req: NextRequest) {
       const notifyOnStart = !!d.notifyOnStart;
       const notifyOnFinish = !!d.notifyOnFinish;
 
+      const theme = typeof d.theme === "string" && ["dark", "light", "system"].includes(d.theme) ? d.theme : "dark";
+      const defaultModel = typeof d.defaultModel === "string" ? d.defaultModel.trim().slice(0, 100) : "openai/gpt-4o";
+      const autoDeleteDays = clamp(d.autoDeleteDays, 0, 365, 0);
+
       const settings = await prisma.userSettings.upsert({
         where: { userId },
-        update: { aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish },
-        create: { userId, aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish }
+        update: { aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish, theme, defaultModel, autoDeleteDays },
+        create: { userId, aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish, theme, defaultModel, autoDeleteDays }
       });
 
       return NextResponse.json({ success: true, settings });

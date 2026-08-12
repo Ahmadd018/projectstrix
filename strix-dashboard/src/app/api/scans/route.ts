@@ -373,7 +373,7 @@ export async function POST(req: NextRequest) {
   }
   log.info("POST /api/scans", `Scan created/resumed`, { scanId, scanDir });
 
-  const userSettings = userExists.settings || { webhookUrl: "", notifyOnStart: false, notifyOnFinish: true };
+  const userSettings = userExists.settings || { webhookUrl: "", notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
   const notificationConfig = {
     webhookUrl: userSettings.webhookUrl,
     notifyOnStart: userSettings.notifyOnStart,
@@ -447,6 +447,14 @@ export async function POST(req: NextRequest) {
 
     if (maxBudget?.trim()) args.push("--max-budget", maxBudget.trim());
     if (maxTurns?.trim()) args.push("--max-turns", maxTurns.trim());
+    
+    // Add User Settings: Agent Behavior
+    if (userSettings.aggressiveness !== undefined) {
+      args.push("--aggressiveness", String(userSettings.aggressiveness));
+    }
+    if (userSettings.maxThreads !== undefined) {
+      args.push("--threads", String(userSettings.maxThreads));
+    }
   }
 
   const env = {

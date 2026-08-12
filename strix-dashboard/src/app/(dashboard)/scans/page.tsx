@@ -235,8 +235,13 @@ function ScansContent() {
     fetch("/api/user/settings")
       .then(r => r.json())
       .then(data => {
-        if (!data.error && data.customModels) {
-          setCustomModels(data.customModels);
+        if (!data.error) {
+          if (data.customModels) {
+            setCustomModels(data.customModels);
+          }
+          if (data.settings?.defaultModel) {
+            setForm(prev => ({ ...prev, llmModel: data.settings.defaultModel }));
+          }
         }
       })
       .catch(() => {});
