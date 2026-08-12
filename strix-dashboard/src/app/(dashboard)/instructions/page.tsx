@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Search, FileText, Loader2, Save } from "lucide-react";
+import { Plus, Trash2, Search, FileText, Loader2, Check, AlertCircle, Edit3, Eye } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
+import ReactMarkdown from "react-markdown";
 
 interface Instruction {
   id: string;
@@ -16,14 +17,18 @@ export default function InstructionsPage() {
   const [instructions, setInstructions] = useState<Instruction[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Which instruction is currently selected in the left pane
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   
-  // Editor state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [saving, setSaving] = useState(false);
+  
+  // Auto-save state
+  const [lastSaved, setLastSaved] = useState({ title: "", content: "" });
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  
+  // Editor mode
+  const [previewMode, setPreviewMode] = useState(false);
 
   const { confirm, alert } = useDialog();
 
@@ -50,19 +55,71 @@ export default function InstructionsPage() {
     fetchInstructions();
   }, []);
 
-  // Update editor state when selected instruction changes
+  // Update editor when selected instruction changes
   useEffect(() => {
+    setPreviewMode(false);
     if (selectedId === "new") {
       setTitle("");
       setContent("");
+      setLastSaved({ title: "", content: "" });
+      setSaveStatus("idle");
     } else {
       const found = instructions.find(i => i.id === selectedId);
       if (found) {
         setTitle(found.title);
         setContent(found.content);
+        setLastSaved({ title: found.title, content: found.content });
+        setSaveStatus("idle");
       }
     }
   }, [selectedId, instructions]);
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!selectedId) return;
+    if (title === lastSaved.title && content === lastSaved.content) {
+       if (saveStatus === "saving") setSaveStatus("saved");
+       return;
+    }
+    
+    // Don't auto-save if empty
+    if (!title.trim() || !content.trim()) return;
+
+    setSaveStatus("saving");
+    const timeout = setTimeout(async () => {
+      try {
+        const isNew = selectedId === "new";
+        const url = isNew ? "/api/instructions" : `/api/instructions/${selectedId}`;
+        const method = isNew ? "POST" : "PUT";
+        
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, content }),
+        });
+        if (!res.ok) throw new Error("Save failed");
+        
+        const savedInst = await res.json();
+        setLastSaved({ title: savedInst.title, content: savedInst.content });
+        setSaveStatus("saved");
+        
+        // Silent update to list
+        fetch("/api/instructions")
+          .then(r => r.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setInstructions(data);
+              if (isNew) setSelectedId(savedInst.id);
+            }
+          });
+          
+      } catch (e) {
+        setSaveStatus("error");
+      }
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(timeout);
+  }, [title, content, selectedId, lastSaved]);
 
   const filteredInstructions = useMemo(() => {
     return instructions.filter(i => i.title.toLowerCase().includes(search.toLowerCase()));
@@ -70,35 +127,6 @@ export default function InstructionsPage() {
 
   const handleNew = () => {
     setSelectedId("new");
-  };
-
-  const handleSave = async () => {
-    if (!title.trim() || !content.trim()) {
-      alert("Title and content are required.", "Error");
-      return;
-    }
-    setSaving(true);
-    try {
-      const isNew = selectedId === "new";
-      const url = isNew ? "/api/instructions" : `/api/instructions/${selectedId}`;
-      const method = isNew ? "POST" : "PUT";
-      
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to save");
-      }
-      const savedInst = await res.json();
-      await fetchInstructions(savedInst.id);
-    } catch (e: any) {
-      alert(e.message, "Error");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -122,7 +150,6 @@ export default function InstructionsPage() {
       
       {/* Left Sidebar */}
       <div style={{ width: 320, background: "var(--bg-1)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        {/* Sidebar Header */}
         <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)" }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, color: "var(--fg)" }}>Instructions</h2>
           <button onClick={handleNew} className="btn-icon" title="New Instruction">
@@ -130,7 +157,6 @@ export default function InstructionsPage() {
           </button>
         </div>
 
-        {/* Search */}
         <div style={{ padding: 12, borderBottom: "1px solid var(--border)", display: "flex", gap: 8, alignItems: "center", background: "var(--bg-2)" }}>
           <Search size={14} color="var(--fg-3)" />
           <input 
@@ -142,7 +168,6 @@ export default function InstructionsPage() {
           />
         </div>
 
-        {/* List */}
         <div style={{ flex: 1, overflowY: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 4 }}>
           {loading ? (
             <div style={{ padding: 20, textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>Loading...</div>
@@ -195,33 +220,42 @@ export default function InstructionsPage() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg)", position: "relative" }}>
         {selectedId ? (
           <>
-            <div style={{ padding: "24px 40px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "16px 32px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <div style={{ padding: 8, background: "var(--bg-2)", borderRadius: "var(--r)", color: "var(--fg-2)" }}>
                   <FileText size={16} />
                 </div>
-                <div style={{ fontSize: 12, color: "var(--fg-3)", fontWeight: 500 }}>
-                  {selectedId === "new" ? "Create New Instruction" : "Edit Instruction"}
+                <div style={{ fontSize: 13, color: "var(--fg-3)", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                  {saveStatus === "saving" && <><Loader2 size={12} style={{ animation: "spin 1s linear infinite" }}/> Auto-saving...</>}
+                  {saveStatus === "saved" && <><Check size={12} color="var(--brand)"/> Saved</>}
+                  {saveStatus === "error" && <><AlertCircle size={12} color="var(--sev-critical)"/> Failed to save</>}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ display: "flex", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", overflow: "hidden" }}>
+                  <button 
+                    onClick={() => setPreviewMode(false)}
+                    style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: !previewMode ? "var(--bg-3)" : "transparent", color: !previewMode ? "var(--fg)" : "var(--fg-3)", border: "none", cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    <Edit3 size={13}/> Edit
+                  </button>
+                  <button 
+                    onClick={() => setPreviewMode(true)}
+                    style={{ padding: "6px 12px", fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: previewMode ? "var(--bg-3)" : "transparent", color: previewMode ? "var(--fg)" : "var(--fg-3)", border: "none", cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    <Eye size={13}/> Preview
+                  </button>
+                </div>
                 {selectedId !== "new" && (
                   <button 
                     onClick={() => handleDelete(selectedId)} 
-                    className="btn-ghost" 
+                    className="btn-icon" 
                     style={{ color: "var(--sev-critical)" }}
+                    title="Delete Instruction"
                   >
-                    <Trash2 size={14} style={{ marginRight: 6 }}/> Delete
+                    <Trash2 size={16}/>
                   </button>
                 )}
-                <button 
-                  onClick={handleSave} 
-                  className="btn-primary"
-                  disabled={saving || !title.trim() || !content.trim()}
-                >
-                  {saving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite", marginRight: 6 }} /> : <Save size={14} style={{ marginRight: 6 }} />}
-                  Save
-                </button>
               </div>
             </div>
             
@@ -241,23 +275,29 @@ export default function InstructionsPage() {
                   width: "100%" 
                 }}
               />
-              <textarea
-                placeholder="Write your custom prompt or logic here..."
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                style={{ 
-                  flex: 1, 
-                  fontSize: 14, 
-                  color: "var(--fg-2)", 
-                  background: "transparent", 
-                  border: "none", 
-                  outline: "none", 
-                  resize: "none", 
-                  fontFamily: "monospace", 
-                  lineHeight: 1.6,
-                  width: "100%"
-                }}
-              />
+              {!previewMode ? (
+                <textarea
+                  placeholder="Write your custom prompt or logic here... (Markdown supported)"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    fontSize: 14, 
+                    color: "var(--fg-2)", 
+                    background: "transparent", 
+                    border: "none", 
+                    outline: "none", 
+                    resize: "none", 
+                    fontFamily: "monospace", 
+                    lineHeight: 1.6,
+                    width: "100%"
+                  }}
+                />
+              ) : (
+                <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6 }} className="markdown-body">
+                  <ReactMarkdown>{content || "*Nothing to preview*"}</ReactMarkdown>
+                </div>
+              )}
             </div>
           </>
         ) : (
