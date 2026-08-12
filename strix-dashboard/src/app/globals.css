@@ -812,7 +812,6 @@ code, pre { font-family: var(--font-mono); }
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 1400px;
 }
 .page-heading {
   font-size: 22px;
