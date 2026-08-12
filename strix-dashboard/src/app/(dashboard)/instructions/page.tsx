@@ -294,7 +294,7 @@ export default function InstructionsPage() {
                   }}
                 />
               ) : (
-                <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6 }} className="markdown-body">
+                <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap" }} className="markdown-body">
                   <ReactMarkdown
                     components={{
                       code({ node, inline, className, children, ...props }: any) {
