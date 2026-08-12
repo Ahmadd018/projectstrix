@@ -4,11 +4,11 @@ import { getSession } from "@/lib/session";
 
 export async function GET(req: Request) {
   const session = await getSession();
-  if (!session || !session.user || typeof (session.user as any).id !== "string") {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  
-  const userId = (session.user as any).id;
+
+  const userId = session.userId as string;
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
