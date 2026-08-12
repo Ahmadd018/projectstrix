@@ -14,3 +14,12 @@ strixexampleoutput.json
 .agents/
 .windsurf/
 .cursor/
+
+# Security audit docs — should not be public
+security_implementation.md
+
+# AI tool artifacts
+skills-lock.json
+
+# Build artifacts
+*.tsbuildinfo

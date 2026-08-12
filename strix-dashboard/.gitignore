@@ -23,6 +23,11 @@
 # misc
 .DS_Store
 *.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.cer
 
 # debug
 npm-debug.log*
@@ -39,6 +44,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 next-env.d.ts
 
 # Strix specific
@@ -47,6 +53,7 @@ next-env.d.ts
 /data/
 
 /src/generated/prisma
+prisma/migrations/
 
 # IDE and AI tools
 /.agents/
@@ -55,3 +62,9 @@ next-env.d.ts
 /.cursor/
 /.gemini/
 strixexampleoutput.json
+
+# AI tool artifacts
+skills-lock.json
+
+# Internal docs — never expose publicly
+security_implementation.md
