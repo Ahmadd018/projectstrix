@@ -17,7 +17,6 @@ export async function GET() {
     path.join(process.cwd(), "../strix-venv/bin/strix"),
   ];
   const strixInstalled = strixPaths.some((p) => fs.existsSync(p));
-  const strixPath = strixPaths.find((p) => fs.existsSync(p)) ?? null;
 
   const runsDirExists = fs.existsSync(RUNS_DIR);
   let scanCount = 0;
@@ -52,15 +51,14 @@ export async function GET() {
         message: "Next.js API is running",
       },
       strix_cli: {
+        // L-4: don't disclose server filesystem paths on this public endpoint.
         status: strixInstalled ? "ok" : "not_installed",
-        path: strixPath,
         message: strixInstalled
-          ? `strix found at ${strixPath}`
+          ? "strix CLI found"
           : "strix CLI not found — demo mode will be used for scans",
       },
       storage: {
         status: "ok",
-        runs_dir: RUNS_DIR,
         runs_dir_exists: runsDirExists,
         total_scans: scanCount,
         running_scans: runningScanCount,

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { getSession } from "@/lib/session";
+import { getSession, createSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { log } from "@/lib/logger";
+import { isLocked, recordFailure, recordSuccess } from "@/lib/rateLimiter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +31,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Password must contain at least one uppercase letter, one lowercase letter, and one number" }, { status: 400 });
     }
 
+    // M-2: Throttle current-password guessing on a live session.
+    const throttleKey = `pw:${userId}`;
+    const lockedFor = isLocked(throttleKey);
+    if (lockedFor > 0) {
+      return NextResponse.json(
+        { error: "Too many failed attempts. Try again later." },
+        { status: 429, headers: { "Retry-After": String(lockedFor) } }
+      );
+    }
+
     // Fetch user from DB
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -39,18 +50,22 @@ export async function POST(req: NextRequest) {
     // Verify current password
     const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isCurrentValid) {
+      recordFailure(throttleKey);
       log.warn("CHANGE_PASSWORD", `Failed password change attempt for user: ${user.username}`);
       return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
     }
+    recordSuccess(throttleKey);
 
     // Hash new password
     const newHash = await bcrypt.hash(newPassword, 10);
 
-    // Update password in DB
-    await prisma.user.update({
+    // H-3: Bump tokenVersion so every OTHER existing session is invalidated,
+    // then re-issue a fresh session for this caller so they stay logged in.
+    const updated = await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: newHash },
+      data: { passwordHash: newHash, tokenVersion: { increment: 1 } },
     });
+    await createSession(updated.id, updated.username, updated.role, updated.status, updated.tokenVersion);
 
     log.info("CHANGE_PASSWORD", `Password successfully changed for user: ${user.username}`);
     return NextResponse.json({ success: true, message: "Password updated successfully" });

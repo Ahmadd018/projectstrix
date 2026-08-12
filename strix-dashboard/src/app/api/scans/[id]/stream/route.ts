@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import fs from "fs";
 import path from "path";
 import { log } from "@/lib/logger";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 import os from "os";
 
@@ -15,6 +17,17 @@ export async function GET(
 ) {
   const { id } = await params;
   log.info(`SSE /api/scans/${id}/stream`, "Client connected to SSE stream");
+
+  // H-1: Authenticate + enforce ownership before streaming any scan's logs/vulns.
+  // Without this, any logged-in user could read another user's live scan output.
+  const session = await getSession();
+  if (!session) return new Response("Unauthorized", { status: 401 });
+
+  const dbScan = await prisma.scan.findUnique({ where: { id } });
+  if (!dbScan) return new Response("Scan not found", { status: 404 });
+  if (session.role !== "ADMIN" && dbScan.userId !== session.userId) {
+    return new Response("Forbidden", { status: 403 });
+  }
 
   const logFile = path.join(RUNS_DIR, id, "log.txt");
   const runFile = path.join(RUNS_DIR, id, "run.json");

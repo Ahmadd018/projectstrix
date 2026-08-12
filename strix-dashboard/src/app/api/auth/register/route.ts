@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const user = await createUser(username, password);
     
     // Auto-login after registration (even if pending, so they see the lock screen)
-    await createSession(user.id, user.username, user.role, user.status);
+    await createSession(user.id, user.username, user.role, user.status, user.tokenVersion);
 
     return NextResponse.json({ success: true, user: { id: user.id, username: user.username, role: user.role, status: user.status } });
   } catch (err: any) {

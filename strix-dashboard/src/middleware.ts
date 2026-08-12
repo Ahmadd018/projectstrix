@@ -54,11 +54,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Next.js static assets and internal requests
+  // Next.js static assets and internal requests.
+  // L-1: match known asset extensions explicitly instead of any path containing a
+  // dot — the old `includes('.')` fail-open pattern skipped auth for any such path.
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
-    pathname.includes('.') // like .css, .js files
+    /\.(css|js|mjs|map|json|txt|xml|svg|png|jpe?g|gif|webp|ico|woff2?|ttf|eot)$/i.test(pathname)
   ) {
     return NextResponse.next()
   }
@@ -84,6 +86,30 @@ export async function middleware(request: NextRequest) {
       userStatus = (verified.payload.status as string) || 'APPROVED'
     } catch (e) {
       // Invalid token
+    }
+  }
+
+  // M-3: CSRF defense-in-depth. For state-changing API calls, reject any request
+  // whose Origin host doesn't match the target host. Same-origin browser fetches
+  // always send a matching Origin; server-to-server callers (scheduler) are exempt
+  // via the shared secret; non-browser clients that send no Origin are allowed
+  // (the SameSite=Strict session cookie already blocks cross-site cookie replay).
+  if (
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) &&
+    pathname.startsWith('/api')
+  ) {
+    const isScheduler = !!(schedulerKey && expectedSchedulerKey && schedulerKey === expectedSchedulerKey)
+    if (!isScheduler) {
+      const origin = request.headers.get('origin')
+      if (origin) {
+        try {
+          if (new URL(origin).host !== request.headers.get('host')) {
+            return NextResponse.json({ error: 'Cross-origin request blocked' }, { status: 403 })
+          }
+        } catch {
+          return NextResponse.json({ error: 'Invalid origin' }, { status: 403 })
+        }
+      }
     }
   }
 

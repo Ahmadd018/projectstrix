@@ -7,6 +7,8 @@ import { registerProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { readApiKeys } from "@/lib/apiKeys";
+import { isSafePublicUrl } from "@/lib/urlGuard";
 
 import os from "os";
 
@@ -52,16 +54,10 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
   if (event === "start" && !config.notifyOnStart) return;
   if (event === "finish" && !config.notifyOnFinish) return;
 
-  // SSRF protection: only allow http/https to external non-private addresses
-  try {
-    const parsed = new URL(config.webhookUrl);
-    if (!["http:", "https:"].includes(parsed.protocol)) return;
-    const host = parsed.hostname;
-    if (/^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|localhost|::1|0\.0\.0\.0)/i.test(host)) {
-      log.warn("WEBHOOK", `Blocked SSRF attempt to private/loopback address: ${host}`);
-      return;
-    }
-  } catch {
+  // M-1: SSRF protection — resolve the host and block private/reserved/link-local
+  // ranges (incl. cloud metadata 169.254.169.254 and alternate IP encodings).
+  if (!(await isSafePublicUrl(config.webhookUrl))) {
+    log.warn("WEBHOOK", "Blocked SSRF/invalid webhook URL");
     return;
   }
 
@@ -99,6 +95,7 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      redirect: "manual", // M-1: don't follow redirects into blocked internal hosts
     });
     if (!res.ok) {
       log.warn("WEBHOOK", `Failed to send webhook: ${res.status} ${res.statusText}`);
@@ -283,11 +280,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid session. Please log out and log in again." }, { status: 401 });
   }
 
-  // Fetch API Keys directly from DB
-  let userKeys: any = {};
-  if (userExists.apiKeys) {
-    try { userKeys = JSON.parse(userExists.apiKeys); } catch(e) {}
-  }
+  // Fetch API Keys directly from DB (M-5: stored encrypted, decrypt to use).
+  const userKeys: any = readApiKeys(userExists.apiKeys);
 
   let resolvedApiKey = "";
   if (llmModel.startsWith("openai/")) resolvedApiKey = userKeys.openai || "";
@@ -428,25 +422,26 @@ export async function POST(req: NextRequest) {
     
     if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
 
-    // C-4: Path traversal protection for diffBase
+    // C-4 / L-3: Path traversal protection for diffBase.
+    // path.resolve() already collapses '..', so a substring check is insufficient —
+    // require the resolved path to be contained within RUNS_DIR.
     if (diffBase?.trim()) {
       const resolvedDiff = path.resolve(diffBase.trim());
-      // Only allow absolute paths that don't escape the scan's parent directory
-      const allowedDiffBase = RUNS_DIR;
-      if (!resolvedDiff.startsWith("/") || resolvedDiff.includes("..")) {
-        log.warn("POST /api/scans", "Rejected suspicious diffBase path", { diffBase });
-      } else {
+      if (resolvedDiff === RUNS_DIR || resolvedDiff.startsWith(RUNS_DIR + path.sep)) {
         args.push("--diff-base", resolvedDiff);
+      } else {
+        log.warn("POST /api/scans", "Rejected out-of-bounds diffBase path", { diffBase });
       }
     }
 
-    // C-3: Path traversal protection for configFile
+    // C-3 / L-3: Path traversal protection for configFile — same containment rule,
+    // blocking arbitrary absolute-path passthrough (e.g. --config /etc/passwd).
     if (configFile?.trim()) {
       const resolvedConfig = path.resolve(configFile.trim());
-      if (resolvedConfig.includes("..")) {
-        log.warn("POST /api/scans", "Rejected suspicious configFile path", { configFile });
-      } else {
+      if (resolvedConfig === RUNS_DIR || resolvedConfig.startsWith(RUNS_DIR + path.sep)) {
         args.push("--config", resolvedConfig);
+      } else {
+        log.warn("POST /api/scans", "Rejected out-of-bounds configFile path", { configFile });
       }
     }
 
