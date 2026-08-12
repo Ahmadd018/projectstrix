@@ -6,8 +6,65 @@ import remarkBreaks from "remark-breaks";
 import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import 'katex/dist/katex.min.css';
+
+const PreBlock = ({ children }: any) => {
+  const [copied, setCopied] = React.useState(false);
+  const codeChild = React.Children.toArray(children)[0] as any;
+  const className = codeChild?.props?.className || "";
+  const match = /language-(\w+)/.exec(className);
+  const language = match ? match[1] : "";
+  const codeString = String(codeChild?.props?.children || "").replace(/\n$/, "");
+
+  const handleCopy = () => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(codeString);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = codeString;
+      textArea.style.position = "absolute";
+      textArea.style.left = "-999999px";
+      document.body.prepend(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (error) {} finally {
+        textArea.remove();
+      }
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ background: "#1e1e1e", borderRadius: 8, overflow: "hidden", margin: "16px 0", border: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", background: "#252526", borderBottom: "1px solid var(--border)" }}>
+        <span style={{ color: "#858585", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          {language || "TEXT"}
+        </span>
+        <button 
+          onClick={handleCopy}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: copied ? "#4caf50" : "#858585", cursor: "pointer", fontSize: 11, transition: "color 0.2s" }}
+          onMouseEnter={e => { if (!copied) e.currentTarget.style.color = "#fff"; }}
+          onMouseLeave={e => { if (!copied) e.currentTarget.style.color = "#858585"; }}
+        >
+          {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+        </button>
+      </div>
+      <div style={{ padding: "12px", overflowX: "auto" }}>
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={language || "text"}
+          PreTag="div"
+          customStyle={{ background: "transparent", padding: 0, margin: 0, overflow: "visible" }}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      </div>
+    </div>
+  );
+};
 
 export const MarkdownRenderer = ({ content }: { content: string }) => {
   return (
@@ -16,41 +73,7 @@ export const MarkdownRenderer = ({ content }: { content: string }) => {
         remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          pre: ({ children }: any) => {
-            const codeChild = React.Children.toArray(children)[0] as any;
-            const className = codeChild?.props?.className || "";
-            const match = /language-(\w+)/.exec(className);
-            const language = match ? match[1] : "";
-            const codeString = String(codeChild?.props?.children || "").replace(/\n$/, "");
-            
-            return (
-              <div style={{ background: "#1e1e1e", borderRadius: 8, overflow: "hidden", margin: "16px 0", border: "1px solid var(--border)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", background: "#252526", borderBottom: "1px solid var(--border)" }}>
-                  <span style={{ color: "#858585", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    {language || "TEXT"}
-                  </span>
-                  <button 
-                    onClick={() => navigator.clipboard.writeText(codeString)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: "#858585", cursor: "pointer", fontSize: 11, transition: "color 0.2s" }}
-                    onMouseEnter={e => e.currentTarget.style.color = "#fff"}
-                    onMouseLeave={e => e.currentTarget.style.color = "#858585"}
-                  >
-                    <Copy size={13} /> Copy
-                  </button>
-                </div>
-                <div style={{ padding: "12px", overflowX: "auto" }}>
-                  <SyntaxHighlighter
-                    style={vscDarkPlus}
-                    language={language || "text"}
-                    PreTag="div"
-                    customStyle={{ background: "transparent", padding: 0, margin: 0, overflow: "visible" }}
-                  >
-                    {codeString}
-                  </SyntaxHighlighter>
-                </div>
-              </div>
-            );
-          },
+          pre: PreBlock,
           code: ({ node, className, children, ...props }: any) => {
             return (
               <code className={className} style={{ color: "#ff4d4d", background: "rgba(255, 77, 77, 0.15)", padding: "3px 6px", borderRadius: 4, fontFamily: "monospace", fontSize: "0.9em", border: "1px solid rgba(255, 77, 77, 0.3)" }} {...props}>
