@@ -226,9 +226,7 @@ export default function InstructionsPage() {
                   <FileText size={16} />
                 </div>
                 <div style={{ fontSize: 13, color: "var(--fg-3)", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
-                  {saveStatus === "saving" && <><Loader2 size={12} style={{ animation: "spin 1s linear infinite" }}/> Auto-saving...</>}
-                  {saveStatus === "saved" && <><Check size={12} color="var(--brand)"/> Saved</>}
-                  {saveStatus === "error" && <><AlertCircle size={12} color="var(--sev-critical)"/> Failed to save</>}
+                  {selectedId === "new" ? "Create New Instruction" : "Edit Instruction"}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
