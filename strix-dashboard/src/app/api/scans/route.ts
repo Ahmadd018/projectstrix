@@ -61,7 +61,7 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
     return;
   }
 
-  let blocks = [];
+  let blocks: any[] = [];
   let fallbackText = "";
   let color = "#36a64f";
 
