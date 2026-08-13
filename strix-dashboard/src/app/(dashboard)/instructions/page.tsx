@@ -274,23 +274,37 @@ export default function InstructionsPage() {
                 }}
               />
               {!previewMode ? (
-                <textarea
-                  placeholder="Write your custom prompt or logic here... (Markdown supported)"
-                  value={content}
-                  onChange={e => setContent(e.target.value)}
-                  style={{ 
-                    flex: 1, 
-                    fontSize: 14, 
-                    color: "var(--fg-2)", 
-                    background: "transparent", 
-                    border: "none", 
-                    outline: "none", 
-                    resize: "none", 
-                    fontFamily: "monospace", 
-                    lineHeight: 1.6,
-                    width: "100%"
-                  }}
-                />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
+                  <textarea
+                    placeholder="Write your custom prompt or logic here... (Markdown supported)"
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      fontSize: 14, 
+                      color: "var(--fg-2)", 
+                      background: "transparent", 
+                      border: "none", 
+                      outline: "none", 
+                      resize: "none", 
+                      fontFamily: "monospace", 
+                      lineHeight: 1.6,
+                      width: "100%"
+                    }}
+                  />
+                  <div style={{ 
+                    position: "absolute", 
+                    bottom: 0, 
+                    right: 0, 
+                    fontSize: 12, 
+                    color: "var(--fg-3)",
+                    background: "var(--bg)",
+                    padding: "4px 8px",
+                    borderRadius: "4px"
+                  }}>
+                    {String(content.length).padStart(4, '0')}/8000
+                  </div>
+                </div>
               ) : (
                 <div style={{ flex: 1, color: "var(--fg-1)", fontSize: 14, lineHeight: 1.6 }} className="markdown-body">
                   <MarkdownRenderer content={content || "*Nothing to preview*"} />
