@@ -61,31 +61,79 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
     return;
   }
 
-  let message = "";
-  let color = "#36a64f"; // default green
+  let blocks = [];
+  let fallbackText = "";
+  let color = "#36a64f";
 
   if (event === "start") {
-    message = `🚀 *Scan Started*\n*Target:* ${scanMeta.target}\n*Mode:* ${scanMeta.scanMode}\n*Model:* ${scanMeta.llmModel}\n*ID:* ${scanMeta.id}`;
+    fallbackText = `🚀 Scan Started on ${scanMeta.target}`;
     color = "#3498db";
+    blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: "🚀 Strix Scan Initiated", emoji: true }
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Target:*\n\`${scanMeta.target}\`` },
+          { type: "mrkdwn", text: `*Mode:*\n${scanMeta.scanMode}` },
+          { type: "mrkdwn", text: `*Model:*\n${scanMeta.llmModel}` },
+          { type: "mrkdwn", text: `*Scan ID:*\n\`${scanMeta.id.slice(0, 8)}\`` }
+        ]
+      },
+      { type: "divider" },
+      {
+        type: "context",
+        elements: [
+          { type: "mrkdwn", text: `🕒 Started at: ${new Date().toLocaleString()}` }
+        ]
+      }
+    ];
   } else {
-    message = `🏁 *Scan Finished*\n*Target:* ${scanMeta.target}\n*Status:* ${scanMeta.status}\n*Vulnerabilities Found:* ${vulnCount}\n*ID:* ${scanMeta.id}`;
+    fallbackText = `🏁 Scan Finished on ${scanMeta.target} - ${vulnCount} vulns`;
     color = scanMeta.status === "failed" ? "#e74c3c" : vulnCount > 0 ? "#f39c12" : "#2ecc71";
+    
+    let headerText = scanMeta.status === "failed" ? "❌ Scan Failed" : "✅ Scan Completed";
+    
+    blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: headerText, emoji: true }
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Target:*\n\`${scanMeta.target}\`` },
+          { type: "mrkdwn", text: `*Status:*\n${scanMeta.status.toUpperCase()}` },
+          { type: "mrkdwn", text: `*Vulnerabilities Found:*\n${vulnCount > 0 ? '🚨 *' + vulnCount + '*' : '✅ 0'}` },
+          { type: "mrkdwn", text: `*Scan ID:*\n\`${scanMeta.id.slice(0, 8)}\`` }
+        ]
+      }
+    ];
+
+    if (vulnCount > 0) {
+      blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `⚠️ *Action Required:* Vulnerabilities were detected on the target. Please review the detailed Strix report immediately.` }
+      });
+    }
+
+    blocks.push({ type: "divider" });
+    blocks.push({
+      type: "context",
+      elements: [
+        { type: "mrkdwn", text: `🕒 Finished at: ${new Date().toLocaleString()}` }
+      ]
+    });
   }
 
   const payload = {
-    text: message, // For basic Slack/Discord compatibility
+    text: fallbackText,
     attachments: [
       {
         color: color,
-        blocks: [
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: message
-            }
-          }
-        ]
+        blocks: blocks
       }
     ]
   };
