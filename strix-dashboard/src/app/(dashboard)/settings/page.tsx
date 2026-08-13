@@ -372,30 +372,7 @@ export default function Settings() {
                 <div style={s.cardDesc}>Configure default workspace and interface settings.</div>
               </div>
               <div style={s.cardBody}>
-                <div style={s.field}>
-                  <label style={s.label}>Theme</label>
-                  <select
-                    style={s.input}
-                    value={preferencesConfig.theme}
-                    onChange={(e) => {
-                      setPreferencesConfig({ ...preferencesConfig, theme: e.target.value });
-                      if (e.target.value === "light") {
-                        document.documentElement.style.setProperty("--bg-base", "#f8f9fa");
-                        document.documentElement.style.setProperty("--bg-1", "#ffffff");
-                        document.documentElement.style.setProperty("--fg", "#111827");
-                      } else {
-                        document.documentElement.style.setProperty("--bg-base", "#050505");
-                        document.documentElement.style.setProperty("--bg-1", "#0a0a0a");
-                        document.documentElement.style.setProperty("--fg", "#ffffff");
-                      }
-                    }}
-                  >
-                    <option value="dark">Dark</option>
-                    <option value="light">Light</option>
-                    <option value="system">System Default</option>
-                  </select>
-                  <span style={s.hint}>Changes the appearance of the Strix dashboard.</span>
-                </div>
+
 
                 <div style={s.field}>
                   <label style={s.label}>Default LLM Model</label>

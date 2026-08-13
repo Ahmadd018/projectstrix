@@ -90,6 +90,49 @@
   --radius:              0.5rem;
 }
 
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS — Light Mode
+═══════════════════════════════════════════ */
+[data-theme="light"] {
+  /* Surface */
+  --bg:         #ffffff;
+  --bg-1:       #f7f7f7;
+  --bg-2:       #ececec;
+  --bg-3:       #e0e0e0;
+  --bg-4:       #d4d4d4;
+
+  /* Border */
+  --border:     rgba(0,0,0,0.08);
+  --border-md:  rgba(0,0,0,0.12);
+  --border-hi:  rgba(0,0,0,0.20);
+
+  /* Text */
+  --fg:         #080808;
+  --fg-2:       rgba(0,0,0,0.65);
+  --fg-3:       rgba(0,0,0,0.40);
+
+  /* Accent */
+  --accent:     #080808;
+  --accent-dim: rgba(0,0,0,0.06);
+
+  /* Shadcn compat */
+  --background:          #ffffff;
+  --foreground:          #080808;
+  --card:                #f7f7f7;
+  --card-foreground:     #080808;
+  --popover:             #ececec;
+  --popover-foreground:  #080808;
+  --primary:             #080808;
+  --primary-foreground:  #ffffff;
+  --secondary:           #e0e0e0;
+  --secondary-foreground: #080808;
+  --muted:               #ececec;
+  --muted-foreground:    rgba(0,0,0,0.45);
+  --border-color:        rgba(0,0,0,0.08);
+  --input:               rgba(0,0,0,0.08);
+  --ring:                rgba(0,0,0,0.20);
+}
+
 /* ─── Reset ────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

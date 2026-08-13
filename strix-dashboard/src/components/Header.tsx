@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Plus, Bell, Search, CheckCircle2, XCircle, Clock, Settings2, Book, Loader2, ShieldAlert } from "lucide-react";
+import { Plus, Bell, Search, CheckCircle2, XCircle, Clock, Settings2, Book, Loader2, ShieldAlert, Sun, Moon } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 
 const routeTitles: Record<string, string> = {
   "/":               "Overview",
@@ -34,6 +35,12 @@ interface SearchResult {
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState<InAppNotif[]>([]);
@@ -259,6 +266,16 @@ export default function Header() {
           >
             <Settings2 size={16} />
           </button>
+
+          {mounted && (
+            <button 
+              className="header-icon-btn" 
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          )}
 
           {/* Notifications */}
           <div style={{ position: "relative" }}>

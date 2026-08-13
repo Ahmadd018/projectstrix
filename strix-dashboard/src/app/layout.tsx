@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 import { DialogProvider } from "@/components/DialogProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export default function RootLayout({
   children,
@@ -21,9 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <DialogProvider>
-          {children}
-        </DialogProvider>
+        <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false}>
+          <DialogProvider>
+            {children}
+          </DialogProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
