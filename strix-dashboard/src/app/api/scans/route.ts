@@ -135,9 +135,15 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
   try {
     let endpoint = "https://slack.com/api/chat.postMessage";
     
-    if (event === "finish" && scanMeta.slackMessageTs) {
-      endpoint = "https://slack.com/api/chat.update";
-      payload.ts = scanMeta.slackMessageTs;
+    if (event === "finish") {
+      const dbScan = await prisma.scan.findUnique({ 
+        where: { id: scanMeta.id }, 
+        select: { slackMessageTs: true } 
+      });
+      if (dbScan?.slackMessageTs) {
+        endpoint = "https://slack.com/api/chat.update";
+        payload.ts = dbScan.slackMessageTs;
+      }
     }
 
     const res = await fetch(endpoint, {
