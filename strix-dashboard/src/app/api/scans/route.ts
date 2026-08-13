@@ -118,7 +118,7 @@ export async function GET() {
     if (session.role !== "ADMIN") {
       where = { userId: session.userId as string };
     }
-    const dbScans = await prisma.scan.findMany({ where, orderBy: { startedAt: "desc" } });
+    const dbScans = await prisma.scan.findMany({ where, orderBy: { startedAt: "desc" }, include: { project: true } });
     
     // Sync logic: loop through dbScans, read vulnerabilities.json and run.json, update DB if changed.
     const syncedScans = await Promise.all(dbScans.map(async (scan) => {
@@ -158,10 +158,10 @@ export async function GET() {
              data: { status: newStatus, vulnCount: newVulnCount } 
            });
          } catch(e) {}
-         return { ...scan, status: newStatus, vulnCount: newVulnCount, scanName: (scan.payload as any)?.scanName || "" };
+         return { ...scan, status: newStatus, vulnCount: newVulnCount, scanName: (scan.payload as any)?.scanName || "", projectName: scan.project?.name || scan.projectName };
       }
       
-      return { ...scan, scanName: (scan.payload as any)?.scanName || "" };
+      return { ...scan, scanName: (scan.payload as any)?.scanName || "", projectName: scan.project?.name || scan.projectName };
     }));
 
     return NextResponse.json({ scans: syncedScans });

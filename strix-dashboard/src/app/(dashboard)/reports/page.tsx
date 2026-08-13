@@ -12,11 +12,15 @@ interface Scan {
   vulnCount: number;
   startedAt: string;
   projectName?: string;
+  scanMode?: string;
+  llmModel?: string;
 }
 
 export default function Reports() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [search, setSearch] = useState("");
+  const [filterProject, setFilterProject] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
   const { alert } = useDialog();
 
@@ -30,12 +34,19 @@ export default function Reports() {
       });
   }, []);
 
+  const projects = Array.from(new Set(scans.map(s => s.projectName || "Default"))).sort();
+
   const filteredScans = scans.filter((s) => {
     const q = search.toLowerCase();
     const targetMatch = s.target?.toLowerCase().includes(q);
-    const projectMatch = s.projectName?.toLowerCase().includes(q);
-    const defaultProjectMatch = "default".includes(q);
-    return targetMatch || projectMatch || (!s.projectName && defaultProjectMatch);
+    const pName = s.projectName || "Default";
+    const projectMatch = pName.toLowerCase().includes(q);
+    
+    const matchesSearch = targetMatch || projectMatch;
+    const matchesProject = filterProject === "all" || pName === filterProject;
+    const matchesStatus = filterStatus === "all" || s.status === filterStatus;
+    
+    return matchesSearch && matchesProject && matchesStatus;
   });
 
   const [generating, setGenerating] = useState(false);
@@ -66,33 +77,55 @@ export default function Reports() {
           <p className="page-desc">Generate and download executive summaries for completed scans.</p>
         </div>
         
-        {/* Search Input */}
-        <div style={{ position: "relative", width: 280 }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)" }} />
-          <input 
-            type="text" 
-            placeholder="Search by project or target..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%", padding: "9px 12px 9px 34px", background: "var(--bg-1)",
-              border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)",
-              fontSize: 13, fontFamily: "var(--font-sans)", outline: "none"
-            }}
-          />
+        {/* Filters */}
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ position: "relative", width: 220 }}>
+            <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)" }} />
+            <input 
+              type="text" 
+              placeholder="Search target..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: "100%", padding: "9px 12px 9px 34px", background: "var(--bg-1)",
+                border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)",
+                fontSize: 13, fontFamily: "var(--font-sans)", outline: "none"
+              }}
+            />
+          </div>
+          
+          <select 
+            value={filterProject} 
+            onChange={(e) => setFilterProject(e.target.value)}
+            style={{ padding: "9px 12px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13, outline: "none", width: 160 }}
+          >
+            <option value="all">All Projects</option>
+            {projects.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          <select 
+            value={filterStatus} 
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{ padding: "9px 12px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13, outline: "none", width: 140 }}
+          >
+            <option value="all">All Statuses</option>
+            <option value="completed">Completed</option>
+            <option value="stopped">Stopped</option>
+          </select>
         </div>
       </div>
 
       <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
         {/* Table header */}
         <div style={{
-          display: "grid", gridTemplateColumns: "1.5fr 2fr 1fr 80px 100px",
+          display: "grid", gridTemplateColumns: "1fr 2fr 1.5fr 1fr 80px 100px",
           gap: 12, padding: "10px 20px", borderBottom: "1px solid var(--border)",
           fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--fg-3)",
           background: "var(--bg-1)",
         }}>
           <div>Project</div>
           <div>Target</div>
+          <div>Details</div>
           <div>Date</div>
           <div>Issues</div>
           <div></div>
@@ -111,7 +144,7 @@ export default function Reports() {
               <div
                 key={scan.id}
                 style={{
-                  display: "grid", gridTemplateColumns: "1.5fr 2fr 1fr 80px 100px",
+                  display: "grid", gridTemplateColumns: "1fr 2fr 1.5fr 1fr 80px 100px",
                   gap: 12, padding: "13px 20px", borderBottom: "1px solid var(--border)",
                   alignItems: "center", transition: "background var(--dur)",
                 }}
@@ -123,6 +156,10 @@ export default function Reports() {
                 </div>
                 <div style={{ fontSize: 12, color: "var(--fg-3)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {scan.target}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--fg-3)", display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span>{scan.scanMode ? scan.scanMode.charAt(0).toUpperCase() + scan.scanMode.slice(1) : "Standard"} Mode</span>
+                  <span style={{ color: "var(--fg-2)" }}>{scan.llmModel || "Auto"}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--fg-3)" }}>
                   <Calendar size={12} />
