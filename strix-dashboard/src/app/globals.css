@@ -95,42 +95,42 @@
 ═══════════════════════════════════════════ */
 [data-theme="light"] {
   /* Surface */
-  --bg:         #ffffff;
-  --bg-1:       #f7f7f7;
-  --bg-2:       #ececec;
-  --bg-3:       #e0e0e0;
-  --bg-4:       #d4d4d4;
+  --bg:         #FCF9F2;
+  --bg-1:       #F5EFE6;
+  --bg-2:       #EAE0D5;
+  --bg-3:       #D8C9B9;
+  --bg-4:       #C6B3A0;
 
   /* Border */
-  --border:     rgba(0,0,0,0.08);
-  --border-md:  rgba(0,0,0,0.12);
-  --border-hi:  rgba(0,0,0,0.20);
+  --border:     rgba(94, 76, 61, 0.12);
+  --border-md:  rgba(94, 76, 61, 0.20);
+  --border-hi:  rgba(94, 76, 61, 0.35);
 
   /* Text */
-  --fg:         #080808;
-  --fg-2:       rgba(0,0,0,0.65);
-  --fg-3:       rgba(0,0,0,0.40);
+  --fg:         #4A3B32;
+  --fg-2:       rgba(74, 59, 50, 0.70);
+  --fg-3:       rgba(74, 59, 50, 0.45);
 
   /* Accent */
-  --accent:     #080808;
-  --accent-dim: rgba(0,0,0,0.06);
+  --accent:     #8C6239;
+  --accent-dim: rgba(140, 98, 57, 0.12);
 
   /* Shadcn compat */
-  --background:          #ffffff;
-  --foreground:          #080808;
-  --card:                #f7f7f7;
-  --card-foreground:     #080808;
-  --popover:             #ececec;
-  --popover-foreground:  #080808;
-  --primary:             #080808;
-  --primary-foreground:  #ffffff;
-  --secondary:           #e0e0e0;
-  --secondary-foreground: #080808;
-  --muted:               #ececec;
-  --muted-foreground:    rgba(0,0,0,0.45);
-  --border-color:        rgba(0,0,0,0.08);
-  --input:               rgba(0,0,0,0.08);
-  --ring:                rgba(0,0,0,0.20);
+  --background:          #FCF9F2;
+  --foreground:          #4A3B32;
+  --card:                #F5EFE6;
+  --card-foreground:     #4A3B32;
+  --popover:             #F5EFE6;
+  --popover-foreground:  #4A3B32;
+  --primary:             #8C6239;
+  --primary-foreground:  #FCF9F2;
+  --secondary:           #EAE0D5;
+  --secondary-foreground: #4A3B32;
+  --muted:               #EAE0D5;
+  --muted-foreground:    rgba(74, 59, 50, 0.6);
+  --border-color:        rgba(94, 76, 61, 0.12);
+  --input:               rgba(94, 76, 61, 0.12);
+  --ring:                rgba(140, 98, 57, 0.3);
 }
 
 /* ─── Reset ────────────────────────────── */
