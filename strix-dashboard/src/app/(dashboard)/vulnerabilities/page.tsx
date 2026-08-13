@@ -57,21 +57,19 @@ export default function VulnerabilitiesPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const res = await fetch("/api/scans");
+      const res = await fetch("/api/vulnerabilities");
       const data = await res.json();
-      const scans: Scan[] = data.scans ?? [];
+      
+      const vulns = (Array.isArray(data) ? data : []).map((v: any) => ({
+        ...v,
+        scanTarget: v.scan?.target || "Unknown Target"
+      }));
 
-      const vulns: VulnWithScan[] = [];
-      for (const scan of scans) {
-        const detail = await fetch(`/api/scans/${scan.id}`).then((r) => r.json());
-        for (const v of detail.vulnerabilities ?? []) {
-          vulns.push({ ...v, scanId: scan.id, scanTarget: scan.target });
-        }
-      }
-
-      vulns.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+      vulns.sort((a, b) => (SEVERITY_ORDER[a.severity as keyof typeof SEVERITY_ORDER] ?? 5) - (SEVERITY_ORDER[b.severity as keyof typeof SEVERITY_ORDER] ?? 5));
       setAllVulns(vulns);
-    } catch {}
+    } catch (e) {
+      console.error("Failed to fetch vulnerabilities", e);
+    }
     setLoading(false);
   }, []);
 
