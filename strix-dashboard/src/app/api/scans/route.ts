@@ -373,7 +373,7 @@ export async function POST(req: NextRequest) {
   }
   log.info("POST /api/scans", `Scan created/resumed`, { scanId, scanDir });
 
-  const userSettings = userExists.settings || { telegramToken: "", telegramChatId: "", telegramBotEnabled: false, notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
+  const userSettings: any = userExists.settings || { telegramToken: "", telegramChatId: "", telegramBotEnabled: false, notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
 
   const passSettings = {
     aggressiveness: userSettings.aggressiveness,
