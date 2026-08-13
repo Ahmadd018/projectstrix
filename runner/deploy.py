@@ -268,18 +268,26 @@ def setup_dashboard(db_pass):
     print_success("Dashboard setup completed.")
 
 def deploy_service():
-    print_step("Deploying Strix Dashboard as a PM2 Service...")
+    print_step("Deploying Strix Dashboard and Telegram Bot as PM2 Services...")
     dashboard_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "strix-dashboard")
+    bot_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), "telegram-bot")
     
     # Kill any process on port 48080 to prevent EADDRINUSE
     run_cmd("fuser -k 48080/tcp", fail_on_error=False)
     
-    # Delete existing pm2 process if it exists
+    # Delete existing pm2 processes if they exist
     run_cmd("pm2 delete strix-dashboard", fail_on_error=False)
+    run_cmd("pm2 delete strix-telegram-bot", fail_on_error=False)
     
     # Start the app via PM2
     print("Starting Next.js via PM2 on port 48080...")
     run_cmd(f"cd {dashboard_dir} && pm2 start npm --name 'strix-dashboard' -- run start -- -H 0.0.0.0 -p 48080")
+    
+    # Install and Start Telegram Bot via PM2
+    if os.path.exists(bot_dir):
+        print("Starting Telegram Bot via PM2...")
+        run_cmd(f"cd {bot_dir} && npm install --legacy-peer-deps", fail_on_error=False)
+        run_cmd(f"cd {bot_dir} && pm2 start bot.js --name 'strix-telegram-bot'", fail_on_error=False)
     
     # Save PM2 list and configure startup
     run_cmd("pm2 save")
