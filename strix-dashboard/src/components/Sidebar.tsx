@@ -41,7 +41,6 @@ const navItems = [
   { name: "System Logs",      path: "/logs",            icon: TerminalSquare },
   { name: "Instructions",     path: "/instructions",    icon: BookText },
   { name: "API Docs",         path: "/api-docs",        icon: BookOpen },
-  { name: "Settings",         path: "/settings",        icon: Settings },
 ];
 
 interface UserProfile {
@@ -246,17 +245,33 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar-footer">
-        {/* API Status */}
-        <div className="sidebar-api-status" style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px", justifyContent: collapsed ? "center" : "flex-start" }}>
-          <span
-            className={`status-dot${apiStatus === "ok" ? " online" : " offline"}`}
-          />
+        {/* Settings Link replacing API Status */}
+        <Link 
+          href="/settings"
+          className={`sidebar-api-status ${pathname === "/settings" ? "active" : ""}`} 
+          style={{ 
+            display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "12px 0" : "12px", 
+            justifyContent: collapsed ? "center" : "flex-start",
+            color: pathname === "/settings" ? "var(--fg)" : "var(--fg-3)",
+            textDecoration: "none",
+            borderRadius: "var(--r)",
+            transition: "background 0.2s, color 0.2s",
+            background: pathname === "/settings" ? "var(--bg-2)" : "transparent"
+          }}
+          onMouseOver={e => {
+            if (pathname !== "/settings") e.currentTarget.style.color = "var(--fg)";
+          }}
+          onMouseOut={e => {
+            if (pathname !== "/settings") e.currentTarget.style.color = "var(--fg-3)";
+          }}
+        >
+          <Settings size={18} style={{ color: pathname === "/settings" ? "var(--fg)" : "var(--fg-2)" }} />
           {!collapsed && (
-            <span className="sidebar-api-text" style={{ fontSize: 12, color: "var(--fg-3)" }}>
-              API {apiStatus === "ok" ? "Online" : apiStatus === "error" ? "Offline" : "…"}
+            <span style={{ fontSize: 13, fontWeight: 500 }}>
+              Settings
             </span>
           )}
-        </div>
+        </Link>
 
         {/* User */}
         <div 
