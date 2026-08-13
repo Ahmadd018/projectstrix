@@ -49,17 +49,10 @@ function ensureRunsDir() {
 }
 
 async function sendWebhookNotification(config: any, event: "start" | "finish", scanMeta: any, vulnCount: number = 0) {
-  if (!config || !config.webhookUrl) return;
+  if (!config || !config.slackBotToken || !config.slackChannelId) return;
   
   if (event === "start" && !config.notifyOnStart) return;
   if (event === "finish" && !config.notifyOnFinish) return;
-
-  // M-1: SSRF protection — resolve the host and block private/reserved/link-local
-  // ranges (incl. cloud metadata 169.254.169.254 and alternate IP encodings).
-  if (!(await isSafePublicUrl(config.webhookUrl))) {
-    log.warn("WEBHOOK", "Blocked SSRF/invalid webhook URL");
-    return;
-  }
 
   let blocks: any[] = [];
   let fallbackText = "";
@@ -128,7 +121,8 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
     });
   }
 
-  const payload = {
+  const payload: any = {
+    channel: config.slackChannelId,
     text: fallbackText,
     attachments: [
       {
@@ -139,19 +133,41 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
   };
 
   try {
-    const res = await fetch(config.webhookUrl, {
+    let endpoint = "https://slack.com/api/chat.postMessage";
+    
+    if (event === "finish" && scanMeta.slackMessageTs) {
+      endpoint = "https://slack.com/api/chat.update";
+      payload.ts = scanMeta.slackMessageTs;
+    }
+
+    const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      redirect: "manual", // M-1: don't follow redirects into blocked internal hosts
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.slackBotToken}`
+      },
+      body: JSON.stringify(payload)
     });
+
     if (!res.ok) {
-      log.warn("WEBHOOK", `Failed to send webhook: ${res.status} ${res.statusText}`);
+      log.warn("SLACK", `Failed to reach Slack API: ${res.status}`);
+      return;
+    }
+
+    const data = await res.json();
+    if (!data.ok) {
+      log.warn("SLACK", `Slack API returned error: ${data.error}`);
+    } else if (event === "start" && data.ts) {
+      await prisma.scan.update({
+        where: { id: scanMeta.id },
+        data: { slackMessageTs: data.ts }
+      });
+      log.info("SLACK", `Saved Slack message ts: ${data.ts}`);
     } else {
-      log.info("WEBHOOK", `Successfully sent ${event} notification to webhook`);
+      log.info("SLACK", `Successfully sent ${event} notification to Slack`);
     }
   } catch (err: any) {
-    log.error("WEBHOOK", `Error sending webhook`, err);
+    log.error("SLACK", `Error sending Slack notification`, err);
   }
 }
 
@@ -421,9 +437,10 @@ export async function POST(req: NextRequest) {
   }
   log.info("POST /api/scans", `Scan created/resumed`, { scanId, scanDir });
 
-  const userSettings = userExists.settings || { webhookUrl: "", notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
+  const userSettings = userExists.settings || { slackBotToken: "", slackChannelId: "", notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
   const notificationConfig = {
-    webhookUrl: userSettings.webhookUrl,
+    slackBotToken: (userSettings as any).slackBotToken,
+    slackChannelId: (userSettings as any).slackChannelId,
     notifyOnStart: userSettings.notifyOnStart,
     notifyOnFinish: userSettings.notifyOnFinish
   };
