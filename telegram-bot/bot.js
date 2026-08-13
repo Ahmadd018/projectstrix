@@ -1,5 +1,6 @@
 require('dotenv').config({ path: '../strix-dashboard/.env' });
-const TelegramBot = require('node-telegram-bot-api');
+const TelegramBotModule = require('node-telegram-bot-api');
+const TelegramBot = TelegramBotModule.default || TelegramBotModule.TelegramBot || TelegramBotModule;
 const { Client } = require('pg');
 
 const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/strix';
