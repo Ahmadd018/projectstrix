@@ -637,7 +637,7 @@ export async function POST(req: NextRequest) {
       data: { status: "failed" }
     }).catch(() => {});
     log.warn("PROC_ERROR", "Falling back to DEMO mode after process error");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, userSettings);
   });
 
   return NextResponse.json({ scanId, status: "running" });
