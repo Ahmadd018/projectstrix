@@ -481,7 +481,7 @@ export async function POST(req: NextRequest) {
 
   if (body.simulationMode) {
     log.info("POST /api/scans", "Simulation Mode enabled, bypassing real agent");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, userSettings);
     return NextResponse.json({ scanId, status: "running", mode: "simulation" });
   }
 
@@ -496,7 +496,7 @@ export async function POST(req: NextRequest) {
       err,
     );
     log.warn("POST /api/scans", "Falling back to DEMO mode");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, userSettings);
     return NextResponse.json({ scanId, status: "running", mode: "demo" });
   }
 
@@ -703,7 +703,7 @@ function runMockScan(
   vulnFile: string,
   logFile: string,
   target: string,
-  notificationConfig?: any
+  userSettings?: any
 ) {
   log.info("MOCK_SCAN", `Starting mock scan for ${target}`, {
     scanId: scanId.slice(0, 8),
@@ -866,8 +866,15 @@ function runMockScan(
         data: { status: "completed", vulnCount: mockVulns.length }
       }).catch(() => {});
       
-      // Send finish notification for mock
-      sendWebhookNotification(notificationConfig, "finish", updated, mockVulns.length);
+      // Send finish notification for mock if enabled
+      if (userSettings?.telegramBotEnabled && userSettings?.telegramToken && userSettings?.telegramChatId && userSettings?.notifyOnFinish) {
+        const text = `✅ *Scan Finished (MOCK)*\n\n🎯 Target: ${target}\n📊 Status: completed\n🛡️ Vulnerabilities: ${mockVulns.length}`;
+        fetch(`https://api.telegram.org/bot${userSettings.telegramToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: userSettings.telegramChatId, text, parse_mode: "Markdown" })
+        }).catch(() => {});
+      }
       
       log.info("MOCK_SCAN", `Mock scan ${scanId.slice(0, 8)} completed`, {
         totalVulns: mockVulns.length,
