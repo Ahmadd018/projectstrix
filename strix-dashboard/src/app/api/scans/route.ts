@@ -373,25 +373,15 @@ export async function POST(req: NextRequest) {
   }
   log.info("POST /api/scans", `Scan created/resumed`, { scanId, scanDir });
 
-  const userSettings: any = userExists.settings || { telegramToken: "", telegramChatId: "", telegramBotEnabled: false, notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
-
-  const passSettings = {
-    aggressiveness: userSettings.aggressiveness,
-    maxThreads: userSettings.maxThreads,
+  const userSettings = userExists.settings || { webhookUrl: "", notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
+  const notificationConfig = {
+    webhookUrl: userSettings.webhookUrl,
     notifyOnStart: userSettings.notifyOnStart,
     notifyOnFinish: userSettings.notifyOnFinish
   };
 
-  // Webhook notifications are now handled by Telegram bot (standalone service)
-  // Send start notification if enabled
-  if (userSettings.telegramBotEnabled && userSettings.telegramToken && userSettings.telegramChatId && userSettings.notifyOnStart) {
-    const text = `🚀 *Scan Started*\n\n🎯 Target: ${target}\n⚙️ Mode: ${scanMode}\n🤖 Model: ${llmModel}`;
-    fetch(`https://api.telegram.org/bot${userSettings.telegramToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: userSettings.telegramChatId, text, parse_mode: "Markdown" })
-    }).catch(e => log.error("POST /api/scans", "Failed to send Telegram notification", e));
-  }
+  // Send start notification
+  sendWebhookNotification(notificationConfig, "start", runMeta);
 
   const strixCmd = getStrixCommand();
   const args = ["-n"]; // Non-interactive to ensure clean logs
@@ -481,7 +471,7 @@ export async function POST(req: NextRequest) {
 
   if (body.simulationMode) {
     log.info("POST /api/scans", "Simulation Mode enabled, bypassing real agent");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, userSettings);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
     return NextResponse.json({ scanId, status: "running", mode: "simulation" });
   }
 
@@ -496,7 +486,7 @@ export async function POST(req: NextRequest) {
       err,
     );
     log.warn("POST /api/scans", "Falling back to DEMO mode");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, userSettings);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
     return NextResponse.json({ scanId, status: "running", mode: "demo" });
   }
 
@@ -600,17 +590,9 @@ export async function POST(req: NextRequest) {
       data: { status: finalStatus, vulnCount }
     }).catch(err => log.error("PROC_CLOSE", "Failed to update DB status on scan close", err));
     
-    // Send finish notification if enabled
-    if (userSettings.telegramBotEnabled && userSettings.telegramToken && userSettings.telegramChatId && userSettings.notifyOnFinish) {
-      const icon = finalStatus === 'completed' ? '✅' : (finalStatus === 'failed' ? '❌' : '⚠️');
-      const text = `${icon} *Scan Finished*\n\n🎯 Target: ${target}\n📊 Status: ${finalStatus}\n🛡️ Vulnerabilities: ${vulnCount}`;
-      fetch(`https://api.telegram.org/bot${userSettings.telegramToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: userSettings.telegramChatId, text, parse_mode: "Markdown" })
-      }).catch(e => log.error("PROC_CLOSE", "Failed to send Telegram finish notification", e));
-    }
-
+    // Send finish notification
+    sendWebhookNotification(notificationConfig, "finish", updated, vulnCount);
+    
     log.info("PROC_CLOSE", `Scan ${scanId.slice(0, 8)} finished`, {
       exitCode: code,
       status: updated.status,
@@ -637,7 +619,7 @@ export async function POST(req: NextRequest) {
       data: { status: "failed" }
     }).catch(() => {});
     log.warn("PROC_ERROR", "Falling back to DEMO mode after process error");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, userSettings);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
   });
 
   return NextResponse.json({ scanId, status: "running" });
@@ -703,7 +685,7 @@ function runMockScan(
   vulnFile: string,
   logFile: string,
   target: string,
-  userSettings?: any
+  notificationConfig?: any
 ) {
   log.info("MOCK_SCAN", `Starting mock scan for ${target}`, {
     scanId: scanId.slice(0, 8),
@@ -866,15 +848,8 @@ function runMockScan(
         data: { status: "completed", vulnCount: mockVulns.length }
       }).catch(() => {});
       
-      // Send finish notification for mock if enabled
-      if (userSettings?.telegramBotEnabled && userSettings?.telegramToken && userSettings?.telegramChatId && userSettings?.notifyOnFinish) {
-        const text = `✅ *Scan Finished (MOCK)*\n\n🎯 Target: ${target}\n📊 Status: completed\n🛡️ Vulnerabilities: ${mockVulns.length}`;
-        fetch(`https://api.telegram.org/bot${userSettings.telegramToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: userSettings.telegramChatId, text, parse_mode: "Markdown" })
-        }).catch(() => {});
-      }
+      // Send finish notification for mock
+      sendWebhookNotification(notificationConfig, "finish", updated, mockVulns.length);
       
       log.info("MOCK_SCAN", `Mock scan ${scanId.slice(0, 8)} completed`, {
         totalVulns: mockVulns.length,
