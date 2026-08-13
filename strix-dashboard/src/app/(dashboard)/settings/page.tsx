@@ -15,7 +15,7 @@ export default function Settings() {
   const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "", dashscope: "", moonshot: "", vertex_ai: "" });
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
-  const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
+  const [notificationConfig, setNotificationConfig] = useState({ slackBotToken: "", slackChannelId: "", notifyOnStart: false, notifyOnFinish: true });
   const [preferencesConfig, setPreferencesConfig] = useState({ theme: "dark", defaultModel: "openai/gpt-4o", autoDeleteDays: 0 });
   const [saved, setSaved] = useState(false);
 
@@ -35,7 +35,7 @@ export default function Settings() {
         if (!data.error) {
           if (data.settings) {
             setAgentConfig({ aggressiveness: data.settings.aggressiveness, maxThreads: data.settings.maxThreads });
-            setNotificationConfig({ webhookUrl: data.settings.webhookUrl || "", notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
+            setNotificationConfig({ slackBotToken: data.settings.slackBotToken || "", slackChannelId: data.settings.slackChannelId || "", notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
             setPreferencesConfig({ 
               theme: data.settings.theme || "dark", 
               defaultModel: data.settings.defaultModel || "openai/gpt-4o", 
@@ -312,15 +312,27 @@ export default function Settings() {
               </div>
               <div style={s.cardBody}>
                 <div style={s.field}>
-                  <label style={s.label}>Webhook URL</label>
+                  <label style={s.label}>Slack Bot Token</label>
                   <input
                     style={s.input}
-                    type="url"
-                    placeholder="https://hooks.slack.com/... or Discord webhook"
-                    value={notificationConfig.webhookUrl}
-                    onChange={(e) => setNotificationConfig({ ...notificationConfig, webhookUrl: e.target.value })}
+                    type="password"
+                    placeholder="xoxb-..."
+                    value={notificationConfig.slackBotToken}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, slackBotToken: e.target.value })}
                   />
-                  <span style={s.hint}>Standard JSON payload is sent via POST. For Discord, append /slack to the webhook URL.</span>
+                  <span style={s.hint}>Create a Slack App, add 'chat:write' scope, install to workspace, and paste the Bot User OAuth Token here.</span>
+                </div>
+                
+                <div style={{...s.field, marginTop: 12}}>
+                  <label style={s.label}>Slack Channel ID</label>
+                  <input
+                    style={s.input}
+                    type="text"
+                    placeholder="e.g. C01234567"
+                    value={notificationConfig.slackChannelId}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, slackChannelId: e.target.value })}
+                  />
+                  <span style={s.hint}>Right click a channel in Slack -› Copy Link. The Channel ID is the last part of the URL.</span>
                 </div>
                 
                 <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
