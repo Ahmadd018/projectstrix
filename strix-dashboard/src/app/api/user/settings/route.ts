@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
       settings: user.settings || { 
         aggressiveness: 50, 
         maxThreads: 4, 
-        webhookUrl: "", 
+        telegramToken: "",
+        telegramChatId: "",
+        telegramBotEnabled: false, 
         notifyOnStart: false, 
         notifyOnFinish: true,
         theme: "dark",
@@ -54,13 +56,15 @@ export async function POST(req: NextRequest) {
       };
       const aggressiveness = clamp(d.aggressiveness, 0, 100, 50);
       const maxThreads = clamp(d.maxThreads, 1, 32, 4);
-      const webhookUrl = typeof d.webhookUrl === "string" ? d.webhookUrl.trim() : "";
-      if (webhookUrl.length > 2048) {
-        return NextResponse.json({ error: "webhookUrl too long" }, { status: 400 });
+      const telegramToken = typeof d.telegramToken === "string" ? d.telegramToken.trim() : "";
+      if (telegramToken.length > 200) {
+        return NextResponse.json({ error: "telegramToken too long" }, { status: 400 });
       }
-      if (webhookUrl && !/^https?:\/\//i.test(webhookUrl)) {
-        return NextResponse.json({ error: "webhookUrl must be an http(s) URL" }, { status: 400 });
+      const telegramChatId = typeof d.telegramChatId === "string" ? d.telegramChatId.trim() : "";
+      if (telegramChatId.length > 100) {
+        return NextResponse.json({ error: "telegramChatId too long" }, { status: 400 });
       }
+      const telegramBotEnabled = !!d.telegramBotEnabled;
       const notifyOnStart = !!d.notifyOnStart;
       const notifyOnFinish = !!d.notifyOnFinish;
 
@@ -70,8 +74,8 @@ export async function POST(req: NextRequest) {
 
       const settings = await prisma.userSettings.upsert({
         where: { userId },
-        update: { aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish, theme, defaultModel, autoDeleteDays },
-        create: { userId, aggressiveness, maxThreads, webhookUrl, notifyOnStart, notifyOnFinish, theme, defaultModel, autoDeleteDays }
+        update: { aggressiveness, maxThreads, telegramToken, telegramChatId, telegramBotEnabled, notifyOnStart, notifyOnFinish, theme, defaultModel, autoDeleteDays },
+        create: { userId, aggressiveness, maxThreads, telegramToken, telegramChatId, telegramBotEnabled, notifyOnStart, notifyOnFinish, theme, defaultModel, autoDeleteDays }
       });
 
       return NextResponse.json({ success: true, settings });

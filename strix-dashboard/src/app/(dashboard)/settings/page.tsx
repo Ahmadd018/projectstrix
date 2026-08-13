@@ -15,7 +15,7 @@ export default function Settings() {
   const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "", dashscope: "", moonshot: "", vertex_ai: "" });
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
-  const [notificationConfig, setNotificationConfig] = useState({ webhookUrl: "", notifyOnStart: false, notifyOnFinish: true });
+  const [notificationConfig, setNotificationConfig] = useState({ telegramToken: "", telegramChatId: "", telegramBotEnabled: false, notifyOnStart: false, notifyOnFinish: true });
   const [preferencesConfig, setPreferencesConfig] = useState({ theme: "dark", defaultModel: "openai/gpt-4o", autoDeleteDays: 0 });
   const [saved, setSaved] = useState(false);
 
@@ -35,7 +35,7 @@ export default function Settings() {
         if (!data.error) {
           if (data.settings) {
             setAgentConfig({ aggressiveness: data.settings.aggressiveness, maxThreads: data.settings.maxThreads });
-            setNotificationConfig({ webhookUrl: data.settings.webhookUrl || "", notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
+            setNotificationConfig({ telegramToken: data.settings.telegramToken || "", telegramChatId: data.settings.telegramChatId || "", telegramBotEnabled: data.settings.telegramBotEnabled || false, notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
             setPreferencesConfig({ 
               theme: data.settings.theme || "dark", 
               defaultModel: data.settings.defaultModel || "openai/gpt-4o", 
@@ -307,20 +307,46 @@ export default function Settings() {
           {activeTab === "notifications" && (
             <div style={s.card}>
               <div style={s.cardHead}>
-                <div style={s.cardTitle}>Webhook Notifications</div>
-                <div style={s.cardDesc}>Configure webhook URLs to receive scan updates in Slack, Discord, or other services.</div>
+                <div style={s.cardTitle}>Telegram Bot Integration</div>
+                <div style={s.cardDesc}>Configure interactive Telegram Bot to control and monitor scans securely.</div>
               </div>
               <div style={s.cardBody}>
+                <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                  <input
+                    type="checkbox"
+                    id="telegramBotEnabled"
+                    checked={notificationConfig.telegramBotEnabled}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, telegramBotEnabled: e.target.checked })}
+                    style={{ width: 16, height: 16, accentColor: "var(--fg)", cursor: "pointer" }}
+                  />
+                  <div>
+                    <label htmlFor="telegramBotEnabled" style={{ ...s.label, marginBottom: 2, cursor: "pointer" }}>Enable Telegram Bot</label>
+                    <div style={s.hint}>Turn on the interactive Telegram bot service.</div>
+                  </div>
+                </div>
+
                 <div style={s.field}>
-                  <label style={s.label}>Webhook URL</label>
+                  <label style={s.label}>Telegram Bot Token</label>
                   <input
                     style={s.input}
-                    type="url"
-                    placeholder="https://hooks.slack.com/... or Discord webhook"
-                    value={notificationConfig.webhookUrl}
-                    onChange={(e) => setNotificationConfig({ ...notificationConfig, webhookUrl: e.target.value })}
+                    type="password"
+                    placeholder="123456789:AAH..."
+                    value={notificationConfig.telegramToken}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, telegramToken: e.target.value })}
                   />
-                  <span style={s.hint}>Standard JSON payload is sent via POST. For Discord, append /slack to the webhook URL.</span>
+                  <span style={s.hint}>Get this token from @BotFather on Telegram.</span>
+                </div>
+
+                <div style={s.field}>
+                  <label style={s.label}>Telegram Chat ID</label>
+                  <input
+                    style={s.input}
+                    type="text"
+                    placeholder="-10012345678 or 987654321"
+                    value={notificationConfig.telegramChatId}
+                    onChange={(e) => setNotificationConfig({ ...notificationConfig, telegramChatId: e.target.value })}
+                  />
+                  <span style={s.hint}>The chat or group ID where the bot will send alerts and accept commands. Send /start to your bot to auto-detect.</span>
                 </div>
                 
                 <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
