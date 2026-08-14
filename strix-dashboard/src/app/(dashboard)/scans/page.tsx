@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback, Suspense, useMemo } from "reac
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Play, Trash2, Square, Folder, FolderOpen,
-  Search, Plus, Loader2, Settings2, ChevronDown, ChevronRight, Clock
+  Search, Plus, Loader2, Settings2, ChevronDown, ChevronRight, Clock,
+  ChevronsDownUp, ChevronsUpDown
 } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 
@@ -488,9 +489,34 @@ function ScansContent() {
             )}
           </div>
 
-          <span style={{ fontSize: 12, color: "var(--fg-3)", marginLeft: "auto" }}>
-            {filteredScans.length} scan{filteredScans.length !== 1 ? "s" : ""}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto" }}>
+            {Object.keys(groupedScans).length > 1 && (
+              <button
+                onClick={() => {
+                  const allKeys = Object.keys(groupedScans);
+                  const allCollapsed = allKeys.every(k => collapsedGroups[k]);
+                  if (allCollapsed) {
+                    setCollapsedGroups({});
+                  } else {
+                    const collapsed: Record<string, boolean> = {};
+                    allKeys.forEach(k => { collapsed[k] = true; });
+                    setCollapsedGroups(collapsed);
+                  }
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "4px 10px", fontSize: 11, color: "var(--fg-3)", cursor: "pointer", height: 28, transition: "all var(--dur)" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--fg)"; e.currentTarget.style.borderColor = "var(--fg-3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "var(--fg-3)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+              >
+                {Object.keys(groupedScans).every(k => collapsedGroups[k])
+                  ? <><ChevronsUpDown size={12} /> Expand All</>
+                  : <><ChevronsDownUp size={12} /> Collapse All</>
+                }
+              </button>
+            )}
+            <span style={{ fontSize: 12, color: "var(--fg-3)" }}>
+              {filteredScans.length} scan{filteredScans.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
 
         {/* Table header */}
