@@ -9,6 +9,7 @@ export async function GET(req: Request) {
   }
 
   const userId = session.userId as string;
+  const isAdmin = session.role === "ADMIN";
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
@@ -19,41 +20,49 @@ export async function GET(req: Request) {
 
   const query = q.trim();
 
-  // Search scans (by target)
+  // Search scans (by target OR projectName)
   const scans = await prisma.scan.findMany({
     where: {
-      userId: userId,
-      target: { contains: query, mode: "insensitive" }
+      ...(isAdmin ? {} : { userId }),
+      OR: [
+        { target: { contains: query, mode: "insensitive" } },
+        { projectName: { contains: query, mode: "insensitive" } },
+      ]
     },
     select: {
       id: true,
       target: true,
+      projectName: true,
       status: true,
-      startedAt: true
+      scanMode: true,
+      llmModel: true,
+      startedAt: true,
+      vulnCount: true,
     },
-    take: 5,
+    take: 8,
     orderBy: { startedAt: "desc" }
   });
 
-  // Search vulnerabilities (by title or endpoint)
+  // Search vulnerabilities (by title, endpoint, or payload content)
   const vulns = await prisma.vulnerability.findMany({
     where: {
-      scan: { userId: userId },
+      ...(isAdmin ? {} : { scan: { userId } }),
       OR: [
         { title: { contains: query, mode: "insensitive" } },
-        { endpoint: { contains: query, mode: "insensitive" } }
+        { endpoint: { contains: query, mode: "insensitive" } },
       ]
     },
     select: {
       id: true,
       title: true,
       severity: true,
+      endpoint: true,
       scanId: true,
       scan: {
-        select: { target: true }
+        select: { target: true, projectName: true }
       }
     },
-    take: 5,
+    take: 8,
     orderBy: { createdAt: "desc" }
   });
 
