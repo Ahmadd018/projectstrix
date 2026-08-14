@@ -38,7 +38,7 @@ async function triggerScan(scan: any) {
       return;
     }
 
-    const port = process.env.PORT || "48080";
+    const port = process.env.NEXT_PUBLIC_API_PORT || "48080";
     const url = `http://127.0.0.1:${port}/api/scans`;
 
     log.info("SCHEDULER", `Triggering scan ${scan.id} for target: ${payload.target}`);
