@@ -28,8 +28,6 @@ interface InAppNotif {
   link?: string;
 }
 
-}
-
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
