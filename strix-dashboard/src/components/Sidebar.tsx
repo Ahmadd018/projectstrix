@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import GlobalSearchModal from "./GlobalSearchModal";
 import {
   LayoutDashboard,
   Radar,
@@ -62,7 +61,6 @@ export default function Sidebar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Profile Modal State
   const [activeTab, setActiveTab] = useState<"overview" | "security">("overview");
@@ -99,18 +97,7 @@ export default function Sidebar() {
     check();
     const iv = setInterval(check, 30000);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsSearchOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      clearInterval(iv);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
@@ -199,24 +186,7 @@ export default function Sidebar() {
       </div>
 
       {/* New Scan */}
-      <div className="sidebar-new-scan" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <button 
-          className="btn-new-scan" 
-          title="Search (Ctrl+K)"
-          onClick={() => setIsSearchOpen(true)}
-          style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--fg-2)" }}
-          onMouseEnter={e => { e.currentTarget.style.color = "var(--fg)"; e.currentTarget.style.borderColor = "var(--fg-3)"; }}
-          onMouseLeave={e => { e.currentTarget.style.color = "var(--fg-2)"; e.currentTarget.style.borderColor = "var(--border)"; }}
-        >
-          <Search size={14} />
-          {!collapsed && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-              <span>Search</span>
-              <span style={{ fontSize: 10, color: "var(--fg-3)", background: "var(--bg-2)", padding: "2px 4px", borderRadius: 4, border: "1px solid var(--border)" }}>⌘K</span>
-            </div>
-          )}
-        </button>
-
+      <div className="sidebar-new-scan">
         <Link href="/scans?new=1" className="btn-new-scan" title="New Scan">
           <Plus size={14} />
           {!collapsed && "New Scan"}
@@ -685,13 +655,6 @@ export default function Sidebar() {
             @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
           `}} />
         </div>
-      )}
-
-      {/* Global Search Modal */}
-      <GlobalSearchModal 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-      />
     </aside>
   );
 }

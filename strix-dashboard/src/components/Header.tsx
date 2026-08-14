@@ -5,6 +5,7 @@ import { Plus, Bell, Search, CheckCircle2, XCircle, Clock, Settings2, Book, Load
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import GlobalSearchModal from "./GlobalSearchModal";
 
 const routeTitles: Record<string, string> = {
   "/":               "Overview",
@@ -27,9 +28,6 @@ interface InAppNotif {
   link?: string;
 }
 
-interface SearchResult {
-  scans: any[];
-  vulnerabilities: any[];
 }
 
 export default function Header() {
@@ -46,11 +44,7 @@ export default function Header() {
   const [notifs, setNotifs] = useState<InAppNotif[]>([]);
   
   // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Load from local storage on mount
   useEffect(() => {
@@ -112,34 +106,17 @@ export default function Header() {
     return () => clearInterval(interval);
   }, [pollScans]);
 
-  // Handle Search Input
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
-    if (val.trim().length < 2) {
-      setSearchResults(null);
-      setIsSearching(false);
-      return;
-    }
-    
-    setShowSearchResults(true);
-    setIsSearching(true);
-    
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(val)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data);
-        }
-      } catch (e) {} finally {
-        setIsSearching(false);
+  // Listen for Ctrl+K in Header
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
       }
-    }, 400);
-  };
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const unreadCount = notifs.filter(n => !n.read).length;
 
@@ -162,92 +139,33 @@ export default function Header() {
   }
 
   return (
-    <header className="header" onClick={() => setShowSearchResults(false)}>
-      <span className="header-title">{title}</span>
+    <header className="header">
+      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center" }}>
+        <span className="header-title">{title}</span>
+      </div>
 
-      <div className="header-right" onClick={(e) => e.stopPropagation()}>
-        {/* Search */}
-        <div className="header-search" style={{ position: "relative" }}>
-          <Search className="header-search-icon" size={14} />
-          <input 
-            type="text" 
-            placeholder="Search targets or vulns…" 
-            value={searchQuery}
-            onChange={handleSearch}
-            onFocus={() => { if (searchQuery.length >= 2) setShowSearchResults(true); }}
-          />
-          
-          {/* Search Results Dropdown */}
-          {showSearchResults && (
-            <div 
-              className="glass-panel animate-fade-in"
-              style={{
-                position: "absolute", top: "110%", left: 0, right: 0, minWidth: 320,
-                zIndex: 100, padding: 0,
-                maxHeight: 400, overflowY: "auto",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
-                border: "1px solid var(--border-md)"
-              }}
-            >
-              {isSearching ? (
-                <div style={{ padding: 24, textAlign: "center", color: "var(--fg-3)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Searching...
-                </div>
-              ) : searchResults && (searchResults.scans.length > 0 || searchResults.vulnerabilities.length > 0) ? (
-                <div>
-                  {searchResults.scans.length > 0 && (
-                    <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-                        Scans
-                      </div>
-                      {searchResults.scans.map((s: any) => (
-                        <Link 
-                          href={`/scans/${s.id}`} 
-                          key={s.id}
-                          onClick={() => setShowSearchResults(false)}
-                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px", borderRadius: "var(--r)", textDecoration: "none", color: "var(--fg)" }}
-                          className="nav-link"
-                        >
-                          <Search size={14} color="var(--fg-3)" />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>{s.target}</div>
-                            {s.scanName && <div style={{ fontSize: 11, color: "var(--fg-3)" }}>{s.scanName}</div>}
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                  {searchResults.vulnerabilities.length > 0 && (
-                    <div style={{ padding: "8px 12px" }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-                        Vulnerabilities
-                      </div>
-                      {searchResults.vulnerabilities.map((v: any) => (
-                        <Link 
-                          href="/vulnerabilities" 
-                          key={v.id}
-                          onClick={() => setShowSearchResults(false)}
-                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px", borderRadius: "var(--r)", textDecoration: "none", color: "var(--fg)" }}
-                          className="nav-link"
-                        >
-                          <ShieldAlert size={14} className={v.severity === "critical" ? "sev-critical" : "sev-high"} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>{v.title}</div>
-                            <div style={{ fontSize: 11, color: "var(--fg-3)" }}>{v.scan.target}</div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ padding: 24, textAlign: "center", color: "var(--fg-3)", fontSize: 12 }}>
-                  No results found for "{searchQuery}"
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Centered Large Search Bar */}
+      <div style={{ flex: 2, display: "flex", justifyContent: "center", maxWidth: 600, padding: "0 20px" }}>
+        <button 
+          onClick={() => setIsSearchOpen(true)}
+          style={{ 
+            width: "100%", height: 38, display: "flex", alignItems: "center", justifyContent: "space-between", 
+            padding: "0 16px", background: "var(--bg-1)", border: "1px solid var(--border)", 
+            borderRadius: "var(--r)", color: "var(--fg-3)", cursor: "text", transition: "all 0.2s",
+            boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)"
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-md)"; e.currentTarget.style.color = "var(--fg-2)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--fg-3)"; }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Search size={16} />
+            <span style={{ fontSize: 14 }}>Search targets, projects, vulnerabilities...</span>
+          </div>
+          <span style={{ fontSize: 11, background: "var(--bg-2)", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--border)", display: "flex", alignItems: "center" }}>⌘K</span>
+        </button>
+      </div>
+
+      <div className="header-right" style={{ flex: 1, justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
 
         {/* Action Buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 8 }}>
@@ -368,7 +286,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* New Scan */}
         <button
           className="btn-primary"
           style={{ marginLeft: 8 }}
@@ -378,6 +295,11 @@ export default function Header() {
           New Scan
         </button>
       </div>
+
+      <GlobalSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
     </header>
   );
 }
