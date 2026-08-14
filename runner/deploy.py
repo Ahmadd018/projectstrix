@@ -236,9 +236,11 @@ def setup_dashboard(db_pass):
             f.write(f"SESSION_SECRET=\"{session_secret}\"\n")
             f.write(f"SCHEDULER_SECRET=\"{scheduler_secret}\"\n")
             f.write("INSECURE_HTTP=true\n")
+            f.write("PORT=48080\n")
     else:
-        # If it exists, ensure we fix the DATABASE_URL to use the correct port
+        # If it exists, ensure we fix the DATABASE_URL and ensure all required secrets exist
         import re
+        import secrets as _secrets
         with open(env_file, "r") as f:
             content = f.read()
             
@@ -250,6 +252,21 @@ def setup_dashboard(db_pass):
             
         if "INSECURE_HTTP" not in content:
             content += "INSECURE_HTTP=true\n"
+        
+        # Ensure SESSION_SECRET exists (required for auth)
+        if "SESSION_SECRET" not in content:
+            content += f"SESSION_SECRET=\"{_secrets.token_hex(32)}\"\n"
+            print("Generated missing SESSION_SECRET.")
+
+        # Ensure SCHEDULER_SECRET exists (required for scheduled scans)
+        if "SCHEDULER_SECRET" not in content:
+            content += f"SCHEDULER_SECRET=\"{_secrets.token_hex(32)}\"\n"
+            print("Generated missing SCHEDULER_SECRET.")
+
+        # Ensure PORT is set so the embedded scheduler knows how to call back
+        if "PORT=" not in content:
+            content += "PORT=48080\n"
+            print("Set PORT=48080 for scheduler daemon.")
             
         with open(env_file, "w") as f:
             f.write(content)

@@ -38,14 +38,16 @@ async function triggerScan(scan: any) {
       return;
     }
 
-    const port = process.env.NEXT_PUBLIC_API_PORT || "48080";
+    // PORT is set explicitly in .env by deploy.py (48080).
+    // Fallback to 48080 as that's the hardcoded PM2 port.
+    const port = process.env.PORT || "48080";
     const url = `http://127.0.0.1:${port}/api/scans`;
 
-    log.info("SCHEDULER", `Triggering scan ${scan.id} for target: ${payload.target}`);
+    log.info("SCHEDULER", `Triggering scan ${scan.id} for target: ${payload.target} via ${url}`);
 
     const schedulerSecret = process.env.SCHEDULER_SECRET;
     if (!schedulerSecret) {
-      log.error("SCHEDULER", "SCHEDULER_SECRET env var is not set — cannot trigger scans");
+      log.error("SCHEDULER", "SCHEDULER_SECRET env var is not set — cannot trigger scans. Run deploy.py to fix.");
       return;
     }
 
@@ -62,7 +64,8 @@ async function triggerScan(scan: any) {
       const text = await res.text();
       log.error("SCHEDULER", `API returned ${res.status}: ${text}`);
     } else {
-      log.info("SCHEDULER", `Successfully triggered scan ${scan.id}`);
+      const data = await res.json();
+      log.info("SCHEDULER", `Successfully triggered scan ${scan.id}, response: ${JSON.stringify(data)}`);
     }
   } catch (err: any) {
     log.error("SCHEDULER", `Failed to trigger scan ${scan.id}`, err);
@@ -71,8 +74,6 @@ async function triggerScan(scan: any) {
 
 async function checkScheduledScans() {
   try {
-    const fs = await import("fs");
-    try { fs.appendFileSync("/tmp/strix-scheduler.log", new Date().toISOString() + " - Heartbeat: checkScheduledScans running\n"); } catch(e) {}
     const now = new Date();
 
     // ── 1. One-off scheduled scans ──────────────────────────────────────────
@@ -138,7 +139,13 @@ export function startScheduler() {
   }
   schedulerStarted = true;
 
-  log.info("SCHEDULER", "Embedded scheduler daemon started (polling every 10s)");
+  const port = process.env.PORT || "48080";
+  const hasSecret = !!process.env.SCHEDULER_SECRET;
+  log.info("SCHEDULER", `Embedded scheduler daemon started (polling every 10s, port=${port}, secret=${hasSecret ? "SET" : "MISSING"})`);
+
+  if (!hasSecret) {
+    log.error("SCHEDULER", "SCHEDULER_SECRET is NOT set! Scheduled scans will NOT work. Run deploy.py to fix.");
+  }
 
   // Run immediately on startup, then every 10 seconds
   checkScheduledScans();
