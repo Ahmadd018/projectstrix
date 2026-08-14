@@ -71,6 +71,8 @@ async function triggerScan(scan: any) {
 
 async function checkScheduledScans() {
   try {
+    const fs = await import("fs");
+    try { fs.appendFileSync("/tmp/strix-scheduler.log", new Date().toISOString() + " - Heartbeat: checkScheduledScans running\n"); } catch(e) {}
     const now = new Date();
 
     // ── 1. One-off scheduled scans ──────────────────────────────────────────
