@@ -223,14 +223,40 @@ sequenceDiagram
 **Request Body:**
 ```json
 {
-  "cron": "0 0 * * 0" // Run every Sunday at midnight
+  "period": "daily" // Valid options: "daily", "weekly", "monthly", "3_minutes", "none"
 }
 ```
 
 **Response (200 OK):**
 ```json
 {
-  "message": "Schedule created successfully"
+  "success": true,
+  "period": "daily",
+  "nextRunAt": "2026-08-15T12:00:00.000Z"
+}
+```
+:::
+
+::: details GET `/api/search?q={query}`
+**Description:** Performs a global search across all active and completed scans, target URLs, projects, instructions, tags, and vulnerability payloads. Returns combined results categorized by matched property.
+
+**Headers:**
+- `Cookie: strix_session=<jwt>`
+
+**Response (200 OK):**
+```json
+{
+  "results": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "target": "https://example.com",
+      "projectName": "Internal Alpha",
+      "status": "completed",
+      "createdAt": "2026-08-07T12:00:00.000Z",
+      "matchedFields": ["target", "vulnerabilities"],
+      "snippet": "Found SQLi in parameter id..."
+    }
+  ]
 }
 ```
 :::
