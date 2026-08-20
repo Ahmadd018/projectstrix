@@ -294,9 +294,11 @@ def deploy_service():
     # Delete existing pm2 process if it exists
     run_cmd("pm2 delete strix-dashboard", fail_on_error=False)
     
-    # Start the app via PM2
-    print("Starting Next.js via PM2 on port 48080...")
-    run_cmd(f"cd {dashboard_dir} && pm2 start npm --name 'strix-dashboard' -- run start -- -H 0.0.0.0 -p 48080")
+    # Start the app via PM2.
+    # Bind to 127.0.0.1 only: the app is meant to sit behind the Nginx reverse
+    # proxy (443), so it must NOT be reachable directly from outside on 48080.
+    print("Starting Next.js via PM2 on 127.0.0.1:48080...")
+    run_cmd(f"cd {dashboard_dir} && pm2 start npm --name 'strix-dashboard' -- run start -- -H 127.0.0.1 -p 48080")
     
     # Save PM2 list and configure startup
     run_cmd("pm2 save")
