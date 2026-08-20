@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check } from "lucide-react";
+import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
@@ -51,7 +51,33 @@ export default function VulnerabilitiesPage() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deletingBulk, setDeletingBulk] = useState(false);
+  const [fpText, setFpText] = useState<string | null>(null);
+  const [fpCopied, setFpCopied] = useState(false);
   const { confirm, alert } = useDialog();
+
+  // Build a ready-to-paste instruction telling the agent to skip this finding.
+  function buildFpInstruction(v: VulnWithScan): string {
+    const loc = `${v.method || "GET"} ${v.endpoint || "(endpoint unspecified)"}`.trim();
+    const desc = (v.description || "").trim().replace(/\s+/g, " ");
+    return [
+      "The following finding was reviewed and confirmed as a FALSE POSITIVE. Do not test for or report it again:",
+      `- Title: ${v.title}`,
+      `- Location: ${loc}`,
+      desc ? `- Details: ${desc}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  async function copyFp(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setFpCopied(true);
+      setTimeout(() => setFpCopied(false), 1500);
+    } catch {
+      /* clipboard blocked — user can still select the text manually */
+    }
+  }
 
   const projects = Array.from(new Set(allVulns.map(v => v.scanTarget)));
 
@@ -485,6 +511,21 @@ export default function VulnerabilitiesPage() {
                       <MarkdownRenderer content={selected.remediation} />
                   </div>
                 )}
+
+                {/* Mark as false positive → generate a copyable instruction */}
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16, marginTop: 4 }}>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => { setFpText(buildFpInstruction(selected)); setFpCopied(false); }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center" }}
+                  >
+                    <ShieldOff size={14} />
+                    Mark as false positive
+                  </button>
+                  <p style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, lineHeight: 1.5 }}>
+                    Generates an instruction you can paste into a scan&apos;s Instruction field to tell the agent to skip this finding.
+                  </p>
+                </div>
               </div>
             </>
           ) : (
@@ -497,6 +538,46 @@ export default function VulnerabilitiesPage() {
           )}
         </div>
       </div>
+
+      {/* False-positive instruction popup */}
+      {fpText !== null && (
+        <div
+          onClick={() => setFpText(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div
+            className="glass-panel animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 560, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+                <ShieldOff size={16} /> False-positive instruction
+              </div>
+              <button onClick={() => setFpText(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-2)" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--fg-2)", lineHeight: 1.5, margin: 0 }}>
+              Copy this and paste it into the <strong>Instruction</strong> field when you start a scan.
+            </p>
+            <textarea
+              readOnly
+              value={fpText}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{ width: "100%", minHeight: 150, resize: "vertical", padding: 12, background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontFamily: "var(--font-mono, monospace)", fontSize: 12, lineHeight: 1.5 }}
+            />
+            <button
+              className="btn-primary"
+              onClick={() => copyFp(fpText)}
+              style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}
+            >
+              {fpCopied ? <Check size={14} /> : <Copy size={14} />}
+              {fpCopied ? "Copied" : "Copy instruction"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
