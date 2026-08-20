@@ -41,11 +41,11 @@ export async function POST(req: Request) {
   }
 
   const system =
-    "You are a senior application security engineer writing a concise vulnerability report for a Jira ticket. " +
-    "Write EXACTLY two paragraphs in plain text — no headings, no bullet points, no markdown, no code blocks, no image placeholders, no severity label, no CVSS. " +
-    "Paragraph 1: describe the vulnerability. If it involves a specific API/endpoint, name the HTTP method, the path, and the target host in the sentence; if it does not, describe it naturally without forcing an endpoint. State what the flaw enables and the concrete impact an attacker could achieve. " +
-    "Paragraph 2: must start with 'To mitigate this issue,' and give the remediation. " +
-    "Be specific to the finding; do not invent details that are not supported by the data.";
+    "You are a senior application security engineer writing a SHORT vulnerability report for a Jira ticket. " +
+    "Write EXACTLY two short paragraphs in plain text — no headings, no bullet points, no markdown, no code blocks, no image placeholders, no severity label, no CVSS. " +
+    "Paragraph 1 (1–2 sentences max): state the vulnerability and its impact. If it involves a specific API/endpoint, name the HTTP method, the path, and the target host; otherwise describe it naturally without forcing an endpoint. " +
+    "Paragraph 2 (1 sentence): must start with 'To mitigate this issue,' and give the core fix. " +
+    "Be concise and specific; do not pad, repeat, or invent details not supported by the data.";
 
   const userMsg = [
     `Title: ${vuln.title}`,
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
           { role: "user", content: userMsg },
         ],
         temperature: 0.2,
-        max_tokens: 600,
+        max_tokens: 220,
       }),
     });
     const data = await res.json().catch(() => ({}));

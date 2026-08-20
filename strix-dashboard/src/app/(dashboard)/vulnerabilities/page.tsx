@@ -119,7 +119,7 @@ export default function VulnerabilitiesPage() {
 
   function openJiraModal(v: VulnWithScan) {
     setJiraForm({
-      summary: `[${v.severity}] ${v.title}`,
+      summary: `[${v.severity.toUpperCase()}] ${v.title}`,
       assignee: "",
       labels: "strix, security",
       severityLevel: defaultSeverityLevel(v.severity),
