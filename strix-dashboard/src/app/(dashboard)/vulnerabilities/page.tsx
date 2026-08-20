@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff } from "lucide-react";
+import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff, Ticket, ExternalLink } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
@@ -17,6 +17,7 @@ interface Vulnerability {
   poc_script_code?: string;
   cvss?: number;
   remediation?: string;
+  status?: string;
 }
 
 interface Scan {
@@ -33,6 +34,36 @@ interface VulnWithScan extends Vulnerability {
 
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
 const SEVERITIES = ["all", "critical", "high", "medium", "low", "informative"] as const;
+
+// Jira report modal options (kept in sync with src/lib/jira.ts mappings).
+const JIRA_SEVERITY_LEVELS = [
+  { key: "critical", label: "Critical" },
+  { key: "high", label: "High" },
+  { key: "medium", label: "Medium" },
+  { key: "low", label: "Low" },
+  { key: "informational", label: "Informational" },
+  { key: "none", label: "None" },
+];
+const JIRA_PRIORITIES = [
+  { key: "highest", label: "Highest" },
+  { key: "high", label: "High" },
+  { key: "medium", label: "Medium" },
+  { key: "low", label: "Low" },
+];
+// Default severity-level / priority from the finding's severity.
+function defaultSeverityLevel(sev: string): string {
+  const s = sev.toLowerCase();
+  if (s === "info" || s === "informative" || s === "informational") return "informational";
+  if (["critical", "high", "medium", "low"].includes(s)) return s;
+  return "none";
+}
+function defaultPriority(sev: string): string {
+  const s = sev.toLowerCase();
+  if (s === "critical") return "highest";
+  if (s === "high") return "high";
+  if (s === "medium") return "medium";
+  return "low";
+}
 
 function sevClass(s: string) {
   const normalized = s.toLowerCase() === "info" ? "informative" : s.toLowerCase();
@@ -53,20 +84,147 @@ export default function VulnerabilitiesPage() {
   const [deletingBulk, setDeletingBulk] = useState(false);
   const [fpText, setFpText] = useState<string | null>(null);
   const [fpCopied, setFpCopied] = useState(false);
+  const [jiraVuln, setJiraVuln] = useState<VulnWithScan | null>(null);
+  const [jiraForm, setJiraForm] = useState({ summary: "", assignee: "", labels: "", severityLevel: "none", priority: "low" });
+  const [jiraSubmitting, setJiraSubmitting] = useState(false);
+  const [jiraResult, setJiraResult] = useState<{ key: string; url: string } | null>(null);
+  const [jiraError, setJiraError] = useState<string | null>(null);
+  const [jiraDesc, setJiraDesc] = useState("");
+  const [jiraDescLoading, setJiraDescLoading] = useState(false);
+  const [jiraDescNote, setJiraDescNote] = useState<string | null>(null);
   const { confirm, alert } = useDialog();
 
-  // Build a ready-to-paste instruction telling the agent to skip this finding.
+  async function generateJiraDesc(vulnId: string) {
+    setJiraDescLoading(true);
+    setJiraDescNote(null);
+    try {
+      const res = await fetch("/api/jira/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vulnId }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (res.ok && out.description) {
+        setJiraDesc(out.description);
+        if (out.generated === false) setJiraDescNote(out.reason || "Used template (AI unavailable).");
+      } else {
+        setJiraDescNote(out.error || "Could not generate description.");
+      }
+    } catch (e: any) {
+      setJiraDescNote(e?.message || "Network error while generating.");
+    } finally {
+      setJiraDescLoading(false);
+    }
+  }
+
+  function openJiraModal(v: VulnWithScan) {
+    setJiraForm({
+      summary: `[${v.severity}] ${v.title}`,
+      assignee: "",
+      labels: "strix, security",
+      severityLevel: defaultSeverityLevel(v.severity),
+      priority: defaultPriority(v.severity),
+    });
+    setJiraResult(null);
+    setJiraError(null);
+    setJiraDesc("");
+    setJiraDescNote(null);
+    setJiraVuln(v);
+    generateJiraDesc(v.id);
+  }
+
+  async function submitJira() {
+    if (!jiraVuln) return;
+    setJiraSubmitting(true);
+    setJiraError(null);
+    try {
+      const res = await fetch("/api/jira/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vulnId: jiraVuln.id,
+          summary: jiraForm.summary,
+          assignee: jiraForm.assignee,
+          labels: jiraForm.labels.split(",").map((l) => l.trim()).filter(Boolean),
+          severityLevel: jiraForm.severityLevel,
+          priority: jiraForm.priority,
+          description: jiraDesc,
+        }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (res.ok && out.success) {
+        setJiraResult({ key: out.key, url: out.url });
+      } else {
+        setJiraError(out.error || `Request failed (HTTP ${res.status})`);
+      }
+    } catch (e: any) {
+      setJiraError(e?.message || "Network error");
+    } finally {
+      setJiraSubmitting(false);
+    }
+  }
+
+  // Best-effort absolute URL from the scan target (host/subdomain) + endpoint path.
+  function fullUrl(target: string, endpoint?: string): string {
+    if (!endpoint) return target || "";
+    if (/^https?:\/\//i.test(endpoint)) return endpoint;
+    try {
+      const base = /^https?:\/\//i.test(target) ? target : `https://${target}`;
+      return new URL(endpoint, base).toString();
+    } catch {
+      return `${target}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+    }
+  }
+
+  // Build a ready-to-paste, fully-detailed instruction telling the agent to skip
+  // this finding. Included with the main instruction, it must carry enough detail
+  // (host/subdomain, method, path, parameter/PoC) for the agent to re-identify
+  // the exact issue and ignore it.
   function buildFpInstruction(v: VulnWithScan): string {
-    const loc = `${v.method || "GET"} ${v.endpoint || "(endpoint unspecified)"}`.trim();
+    const host = (() => {
+      try {
+        const t = /^https?:\/\//i.test(v.scanTarget) ? v.scanTarget : `https://${v.scanTarget}`;
+        return new URL(t).host;
+      } catch {
+        return v.scanTarget;
+      }
+    })();
+    const method = v.method || "GET";
     const desc = (v.description || "").trim().replace(/\s+/g, " ");
-    return [
-      "The following finding was reviewed and confirmed as a FALSE POSITIVE. Do not test for or report it again:",
+    const poc = (v.poc || v.poc_script_code || v.poc_description || "").trim().replace(/\s+/g, " ");
+    const cvss = typeof v.cvss === "number" && v.cvss > 0 ? ` (CVSS ${v.cvss})` : "";
+
+    const header =
+      "[KNOWN FALSE POSITIVE — DO NOT REPORT]\n" +
+      "The finding below was manually reviewed and confirmed as a FALSE POSITIVE. During this scan, do NOT flag, report, or spend time re-testing it. If you rediscover this exact issue, treat it as a known false positive and ignore it. Only report it if you find a genuinely DIFFERENT vulnerability at the same location.";
+
+    const bullets = [
       `- Title: ${v.title}`,
-      `- Location: ${loc}`,
-      desc ? `- Details: ${desc}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+      `- Severity: ${v.severity}${cvss}`,
+      `- Target host: ${host}`,
+      `- Endpoint: ${method} ${v.endpoint || "(unspecified)"}`,
+      `- Full URL: ${fullUrl(v.scanTarget, v.endpoint)}`,
+      poc ? `- Reproduction / payload: ${poc}` : "",
+      desc ? `- Original description: ${desc}` : "",
+    ].filter(Boolean);
+
+    return `${header}\n\n${bullets.join("\n")}`;
+  }
+
+  // Persist the false-positive mark (badge) and update local state.
+  async function setFpStatus(v: VulnWithScan, isFp: boolean) {
+    const status = isFp ? "FALSE_POSITIVE" : "OPEN";
+    setSelected((prev) => (prev && prev.id === v.id ? { ...prev, status } : prev));
+    setAllVulns((prev) => prev.map((x) => (x.id === v.id && x.scanId === v.scanId ? { ...x, status } : x)));
+    try {
+      await fetch("/api/vulnerabilities/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vulnId: v.id, status }),
+      });
+    } catch {
+      /* keep optimistic UI; refresh will reconcile */
+    }
   }
 
   async function copyFp(text: string) {
@@ -390,6 +548,11 @@ export default function VulnerabilitiesPage() {
                     </div>
                   </div>
                   <div className="trow-right" style={{ flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    {(v.status || "").toUpperCase() === "FALSE_POSITIVE" && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--fg-3)", border: "1px solid var(--border)", borderRadius: 4, padding: "1px 5px" }}>
+                        <ShieldOff size={9} /> False positive
+                      </span>
+                    )}
                     <span className={sevClass(v.severity)}>{v.severity}</span>
                     {v.cvss && (
                       <span style={{ fontSize: 10, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
@@ -432,6 +595,11 @@ export default function VulnerabilitiesPage() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span className={sevClass(selected.severity)}>{selected.severity}</span>
+                  {(selected.status || "").toUpperCase() === "FALSE_POSITIVE" && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--fg-2)", border: "1px solid var(--border-hi, var(--border))", borderRadius: 4, padding: "2px 6px" }}>
+                      <ShieldOff size={10} /> False positive
+                    </span>
+                  )}
                   {selected.cvss && (
                     <span style={{ fontSize: 11, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
                       CVSS {selected.cvss}
@@ -512,18 +680,45 @@ export default function VulnerabilitiesPage() {
                   </div>
                 )}
 
-                {/* Mark as false positive → generate a copyable instruction */}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16, marginTop: 4 }}>
+                {/* Actions: report to Jira (true positive) / mark false positive */}
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16, marginTop: 4, display: "flex", flexDirection: "column", gap: 10 }}>
                   <button
-                    className="btn-secondary"
-                    onClick={() => { setFpText(buildFpInstruction(selected)); setFpCopied(false); }}
+                    className="btn-primary"
+                    onClick={() => openJiraModal(selected)}
                     style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center" }}
                   >
-                    <ShieldOff size={14} />
-                    Mark as false positive
+                    <Ticket size={14} />
+                    Report to Jira
                   </button>
-                  <p style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, lineHeight: 1.5 }}>
-                    Generates an instruction you can paste into a scan&apos;s Instruction field to tell the agent to skip this finding.
+                  {(selected.status || "").toUpperCase() === "FALSE_POSITIVE" ? (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => { setFpText(buildFpInstruction(selected)); setFpCopied(false); }}
+                        style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, justifyContent: "center" }}
+                      >
+                        <Copy size={14} /> Copy FP instruction
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => setFpStatus(selected, false)}
+                        style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}
+                      >
+                        <X size={14} /> Unmark
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn-secondary"
+                      onClick={() => { setFpText(buildFpInstruction(selected)); setFpCopied(false); setFpStatus(selected, true); }}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center" }}
+                    >
+                      <ShieldOff size={14} />
+                      Mark as false positive
+                    </button>
+                  )}
+                  <p style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 2, lineHeight: 1.5 }}>
+                    Report a confirmed finding as a Jira issue, or mark it a false positive (tags the finding and gives you an instruction to paste into a scan).
                   </p>
                 </div>
               </div>
@@ -575,6 +770,124 @@ export default function VulnerabilitiesPage() {
               {fpCopied ? <Check size={14} /> : <Copy size={14} />}
               {fpCopied ? "Copied" : "Copy instruction"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Report to Jira modal */}
+      {jiraVuln && (
+        <div
+          onClick={() => setJiraVuln(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div
+            className="glass-panel animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 560, padding: 20, display: "flex", flexDirection: "column", gap: 14, maxHeight: "90vh", overflowY: "auto" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+                <Ticket size={16} /> Report to Jira
+              </div>
+              <button onClick={() => setJiraVuln(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-2)" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {jiraResult ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--sev-low)" }}>
+                  <Check size={16} /> Created <strong>{jiraResult.key}</strong>
+                </div>
+                <a href={jiraResult.url} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", textDecoration: "none" }}>
+                  <ExternalLink size={14} /> Open {jiraResult.key} in Jira
+                </a>
+              </div>
+            ) : (
+              <>
+                {(() => {
+                  const fieldWrap: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6 };
+                  const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: "var(--fg-2)" };
+                  const inp: React.CSSProperties = { width: "100%", padding: "8px 10px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13 };
+                  return (
+                    <>
+                      <div style={fieldWrap}>
+                        <label style={lbl}>Summary</label>
+                        <input style={inp} value={jiraForm.summary} onChange={(e) => setJiraForm({ ...jiraForm, summary: e.target.value })} />
+                      </div>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ ...fieldWrap, flex: 1 }}>
+                          <label style={lbl}>Severity level</label>
+                          <select style={inp} value={jiraForm.severityLevel} onChange={(e) => setJiraForm({ ...jiraForm, severityLevel: e.target.value })}>
+                            {JIRA_SEVERITY_LEVELS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ ...fieldWrap, flex: 1 }}>
+                          <label style={lbl}>Priority</label>
+                          <select style={inp} value={jiraForm.priority} onChange={(e) => setJiraForm({ ...jiraForm, priority: e.target.value })}>
+                            {JIRA_PRIORITIES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div style={fieldWrap}>
+                        <label style={lbl}>Assignee <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(username, optional)</span></label>
+                        <input style={inp} value={jiraForm.assignee} placeholder="e.g. AghamaliyevAM" onChange={(e) => setJiraForm({ ...jiraForm, assignee: e.target.value })} />
+                      </div>
+                      <div style={fieldWrap}>
+                        <label style={lbl}>Labels <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(comma-separated)</span></label>
+                        <input style={inp} value={jiraForm.labels} placeholder="strix, security" onChange={(e) => setJiraForm({ ...jiraForm, labels: e.target.value })} />
+                      </div>
+                      <div style={fieldWrap}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <label style={lbl}>Description <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(AI-generated, editable)</span></label>
+                          <button
+                            onClick={() => jiraVuln && generateJiraDesc(jiraVuln.id)}
+                            disabled={jiraDescLoading}
+                            style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg-2)", fontSize: 11, padding: "3px 8px", cursor: "pointer" }}
+                          >
+                            {jiraDescLoading ? <Loader2 size={11} className="animate-spin" /> : <Settings2 size={11} />}
+                            Regenerate
+                          </button>
+                        </div>
+                        {jiraDescLoading && !jiraDesc ? (
+                          <div style={{ ...inp, minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-3)", fontSize: 12, gap: 8 }}>
+                            <Loader2 size={14} className="animate-spin" /> Generating report with AI…
+                          </div>
+                        ) : (
+                          <textarea
+                            style={{ ...inp, minHeight: 160, resize: "vertical", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.5 }}
+                            value={jiraDesc}
+                            onChange={(e) => setJiraDesc(e.target.value)}
+                          />
+                        )}
+                        {jiraDescNote && (
+                          <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{jiraDescNote}</span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {jiraError && (
+                  <div style={{ fontSize: 12, color: "var(--sev-critical, #e5484d)", background: "rgba(229,72,77,0.08)", border: "1px solid rgba(229,72,77,0.25)", borderRadius: "var(--r)", padding: "8px 10px", lineHeight: 1.5 }}>
+                    {jiraError}
+                  </div>
+                )}
+
+                <button
+                  className="btn-primary"
+                  disabled={jiraSubmitting || jiraDescLoading || !jiraForm.summary.trim() || !jiraDesc.trim()}
+                  onClick={submitJira}
+                  style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}
+                >
+                  {jiraSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Ticket size={14} />}
+                  {jiraSubmitting ? "Creating…" : "Create Jira issue"}
+                </button>
+                <p style={{ fontSize: 11, color: "var(--fg-2)", margin: 0, lineHeight: 1.5 }}>
+                  The issue description is generated from the finding as a narrative + mitigation. Configure Jira in Settings → Jira first.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

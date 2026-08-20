@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { log } from "@/lib/logger";
+import { encryptSecret } from "@/lib/crypto";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -18,19 +19,25 @@ export async function GET(req: NextRequest) {
 
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+    const base = user.settings || {
+      aggressiveness: 50,
+      maxThreads: 4,
+      slackBotToken: "",
+      slackChannelId: "",
+      notifyOnStart: false,
+      notifyOnFinish: true,
+      theme: "dark",
+      defaultModel: "openai/gpt-4o",
+      autoDeleteDays: 0,
+      jiraBaseUrl: "",
+      jiraProjectId: "",
+      jiraIssueTypeId: "",
+    };
+    // Never leak the (encrypted) PAT to the browser — only whether one is set.
+    const { jiraPat, ...safe } = base as any;
     return NextResponse.json({
-      settings: user.settings || { 
-        aggressiveness: 50, 
-        maxThreads: 4, 
-        slackBotToken: "", 
-        slackChannelId: "",
-        notifyOnStart: false, 
-        notifyOnFinish: true,
-        theme: "dark",
-        defaultModel: "openai/gpt-4o",
-        autoDeleteDays: 0
-      },
-      customModels: user.customModels
+      settings: { ...safe, jiraPatSet: !!jiraPat },
+      customModels: user.customModels,
     });
   } catch (e: any) {
     log.error("GET /api/user/settings", "Failed to fetch settings", e);
@@ -64,19 +71,32 @@ export async function POST(req: NextRequest) {
       const defaultModel = typeof d.defaultModel === "string" ? d.defaultModel.trim().slice(0, 100) : "openai/gpt-4o";
       const autoDeleteDays = clamp(d.autoDeleteDays, 0, 365, 0);
 
+      // Jira integration config. The PAT is encrypted at rest and only updated
+      // when a new non-empty value is supplied (blank = keep the existing one).
+      const jiraBaseUrl = typeof d.jiraBaseUrl === "string" ? d.jiraBaseUrl.trim().slice(0, 255) : "";
+      const jiraProjectId = typeof d.jiraProjectId === "string" ? d.jiraProjectId.trim().slice(0, 50) : "";
+      const jiraIssueTypeId = typeof d.jiraIssueTypeId === "string" ? d.jiraIssueTypeId.trim().slice(0, 50) : "";
+      const jiraPatUpdate =
+        typeof d.jiraPat === "string" && d.jiraPat.trim() !== ""
+          ? { jiraPat: encryptSecret(d.jiraPat.trim().slice(0, 1024)) }
+          : {};
+
       const settings = await prisma.userSettings.upsert({
         where: { userId },
-        create: { 
+        create: {
           userId, aggressiveness, maxThreads, slackBotToken, slackChannelId, notifyOnStart, notifyOnFinish,
-          theme, defaultModel, autoDeleteDays
+          theme, defaultModel, autoDeleteDays,
+          jiraBaseUrl, jiraProjectId, jiraIssueTypeId, ...jiraPatUpdate,
         },
-        update: { 
+        update: {
           aggressiveness, maxThreads, slackBotToken, slackChannelId, notifyOnStart, notifyOnFinish,
-          theme, defaultModel, autoDeleteDays
+          theme, defaultModel, autoDeleteDays,
+          jiraBaseUrl, jiraProjectId, jiraIssueTypeId, ...jiraPatUpdate,
         }
       });
 
-      return NextResponse.json({ success: true, settings });
+      const { jiraPat: _omit, ...safeSettings } = settings as any;
+      return NextResponse.json({ success: true, settings: { ...safeSettings, jiraPatSet: !!settings.jiraPat } });
     }
 
     if (body.type === "customModels") {

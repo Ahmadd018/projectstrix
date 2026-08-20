@@ -65,6 +65,10 @@ model UserSettings {
   theme              String  @default("dark")
   defaultModel       String  @default("openai/gpt-4o")
   autoDeleteDays     Int     @default(0)
+  jiraBaseUrl        String  @default("")
+  jiraPat            String  @default("") // AES-encrypted at rest
+  jiraProjectId      String  @default("")
+  jiraIssueTypeId    String  @default("")
 }
 
 model CustomModel {
