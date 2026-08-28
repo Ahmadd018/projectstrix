@@ -9,6 +9,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { readApiKeys } from "@/lib/apiKeys";
 import { isSafePublicUrl } from "@/lib/urlGuard";
+import { syncVulnsToDb } from "@/lib/vulnSync";
+import { readFpForTargets } from "@/lib/fpStore";
 
 import os from "os";
 
@@ -490,7 +492,27 @@ export async function POST(req: NextRequest) {
 
     if (scanMode) args.push("-m", scanMode);
     if (instruction?.trim()) args.push("--instruction", instruction.trim());
-    
+
+    // Pass known false positives for these target domains to strix via a dedicated
+    // flag (kept separate from --instruction). strix materializes the file inside
+    // the sandbox so agents consult it on demand and discard confirmed FPs at the
+    // moment of discovery — the bulk detail never enters the prompt context.
+    const fpTargets: string[] = [];
+    if (target && target !== "Unknown_Target" && !target.startsWith("Multiple_Targets")) fpTargets.push(target);
+    if (targetList?.trim()) fpTargets.push(...targetList.split("\n").map((s: string) => s.trim()).filter(Boolean));
+    let fpBlock = "";
+    try {
+      fpBlock = readFpForTargets(fpTargets);
+    } catch (e) {
+      log.warn("POST /api/scans", "Failed to read FP instructions", { err: String(e) });
+    }
+    if (fpBlock) {
+      const fpFile = path.join(scanDir, "false_positives.md");
+      fs.writeFileSync(fpFile, fpBlock);
+      args.push("--false-positive-file", fpFile);
+      log.info("POST /api/scans", "Passing known-FP registry to strix", { targets: fpTargets.length });
+    }
+
     if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
 
     // C-4 / L-3: Path traversal protection for diffBase.
@@ -634,24 +656,11 @@ export async function POST(req: NextRequest) {
       vulnCount = Array.isArray(vulns) ? vulns.length : 0;
       
       if (vulnCount > 0) {
-        // Sync vulnerabilities to database
-        const dbVulns = vulns.map((v: any) => ({
-          scanId,
-          vulnId: v.id || randomUUID(),
-          title: v.title || "Unknown",
-          severity: v.severity || "info",
-          endpoint: v.endpoint || "",
-          method: v.method || "",
-          description: v.description || "",
-          poc: v.poc || "",
-          cvss: v.cvss || 0.0,
-          remediation: v.remediation || ""
-        }));
-        
-        prisma.vulnerability.createMany({
-          data: dbVulns,
-          skipDuplicates: true
-        }).catch(e => log.error("PROC_CLOSE", "Failed to sync vulns to DB", e));
+        // Sync vulnerabilities to database (guarded, no duplicates — the detail
+        // GET may have already created rows for triage actions).
+        syncVulnsToDb(scanId, vulns).catch((e) =>
+          log.error("PROC_CLOSE", "Failed to sync vulns to DB", e),
+        );
       }
     } catch {}
     
@@ -895,23 +904,8 @@ function runMockScan(
       updated.exitCode = 0;
       fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
       
-      // Sync mock vulns to DB
-      const dbVulns = mockVulns.map((v: any) => ({
-        scanId,
-        vulnId: v.id || randomUUID(),
-        title: v.title || "Unknown",
-        severity: v.severity || "info",
-        endpoint: v.endpoint || "",
-        method: v.method || "",
-        description: v.description || "",
-        poc: v.poc || "",
-        cvss: v.cvss || 0.0,
-        remediation: v.remediation || ""
-      }));
-      prisma.vulnerability.createMany({
-        data: dbVulns,
-        skipDuplicates: true
-      }).catch(() => {});
+      // Sync mock vulns to DB (guarded, no duplicates).
+      syncVulnsToDb(scanId, mockVulns).catch(() => {});
 
       // Update DB when mock scan finishes
       prisma.scan.update({

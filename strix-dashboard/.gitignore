@@ -49,6 +49,7 @@ next-env.d.ts
 
 # Strix specific
 /strix_runs/
+/fp_instructions/
 /logs/
 /data/
 

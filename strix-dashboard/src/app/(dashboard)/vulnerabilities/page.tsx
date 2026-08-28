@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff, Ticket, ExternalLink } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { buildFpInstruction as buildFpInstructionLib, hostFromTarget } from "@/lib/fpInstruction";
 
 interface Vulnerability {
   id: string;
@@ -164,54 +165,14 @@ export default function VulnerabilitiesPage() {
     }
   }
 
-  // Best-effort absolute URL from the scan target (host/subdomain) + endpoint path.
-  function fullUrl(target: string, endpoint?: string): string {
-    if (!endpoint) return target || "";
-    if (/^https?:\/\//i.test(endpoint)) return endpoint;
-    try {
-      const base = /^https?:\/\//i.test(target) ? target : `https://${target}`;
-      return new URL(endpoint, base).toString();
-    } catch {
-      return `${target}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
-    }
-  }
-
   // Build a ready-to-paste, fully-detailed instruction telling the agent to skip
-  // this finding. Included with the main instruction, it must carry enough detail
-  // (host/subdomain, method, path, parameter/PoC) for the agent to re-identify
-  // the exact issue and ignore it.
+  // this finding (shared implementation in @/lib/fpInstruction).
   function buildFpInstruction(v: VulnWithScan): string {
-    const host = (() => {
-      try {
-        const t = /^https?:\/\//i.test(v.scanTarget) ? v.scanTarget : `https://${v.scanTarget}`;
-        return new URL(t).host;
-      } catch {
-        return v.scanTarget;
-      }
-    })();
-    const method = v.method || "GET";
-    const desc = (v.description || "").trim().replace(/\s+/g, " ");
-    const poc = (v.poc || v.poc_script_code || v.poc_description || "").trim().replace(/\s+/g, " ");
-    const cvss = typeof v.cvss === "number" && v.cvss > 0 ? ` (CVSS ${v.cvss})` : "";
-
-    const header =
-      "[KNOWN FALSE POSITIVE — DO NOT REPORT]\n" +
-      "The finding below was manually reviewed and confirmed as a FALSE POSITIVE. During this scan, do NOT flag, report, or spend time re-testing it. If you rediscover this exact issue, treat it as a known false positive and ignore it. Only report it if you find a genuinely DIFFERENT vulnerability at the same location.";
-
-    const bullets = [
-      `- Title: ${v.title}`,
-      `- Severity: ${v.severity}${cvss}`,
-      `- Target host: ${host}`,
-      `- Endpoint: ${method} ${v.endpoint || "(unspecified)"}`,
-      `- Full URL: ${fullUrl(v.scanTarget, v.endpoint)}`,
-      poc ? `- Reproduction / payload: ${poc}` : "",
-      desc ? `- Original description: ${desc}` : "",
-    ].filter(Boolean);
-
-    return `${header}\n\n${bullets.join("\n")}`;
+    return buildFpInstructionLib({ ...v, target: v.scanTarget });
   }
 
-  // Persist the false-positive mark (badge) and update local state.
+  // Persist the false-positive mark (badge), record it in the target domain's FP
+  // instructions (md file, auto-applied to future scans), and update local state.
   async function setFpStatus(v: VulnWithScan, isFp: boolean) {
     const status = isFp ? "FALSE_POSITIVE" : "OPEN";
     setSelected((prev) => (prev && prev.id === v.id ? { ...prev, status } : prev));
@@ -222,6 +183,13 @@ export default function VulnerabilitiesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vulnId: v.id, status }),
       });
+      if (isFp) {
+        await fetch("/api/fp-instructions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vulnId: v.id }),
+        });
+      }
     } catch {
       /* keep optimistic UI; refresh will reconcile */
     }
@@ -628,18 +596,22 @@ export default function VulnerabilitiesPage() {
                   {selected.title}
                 </h2>
 
-                {/* Meta */}
-                <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "12px 14px", marginBottom: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
-                    <span style={{ color: "var(--fg-3)", width: 64 }}>Target</span>
-                    <a href={`/scans/${selected.scanId}`} style={{ color: "var(--fg)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border-hi)" }}>{selected.scanTarget}</a>
+                {/* Meta — Target Domain + endpoint, matching the scan findings view */}
+                <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "12px 14px", marginBottom: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Target Domain:</span>
+                    <a
+                      href={`/scans/${selected.scanId}`}
+                      style={{ color: "var(--fg)", fontFamily: "var(--font-mono)", fontSize: 12, textDecoration: "underline", textDecorationColor: "var(--border-hi)" }}
+                    >
+                      {/^https?:\/\//i.test(selected.scanTarget) ? selected.scanTarget : `https://${hostFromTarget(selected.scanTarget) || selected.scanTarget}`}
+                    </a>
                   </div>
-                  <div style={{ display: "flex", gap: 8, fontSize: 12, fontFamily: "var(--font-mono)" }}>
-                    <span style={{ color: "var(--fg-3)", fontFamily: "var(--font-sans)", width: 64 }}>Endpoint</span>
-                    <span style={{ color: "var(--fg-2)" }}>
-                      <span style={{ fontWeight: 700, color: "var(--fg)", marginRight: 6 }}>{selected.method ?? "GET"}</span>
-                      {selected.endpoint}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: "var(--fg)", background: "var(--bg-4)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", padding: "1px 6px" }}>
+                      {selected.method ?? "GET"}
                     </span>
+                    <code style={{ color: "var(--fg-2)", fontFamily: "var(--font-mono)", fontSize: 12, wordBreak: "break-all" }}>{selected.endpoint}</code>
                   </div>
                 </div>
 

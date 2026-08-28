@@ -1,22 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Search, FileText, Loader2, Check, AlertCircle, Edit3, Eye, Copy } from "lucide-react";
+import { Plus, Trash2, Search, FileText, Loader2, Check, AlertCircle, Edit3, Eye, Copy, Lock, User } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 interface Instruction {
   id: string;
+  userId: string;
   title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
+  authorName?: string;
 }
 
 export default function InstructionsPage() {
   const [instructions, setInstructions] = useState<Instruction[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   
@@ -53,7 +56,15 @@ export default function InstructionsPage() {
 
   useEffect(() => {
     fetchInstructions();
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.authenticated) setCurrentUserId(d.user.id); })
+      .catch(() => {});
   }, []);
+
+  const selectedInstruction = instructions.find((i) => i.id === selectedId);
+  // Only the author may edit; "new" is always editable (creates your own).
+  const canEdit = selectedId === "new" || (!!selectedInstruction && selectedInstruction.userId === currentUserId);
 
   // Update editor when selected instruction changes
   useEffect(() => {
@@ -77,6 +88,7 @@ export default function InstructionsPage() {
   // Auto-save logic
   useEffect(() => {
     if (!selectedId) return;
+    if (!canEdit) return; // Never write to someone else's instruction.
     if (title === lastSaved.title && content === lastSaved.content) {
        if (saveStatus === "saving") setSaveStatus("saved");
        return;
@@ -119,7 +131,7 @@ export default function InstructionsPage() {
     }, 800); // 800ms debounce
 
     return () => clearTimeout(timeout);
-  }, [title, content, selectedId, lastSaved]);
+  }, [title, content, selectedId, lastSaved, canEdit]);
 
   const filteredInstructions = useMemo(() => {
     return instructions.filter(i => i.title.toLowerCase().includes(search.toLowerCase()));
@@ -203,11 +215,15 @@ export default function InstructionsPage() {
                     if (selectedId !== inst.id) e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {inst.title}
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
+                    {inst.userId !== currentUserId && <Lock size={11} style={{ color: "var(--fg-3)", flexShrink: 0 }} />}
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{inst.title}</span>
                   </div>
                   <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {inst.content}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--fg-3)", marginTop: 6, display: "flex", alignItems: "center", gap: 4, opacity: 0.8 }}>
+                    <User size={10} /> {inst.userId === currentUserId ? "You" : (inst.authorName || "Unknown")}
                   </div>
                 </div>
               ))}
@@ -226,7 +242,12 @@ export default function InstructionsPage() {
                   <FileText size={16} />
                 </div>
                 <div style={{ fontSize: 13, color: "var(--fg-3)", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
-                  {selectedId === "new" ? "Create New Instruction" : "Edit Instruction"}
+                  {selectedId === "new" ? "Create New Instruction" : canEdit ? "Edit Instruction" : "View Instruction"}
+                  {!canEdit && selectedId !== "new" && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--fg-3)", border: "1px solid var(--border)", borderRadius: 4, padding: "2px 6px" }}>
+                      <Lock size={11} /> Read-only · by {selectedInstruction?.authorName || "another user"}
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -244,10 +265,10 @@ export default function InstructionsPage() {
                     <Eye size={13}/> Preview
                   </button>
                 </div>
-                {selectedId !== "new" && (
-                  <button 
-                    onClick={() => handleDelete(selectedId)} 
-                    className="btn-icon" 
+                {selectedId !== "new" && canEdit && (
+                  <button
+                    onClick={() => handleDelete(selectedId)}
+                    className="btn-icon"
                     style={{ color: "var(--sev-critical)" }}
                     title="Delete Instruction"
                   >
@@ -263,8 +284,9 @@ export default function InstructionsPage() {
                 placeholder="Instruction Title"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                style={{ 
-                  fontSize: 32, 
+                readOnly={!canEdit}
+                style={{
+                  fontSize: 32,
                   fontWeight: 700, 
                   color: "var(--fg)", 
                   background: "transparent", 
@@ -279,8 +301,9 @@ export default function InstructionsPage() {
                     placeholder="Write your custom prompt or logic here... (Markdown supported)"
                     value={content}
                     onChange={e => setContent(e.target.value)}
-                    style={{ 
-                      flex: 1, 
+                    readOnly={!canEdit}
+                    style={{
+                      flex: 1,
                       fontSize: 14, 
                       color: "var(--fg-2)", 
                       background: "transparent", 

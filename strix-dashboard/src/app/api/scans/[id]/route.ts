@@ -5,6 +5,7 @@ import { getProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { syncVulnsToDb } from "@/lib/vulnSync";
 
 import os from "os";
 
@@ -68,6 +69,21 @@ export async function GET(
     }
   } else {
     log.debug(`GET /api/scans/${id}`, "No vulnerabilities.json yet");
+  }
+
+  // Ensure each on-disk finding has a DB row, then enrich with its DB id + triage
+  // status so the scan detail page can mark false positives / report to Jira
+  // (these actions are keyed by the DB uuid, not the strix finding id).
+  if (vulnerabilities.length > 0) {
+    try {
+      const dbMap = await syncVulnsToDb(id, vulnerabilities);
+      vulnerabilities = vulnerabilities.map((v) => {
+        const meta = dbMap[String(v.id ?? "")];
+        return meta ? { ...v, dbId: meta.id, status: meta.status } : v;
+      });
+    } catch (e) {
+      log.warn(`GET /api/scans/${id}`, "Failed to enrich vulns with DB ids", { err: String(e) });
+    }
   }
 
   return NextResponse.json({ ...dbScan, ...run, vulnerabilities });

@@ -11,6 +11,8 @@ export interface Vulnerability {
   cvss?: number;
   remediation?: string;
   target?: string;
+  dbId?: string; // DB uuid (present once synced) — used by triage actions
+  status?: string; // "OPEN" | "FALSE_POSITIVE"
 }
 
 export interface ScanDetail {

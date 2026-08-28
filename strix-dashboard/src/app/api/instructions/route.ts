@@ -9,12 +9,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Shared library: every user sees all instructions. Ownership (userId) is
+    // still returned so the client can keep edit/delete restricted to the author.
     const instructions = await prisma.instruction.findMany({
-      where: { userId: session.userId as string },
       orderBy: { updatedAt: "desc" },
+      include: { user: { select: { username: true } } },
     });
 
-    return NextResponse.json(instructions);
+    const shaped = instructions.map((i) => ({
+      id: i.id,
+      userId: i.userId,
+      title: i.title,
+      content: i.content,
+      createdAt: i.createdAt,
+      updatedAt: i.updatedAt,
+      authorName: i.user?.username || "Unknown",
+    }));
+
+    return NextResponse.json(shaped);
   } catch (error) {
     console.error("GET /api/instructions error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

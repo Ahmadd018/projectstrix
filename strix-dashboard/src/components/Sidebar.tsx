@@ -41,6 +41,7 @@ const navItems = [
   { name: "Reports",          path: "/reports",         icon: FileText },
   { name: "System Logs",      path: "/logs",            icon: TerminalSquare },
   { name: "Instructions",     path: "/instructions",    icon: BookText },
+  { name: "FP Instructions",  path: "/fp-instructions", icon: ShieldCheck },
   { name: "API Docs",         path: "/api-docs",        icon: BookOpen },
 ];
 
