@@ -82,7 +82,7 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
     blocks = [
       {
         type: "header",
-        text: { type: "plain_text", text: "🚀 Strix Scan Initiated", emoji: true }
+        text: { type: "plain_text", text: "🚀 Taipan Scan Initiated", emoji: true }
       },
       {
         type: "section",
@@ -126,7 +126,7 @@ async function sendWebhookNotification(config: any, event: "start" | "finish", s
     if (vulnCount > 0) {
       blocks.push({
         type: "section",
-        text: { type: "mrkdwn", text: `⚠️ *Action Required:* Vulnerabilities were detected on the target. Please review the detailed Strix report immediately.` }
+        text: { type: "mrkdwn", text: `⚠️ *Action Required:* Vulnerabilities were detected on the target. Please review the detailed Taipan report immediately.` }
       });
     }
 
@@ -859,7 +859,7 @@ function runMockScan(
   ];
 
   const logs = [
-    `[${new Date().toISOString()}] Starting Strix security assessment (DEMO MODE)`,
+    `[${new Date().toISOString()}] Starting Taipan security assessment (DEMO MODE)`,
     `[${new Date().toISOString()}] Target: ${target}`,
     `[${new Date().toISOString()}] Initializing reconnaissance agent...`,
     `[${new Date().toISOString()}] Crawling target endpoints...`,

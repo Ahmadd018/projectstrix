@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 const spec = {
   openapi: "3.0.3",
   info: {
-    title: "Strix Security Dashboard API",
+    title: "Taipan Security Dashboard API",
     description:
-      "REST API for the Strix AI Penetration Testing Dashboard. Allows launching scans, monitoring results in real-time via SSE, managing users, and retrieving vulnerability findings.\n\n" +
+      "REST API for the Taipan AI Penetration Testing Dashboard. Allows launching scans, monitoring results in real-time via SSE, managing users, and retrieving vulnerability findings.\n\n" +
       "## Authentication\n" +
       "All endpoints (except `/auth/login`, `/auth/register`, `/health`) require a valid session cookie (`strix_session`) obtained via `POST /auth/login`.\n\n" +
       "## Rate Limiting\n" +
@@ -15,7 +15,7 @@ const spec = {
       "- **ADMIN** — Full access including user management, system logs, and all scans.",
     version: "2.0.0",
     contact: {
-      name: "Project Strix",
+      name: "Project Taipan",
       url: "https://github.com/infat0x/ProjectStrix",
     },
   },
@@ -283,7 +283,7 @@ const spec = {
         tags: ["Scans"],
         summary: "Launch a scan",
         description:
-          "Starts a new Strix security assessment. The scan runs asynchronously in the background.\n\n" +
+          "Starts a new Taipan security assessment. The scan runs asynchronously in the background.\n\n" +
           "**API keys** are looked up from the user's stored settings — do not send them in this request.\n\n" +
           "**Input limits:** `instruction` ≤ 8000 chars, `targetList` ≤ 100 000 chars.\n\n" +
           "If the strix CLI is not installed the scan runs in **demo mode** with mock data.",

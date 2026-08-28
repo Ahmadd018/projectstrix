@@ -78,7 +78,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
     setForm({
       summary: `[${(vuln.severity || "").toUpperCase()}] ${vuln.title}`,
       assignee: "",
-      labels: "strix, security",
+      labels: "taipan, security",
       severityLevel: defaultSeverityLevel(vuln.severity),
       priority: defaultPriority(vuln.severity),
     });
@@ -178,7 +178,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
             </div>
             <div style={fieldWrap}>
               <label style={lbl}>Labels <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(comma-separated)</span></label>
-              <input style={inp} value={form.labels} placeholder="strix, security" onChange={(e) => setForm({ ...form, labels: e.target.value })} />
+              <input style={inp} value={form.labels} placeholder="taipan, security" onChange={(e) => setForm({ ...form, labels: e.target.value })} />
             </div>
             <div style={fieldWrap}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

@@ -47,7 +47,8 @@ export async function POST(req: Request) {
     description: vuln.description,
     poc: vuln.poc,
     cvss: vuln.cvss,
-    target: vuln.scan.target,
+    // Per-finding target beats the scan's placeholder for multi-target scans.
+    target: vuln.target || vuln.scan.target,
   };
 
   try {

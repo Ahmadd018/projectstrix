@@ -241,7 +241,7 @@ export default function Reports() {
               <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "16px" }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", marginBottom: 8 }}>AI Analysis Summary</div>
                 <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.7 }}>
-                  Strix Autonomous AI has successfully completed the penetration testing phase for the target environment.
+                  Taipan Autonomous AI has successfully completed the penetration testing phase for the target environment.
                   During execution, the agent explored the exposed attack surface and identified{" "}
                   <strong style={{ color: "var(--fg)" }}>{selectedScan.vulnCount}</strong> potential security vulnerabilities.
                   Review individual findings in the Vulnerabilities tab for reproduction steps and mitigation strategies.

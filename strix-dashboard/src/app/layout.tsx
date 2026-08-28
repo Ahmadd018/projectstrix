@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Strix — Security Dashboard",
+  title: "Taipan — Security Dashboard",
   description: "Enterprise autonomous AI pentesting platform",
   icons: {
     icon: "/logo.svg",

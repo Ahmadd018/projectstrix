@@ -65,11 +65,11 @@ export default function RegisterPage() {
           justifyContent: "center",
           boxShadow: "0 0 30px rgba(255,0,0,0.1)",
         }}>
-          <img src="/logo.svg" alt="Strix Logo" style={{ width: 90, height: 90, objectFit: "contain" }} />
+          <img src="/logo.svg" alt="Taipan Logo" style={{ width: 90, height: 90, objectFit: "contain" }} />
         </div>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Create Account</h1>
-          <p style={{ fontSize: 14, color: "var(--fg-3)", marginTop: 4 }}>Set up a new user to access Strix.</p>
+          <p style={{ fontSize: 14, color: "var(--fg-3)", marginTop: 4 }}>Set up a new user to access Taipan.</p>
         </div>
       </div>
 

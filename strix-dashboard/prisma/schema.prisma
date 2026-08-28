@@ -95,6 +95,7 @@ model Vulnerability {
   vulnId      String
   title       String
   severity    String
+  target      String?
   endpoint    String?
   method      String?
   description String

@@ -174,7 +174,7 @@ export default function Sidebar() {
             <div className="sidebar-logo-mark" style={{ background: "transparent", width: 32, height: 32 }}>
               <img src="/logo.svg" alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
-            <span className="sidebar-logo-text">Project Strix</span>
+            <span className="sidebar-logo-text">Project Taipan</span>
           </div>
         )}
         <button

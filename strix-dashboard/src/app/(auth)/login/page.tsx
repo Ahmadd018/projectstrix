@@ -65,10 +65,10 @@ export default function LoginPage() {
           justifyContent: "center",
           boxShadow: "0 0 30px rgba(255,0,0,0.1)",
         }}>
-          <img src="/logo.svg" alt="Strix Logo" style={{ width: 90, height: 90, objectFit: "contain" }} />
+          <img src="/logo.svg" alt="Taipan Logo" style={{ width: 90, height: 90, objectFit: "contain" }} />
         </div>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Welcome to Strix</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>Welcome to Taipan</h1>
           <p style={{ fontSize: 14, color: "var(--fg-3)", marginTop: 4 }}>Sign in to continue to your dashboard</p>
         </div>
       </div>

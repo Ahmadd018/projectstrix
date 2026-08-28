@@ -35,7 +35,8 @@ export async function POST(req: Request) {
   const keys = readApiKeys(user?.apiKeys);
   const deepseekKey = keys.deepseek;
   // Fallback to the deterministic template if no key is configured.
-  const fallback = buildIssueDescription({ ...vuln, scanTarget: vuln.scan.target });
+  const targetHost = vuln.target || vuln.scan.target;
+  const fallback = buildIssueDescription({ ...vuln, scanTarget: targetHost });
   if (!deepseekKey) {
     return NextResponse.json({ description: fallback, generated: false, reason: "No DeepSeek key in Settings — used template." });
   }
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
 
   const userMsg = [
     `Title: ${vuln.title}`,
-    `Target host: ${vuln.scan.target}`,
+    `Target host: ${targetHost}`,
     `HTTP method: ${vuln.method || "(n/a)"}`,
     `Endpoint/path: ${vuln.endpoint || "(n/a)"}`,
     `Severity: ${vuln.severity}`,

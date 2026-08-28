@@ -19,6 +19,7 @@ interface Vulnerability {
   cvss?: number;
   remediation?: string;
   status?: string;
+  target?: string;
 }
 
 interface Scan {
@@ -122,7 +123,7 @@ export default function VulnerabilitiesPage() {
     setJiraForm({
       summary: `[${v.severity.toUpperCase()}] ${v.title}`,
       assignee: "",
-      labels: "strix, security",
+      labels: "taipan, security",
       severityLevel: defaultSeverityLevel(v.severity),
       priority: defaultPriority(v.severity),
     });
@@ -214,7 +215,9 @@ export default function VulnerabilitiesPage() {
       
       const vulns = (Array.isArray(data) ? data : []).map((v: any) => ({
         ...v,
-        scanTarget: v.scan?.target || "Unknown Target"
+        // Prefer the per-finding target; fall back to the scan's target (which is
+        // a "Multiple_Targets_(N)" placeholder for multi-target scans).
+        scanTarget: v.target || v.scan?.target || "Unknown Target"
       }));
 
       vulns.sort((a, b) => (SEVERITY_ORDER[a.severity as keyof typeof SEVERITY_ORDER] ?? 5) - (SEVERITY_ORDER[b.severity as keyof typeof SEVERITY_ORDER] ?? 5));
@@ -807,7 +810,7 @@ export default function VulnerabilitiesPage() {
                       </div>
                       <div style={fieldWrap}>
                         <label style={lbl}>Labels <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(comma-separated)</span></label>
-                        <input style={inp} value={jiraForm.labels} placeholder="strix, security" onChange={(e) => setJiraForm({ ...jiraForm, labels: e.target.value })} />
+                        <input style={inp} value={jiraForm.labels} placeholder="taipan, security" onChange={(e) => setJiraForm({ ...jiraForm, labels: e.target.value })} />
                       </div>
                       <div style={fieldWrap}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

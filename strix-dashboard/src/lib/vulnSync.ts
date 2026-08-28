@@ -41,6 +41,9 @@ export async function syncVulnsToDb(
           vulnId,
           title: v.title || "Unknown",
           severity: v.severity || "info",
+          // Per-finding target (real host even for multi-target scans, where the
+          // scan's own target is just a "Multiple_Targets_(N)" placeholder).
+          target: v.target || null,
           endpoint: v.endpoint || "",
           method: v.method || "",
           description: v.description || "",

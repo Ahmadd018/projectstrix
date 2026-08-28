@@ -97,7 +97,7 @@ export default function ScanTui({
           </div>
         </div>
         <div style={{ color: '#444', fontSize: '12px', marginTop: 'auto' }}>
-          Strix AI TUI Simulator v4.0 (Markdown)
+          Taipan AI TUI Simulator v4.0 (Markdown)
         </div>
       </div>
 

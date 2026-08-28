@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     description:
       typeof description === "string" && description.trim()
         ? description.trim()
-        : buildIssueDescription({ ...vuln, scanTarget: vuln.scan.target }),
+        : buildIssueDescription({ ...vuln, scanTarget: vuln.target || vuln.scan.target }),
   };
 
   const pid = PRIORITY_MAP[String(priority || "").toLowerCase()];

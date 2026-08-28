@@ -1025,7 +1025,7 @@ function ScansContent() {
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 16 }}>
-                You selected <strong>{scheduleModal.period}</strong>. Strix will automatically use the saved API Key for <strong>{scheduleModal.llmModel}</strong> to run this scan in the background.
+                You selected <strong>{scheduleModal.period}</strong>. Taipan will automatically use the saved API Key for <strong>{scheduleModal.llmModel}</strong> to run this scan in the background.
               </p>
               {error && (
                 <div style={{ marginTop: 12, padding: "8px", background: "var(--sev-critical-bg)", border: "1px solid var(--sev-critical-bd)", borderRadius: "var(--r)", fontSize: 12, color: "var(--sev-critical)" }}>
