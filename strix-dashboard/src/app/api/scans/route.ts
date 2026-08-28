@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
+import { spawn, execFileSync } from "child_process";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -41,6 +41,22 @@ function getStrixCommand(): string {
     { candidates },
   );
   return "strix";
+}
+
+// Whether the installed strix understands --false-positive-file. Cached after the
+// first check (one `strix --help` per server lifetime). Lets the dashboard run
+// against a strix that predates the flag without hard-failing the scan — the FP
+// registry simply isn't injected until strix is updated.
+let strixFpFlagSupported: boolean | null = null;
+function strixSupportsFpFlag(cmd: string): boolean {
+  if (strixFpFlagSupported !== null) return strixFpFlagSupported;
+  try {
+    const help = execFileSync(cmd, ["--help"], { encoding: "utf-8", timeout: 8000 });
+    strixFpFlagSupported = help.includes("--false-positive-file");
+  } catch {
+    strixFpFlagSupported = false;
+  }
+  return strixFpFlagSupported;
 }
 
 function ensureRunsDir() {
@@ -509,8 +525,14 @@ export async function POST(req: NextRequest) {
     if (fpBlock) {
       const fpFile = path.join(scanDir, "false_positives.md");
       fs.writeFileSync(fpFile, fpBlock);
-      args.push("--false-positive-file", fpFile);
-      log.info("POST /api/scans", "Passing known-FP registry to strix", { targets: fpTargets.length });
+      // Only pass the flag if this strix build supports it, so an older/stock
+      // strix install doesn't reject the scan outright.
+      if (strixSupportsFpFlag(strixCmd)) {
+        args.push("--false-positive-file", fpFile);
+        log.info("POST /api/scans", "Passing known-FP registry to strix", { targets: fpTargets.length });
+      } else {
+        log.warn("POST /api/scans", "Installed strix has no --false-positive-file support; FP registry NOT injected. Update strix to enable known-FP suppression.");
+      }
     }
 
     if (scopeMode && scopeMode !== "auto") args.push("--scope-mode", scopeMode);
