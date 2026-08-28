@@ -25,3 +25,12 @@ skills-lock.json
 *.tsbuildinfo
 
 implementation.md
+
+# Vendored strix build artifacts (created on the server by `uv sync`)
+strix/.venv/
+strix/strix_runs/
+strix/**/__pycache__/
+strix/*.egg-info/
+strix/.pytest_cache/
+strix/.mypy_cache/
+strix/.ruff_cache/

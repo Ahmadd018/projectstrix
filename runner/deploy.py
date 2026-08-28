@@ -176,44 +176,66 @@ def install_nodejs():
         print("PM2 is already installed.")
     print_success("Node.js and PM2 are ready.")
 
+def strix_source_dir():
+    """The patched Strix source vendored alongside the dashboard in this repo."""
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    return os.path.join(root, "strix")
+
+
+def strix_binary_path():
+    """Where the built Strix CLI lives once the vendored source is synced."""
+    return os.path.join(strix_source_dir(), ".venv", "bin", "strix")
+
+
 def install_strix():
-    print_step("Installing Strix Core...")
-    
-    code, _ = run_cmd("strix --help", fail_on_error=False)
-    if code == 0:
-        print_success("Strix Core is already installed. Skipping installation.")
-        return
-        
-    print("Fetching official Strix installer...")
-    code, out = run_cmd("curl -sSL https://strix.ai/install | bash", fail_on_error=False)
-    
+    print_step("Installing Strix Core (patched, from vendored source)...")
+
+    strix_src = strix_source_dir()
+    if not os.path.exists(os.path.join(strix_src, "pyproject.toml")):
+        print_error(f"Vendored Strix source not found at {strix_src} (expected pyproject.toml).")
+        print_error("This repo must ship the patched strix/ folder next to strix-dashboard/.")
+        sys.exit(1)
+
+    # The project is uv-managed with a lockfile; build it exactly like local dev.
+    uv_bin = None
+    code, out = run_cmd("command -v uv", fail_on_error=False)
+    if code == 0 and out.strip():
+        uv_bin = out.strip().splitlines()[-1].strip()
+    if not uv_bin:
+        print("Installing uv (Python package manager)...")
+        run_cmd("curl -LsSf https://astral.sh/uv/install.sh | sh", fail_on_error=False)
+        for cand in ["~/.local/bin/uv", "~/.cargo/bin/uv"]:
+            p = os.path.expanduser(cand)
+            if os.path.exists(p):
+                uv_bin = p
+                break
+    if not uv_bin:
+        print_error("Could not install or locate 'uv' (needed to build the vendored Strix).")
+        sys.exit(1)
+
+    # Build the in-tree venv from the locked dependencies.
+    code, out = run_cmd(f"cd {strix_src} && {uv_bin} sync", fail_on_error=False)
     if code != 0:
-        print_error("Failed to install Strix using the official bash script.")
+        print_error("Failed to build Strix with 'uv sync'.")
         print(out)
         sys.exit(1)
-        
-    # The official script installs to ~/.strix/bin/strix
-    # We must symlink it globally so pm2 and the user can access it easily.
-    sudo_user = os.environ.get("SUDO_USER")
-    strix_paths = [
-        "/root/.strix/bin/strix",
-        os.path.expanduser("~/.strix/bin/strix")
-    ]
-    if sudo_user:
-        strix_paths.append(f"/home/{sudo_user}/.strix/bin/strix")
-        
-    for p in strix_paths:
-        if os.path.exists(p):
-            run_cmd(f"ln -sf {p} /usr/local/bin/strix")
-            break
-            
-    # Verify installation
-    code, out = run_cmd("strix --help", fail_on_error=False)
-    if code == 0:
-        print_success("Strix installed successfully (/usr/local/bin/strix).")
-    else:
-        print_error("Failed to verify Strix installation (strix command not found).")
+
+    strix_bin = strix_binary_path()
+    if not os.path.exists(strix_bin):
+        print_error(f"Strix binary not found after build at {strix_bin}.")
         sys.exit(1)
+
+    # Expose it globally for convenience; the dashboard pins STRIX_PATH to it too.
+    run_cmd(f"ln -sf {strix_bin} /usr/local/bin/strix")
+
+    code, out = run_cmd(f"{strix_bin} --help", fail_on_error=False)
+    if code != 0:
+        print_error("Failed to verify Strix installation (strix --help failed).")
+        sys.exit(1)
+    if "--false-positive-file" in out:
+        print_success("Patched Strix Core installed (supports --false-positive-file).")
+    else:
+        print_error("Strix built, but the false-positive patch is missing — vendored source may be stale.")
 
 def setup_dashboard(db_pass):
     print_step("Setting up Strix Dashboard...")
@@ -237,6 +259,7 @@ def setup_dashboard(db_pass):
             f.write(f"SCHEDULER_SECRET=\"{scheduler_secret}\"\n")
             f.write("INSECURE_HTTP=true\n")
             f.write("PORT=48080\n")
+            f.write(f"STRIX_PATH=\"{strix_binary_path()}\"\n")
     else:
         # If it exists, ensure we fix the DATABASE_URL and ensure all required secrets exist
         import re
@@ -267,6 +290,14 @@ def setup_dashboard(db_pass):
         if "PORT=" not in content:
             content += "PORT=48080\n"
             print("Set PORT=48080 for scheduler daemon.")
+
+        # Pin STRIX_PATH to the vendored, patched Strix build.
+        strix_path_line = f"STRIX_PATH=\"{strix_binary_path()}\""
+        if "STRIX_PATH=" in content:
+            content = re.sub(r'STRIX_PATH=.*', strix_path_line, content)
+        else:
+            content += f"{strix_path_line}\n"
+            print("Pinned STRIX_PATH to the vendored Strix build.")
             
         with open(env_file, "w") as f:
             f.write(content)
