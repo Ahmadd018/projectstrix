@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket, Loader2, XCircle } from "lucide-react";
+import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket } from "lucide-react";
+import { JiraIntegrationsManager } from "@/components/JiraIntegrationsManager";
 
 const TABS = [
   { id: "api",           label: "API Keys",      icon: Key },
@@ -16,9 +17,6 @@ export default function Settings() {
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [preferencesConfig, setPreferencesConfig] = useState({ theme: "dark", defaultModel: "openai/gpt-4o", autoDeleteDays: 0 });
-  const [jiraConfig, setJiraConfig] = useState({ jiraBaseUrl: "", jiraProjectId: "", jiraIssueTypeId: "", jiraPat: "" });
-  const [jiraPatSet, setJiraPatSet] = useState(false);
-  const [jiraTest, setJiraTest] = useState<{ status: "idle" | "testing" | "ok" | "err"; msg?: string }>({ status: "idle" });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -42,13 +40,6 @@ export default function Settings() {
               defaultModel: data.settings.defaultModel || "openai/gpt-4o",
               autoDeleteDays: data.settings.autoDeleteDays || 0
             });
-            setJiraConfig({
-              jiraBaseUrl: data.settings.jiraBaseUrl || "",
-              jiraProjectId: data.settings.jiraProjectId || "",
-              jiraIssueTypeId: data.settings.jiraIssueTypeId || "",
-              jiraPat: "",
-            });
-            setJiraPatSet(!!data.settings.jiraPatSet);
           }
           if (data.customModels) {
             setCustomModels(data.customModels.map((m: any) => ({ value: m.value, label: m.label })));
@@ -58,7 +49,7 @@ export default function Settings() {
       .catch(() => {});
   }, []);
 
-  const handleSave = async (tab: "api" | "agent" | "preferences" | "jira") => {
+  const handleSave = async (tab: "api" | "agent" | "preferences") => {
     if (tab === "api") {
       await fetch("/api/user/keys", {
         method: "POST",
@@ -72,41 +63,18 @@ export default function Settings() {
         body: JSON.stringify({ type: "customModels", data: validModels })
       });
     }
-    else if (tab === "agent" || tab === "preferences" || tab === "jira") {
-      // Only send jiraPat when the user typed a new one (blank = keep existing).
-      const jiraData = { ...jiraConfig };
-      if (!jiraData.jiraPat) delete (jiraData as any).jiraPat;
-      const res = await fetch("/api/user/settings", {
+    else if (tab === "agent" || tab === "preferences") {
+      await fetch("/api/user/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "settings",
-          data: { ...agentConfig, ...preferencesConfig, ...jiraData }
+          data: { ...agentConfig, ...preferencesConfig }
         })
       });
-      const out = await res.json().catch(() => ({}));
-      if (out?.settings) {
-        setJiraPatSet(!!out.settings.jiraPatSet);
-        setJiraConfig((prev) => ({ ...prev, jiraPat: "" }));
-      }
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-  };
-
-  const testJira = async () => {
-    setJiraTest({ status: "testing" });
-    try {
-      const res = await fetch("/api/jira/test", { method: "POST" });
-      const out = await res.json().catch(() => ({}));
-      if (res.ok && out.success) {
-        setJiraTest({ status: "ok", msg: `Connected as ${out.displayName || out.name}` });
-      } else {
-        setJiraTest({ status: "err", msg: out.error || `HTTP ${res.status}` });
-      }
-    } catch (e: any) {
-      setJiraTest({ status: "err", msg: e?.message || "Network error" });
-    }
   };
 
   const s: any = {
@@ -335,91 +303,7 @@ export default function Settings() {
           )}
 
           {/* Jira */}
-          {activeTab === "jira" && (
-            <div style={s.card}>
-              <div style={s.cardHead}>
-                <div style={s.cardTitle}>Jira Integration</div>
-                <div style={s.cardDesc}>Report true-positive findings to Jira. Uses a Personal Access Token (Bearer) against the Data Center REST API.</div>
-              </div>
-              <div style={s.cardBody}>
-                <div style={s.field}>
-                  <label style={s.label}>Base URL</label>
-                  <input
-                    style={s.input}
-                    type="text"
-                    placeholder="https://jira.company.com"
-                    value={jiraConfig.jiraBaseUrl}
-                    onChange={(e) => setJiraConfig({ ...jiraConfig, jiraBaseUrl: e.target.value })}
-                  />
-                  <span style={s.hint}>Your Jira server root, without a trailing slash.</span>
-                </div>
-
-                <div style={{ ...s.field, marginTop: 12 }}>
-                  <label style={s.label}>Personal Access Token (PAT)</label>
-                  <input
-                    style={s.input}
-                    type="password"
-                    placeholder={jiraPatSet ? "•••••••• (saved — leave blank to keep)" : "Paste the service account's PAT"}
-                    value={jiraConfig.jiraPat}
-                    onChange={(e) => setJiraConfig({ ...jiraConfig, jiraPat: e.target.value })}
-                  />
-                  <span style={s.hint}>Stored encrypted. Sent as <code>Authorization: Bearer</code>. Leave blank to keep the existing token.</span>
-                </div>
-
-                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-                  <div style={{ ...s.field, flex: 1 }}>
-                    <label style={s.label}>Project ID</label>
-                    <input
-                      style={s.input}
-                      type="text"
-                      placeholder="e.g. 17706"
-                      value={jiraConfig.jiraProjectId}
-                      onChange={(e) => setJiraConfig({ ...jiraConfig, jiraProjectId: e.target.value })}
-                    />
-                  </div>
-                  <div style={{ ...s.field, flex: 1 }}>
-                    <label style={s.label}>Issue Type ID</label>
-                    <input
-                      style={s.input}
-                      type="text"
-                      placeholder="e.g. 10004"
-                      value={jiraConfig.jiraIssueTypeId}
-                      onChange={(e) => setJiraConfig({ ...jiraConfig, jiraIssueTypeId: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <span style={s.hint}>Numeric ids from the create-issue form (<code>pid</code> and <code>issuetype</code>).</span>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-                  <button className="btn-secondary" onClick={testJira} disabled={jiraTest.status === "testing"} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {jiraTest.status === "testing" ? <Loader2 size={13} className="animate-spin" /> : <Ticket size={13} />}
-                    Test connection
-                  </button>
-                  {jiraTest.status === "ok" && (
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)" }}>
-                      <CheckCircle2 size={13} /> {jiraTest.msg}
-                    </span>
-                  )}
-                  {jiraTest.status === "err" && (
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-critical, #e5484d)" }}>
-                      <XCircle size={13} /> {jiraTest.msg}
-                    </span>
-                  )}
-                </div>
-                <span style={s.hint}>Test uses the last <strong>saved</strong> credentials — save first, then test.</span>
-              </div>
-              <div style={s.cardFoot}>
-                {saved && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
-                    <CheckCircle2 size={13} /> Saved
-                  </div>
-                )}
-                <button className="btn-primary" onClick={() => handleSave("jira")}>
-                  <Save size={13} /> Save Configuration
-                </button>
-              </div>
-            </div>
-          )}
+          {activeTab === "jira" && <JiraIntegrationsManager s={s} />}
 
           {/* Preferences */}
           {activeTab === "preferences" && (
