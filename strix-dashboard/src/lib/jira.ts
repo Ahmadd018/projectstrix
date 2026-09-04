@@ -54,6 +54,17 @@ export function getJiraConfig(settings: any): JiraConfig | null {
   return { baseUrl, pat, projectId, issueTypeId };
 }
 
+// Resolve a Data Center config from a JiraIntegration row (authSecret = PAT).
+export function getDatacenterConfig(integration: any): JiraConfig | null {
+  if (!integration) return null;
+  const baseUrl = String(integration.baseUrl || "").trim().replace(/\/+$/, "");
+  const pat = integration.authSecret ? decryptSecret(integration.authSecret) : "";
+  const projectId = String(integration.projectId || "").trim();
+  const issueTypeId = String(integration.issueTypeId || "").trim();
+  if (!baseUrl || !pat || !projectId || !issueTypeId) return null;
+  return { baseUrl, pat, projectId, issueTypeId };
+}
+
 // Reduce a target/URL to a bare host (e.g. "x.com") for the report sentence.
 function hostOf(target?: string): string {
   if (!target) return "the target";

@@ -7,19 +7,21 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
+  id           String                @id @default(uuid())
+  username     String                @unique
   passwordHash String
-  role         String   @default("USER")
-  status       String   @default("APPROVED")
+  role         String                @default("USER")
+  status       String                @default("APPROVED")
   apiKeys      String?
-  tokenVersion Int      @default(0)
-  createdAt    DateTime @default(now())
+  tokenVersion Int                   @default(0)
+  createdAt    DateTime              @default(now())
   scans        Scan[]
   settings     UserSettings?
   customModels CustomModel[]
   projects     Project[]
   instructions Instruction[]
+  ownedJira    JiraIntegration[]     @relation("OwnedJira")
+  jiraOptIns   UserJiraIntegration[]
 }
 
 model Instruction {
@@ -33,54 +35,101 @@ model Instruction {
 }
 
 model Scan {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  target       String
-  projectName  String    @default("")
-  llmModel     String    @default("openai/gpt-4o")
-  scanMode     String    @default("standard")
-  status       String    @default("scheduled")
-  startedAt    DateTime  @default(now())
-  period       String    @default("none")
-  nextRunAt    DateTime?
-  vulnCount    Int       @default(0)
-  payload      Json?
-  projectId    String?
-  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target          String
+  projectName     String          @default("")
+  llmModel        String          @default("openai/gpt-4o")
+  scanMode        String          @default("standard")
+  status          String          @default("scheduled")
+  startedAt       DateTime        @default(now())
+  period          String          @default("none")
+  nextRunAt       DateTime?
+  vulnCount       Int             @default(0)
+  payload         Json?
+  projectId       String?
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
   vulnerabilities Vulnerability[]
 }
 
 model UserSettings {
-  id                 String  @id @default(uuid())
-  userId             String  @unique
-  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  aggressiveness     Int     @default(50)
-  maxThreads         Int     @default(4)
-  theme              String  @default("dark")
-  defaultModel       String  @default("openai/gpt-4o")
-  autoDeleteDays     Int     @default(0)
-  jiraBaseUrl        String  @default("")
-  jiraPat            String  @default("") // AES-encrypted at rest
-  jiraProjectId      String  @default("")
-  jiraIssueTypeId    String  @default("")
+  id                 String @id @default(uuid())
+  userId             String @unique
+  user               User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aggressiveness     Int    @default(50)
+  maxThreads         Int    @default(4)
+  theme              String @default("dark")
+  defaultModel       String @default("openai/gpt-4o")
+  autoDeleteDays     Int    @default(0)
+  jiraBaseUrl        String @default("")
+  jiraPat            String @default("") // AES-encrypted at rest
+  jiraProjectId      String @default("")
+  jiraIssueTypeId    String @default("")
+  // Providers for which this user opted into the admin-shared API key.
+  // JSON array of provider names, e.g. ["deepseek","openai"].
+  sharedKeyProviders String @default("")
+}
+
+// A single Jira integration/config. Two deployment flavors:
+//   DATACENTER — REST v2, Bearer PAT, wiki-markup descriptions (e.g. Kapitalbank)
+//   CLOUD      — REST v3, Basic email:token, ADF descriptions (e.g. Bir Ecosystem)
+model JiraIntegration {
+  id          String                @id @default(uuid())
+  name        String
+  deployment  String                @default("DATACENTER") // "DATACENTER" | "CLOUD"
+  baseUrl     String
+  authEmail   String                @default("") // CLOUD basic-auth email; empty for DATACENTER
+  authSecret  String                @default("") // AES-encrypted: DC PAT or Cloud API token
+  projectId   String                @default("")
+  issueTypeId String                @default("")
+  // Field metadata for the report modal (company field id + options, priority,
+  // security-level field for DC, participants field id, etc.). Shape is
+  // deployment-specific; see src/lib/jira/*.
+  config      Json?
+  shared      Boolean               @default(false) // superadmin "streamed" it to everyone
+  ownerId     String? // null = shared preset; else the creator
+  owner       User?                 @relation("OwnedJira", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime              @default(now())
+  optIns      UserJiraIntegration[]
+}
+
+// A user has accepted/enabled an integration, with their per-integration defaults.
+model UserJiraIntegration {
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integrationId   String
+  integration     JiraIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  defaultAssignee String          @default("") // accountId (CLOUD) or username (DATACENTER)
+  defaultCompany  String          @default("") // customfield option id (CLOUD)
+  createdAt       DateTime        @default(now())
+
+  @@unique([userId, integrationId])
+}
+
+// Singleton row (id = "singleton") for superadmin-managed global settings.
+model AppSettings {
+  id                String  @id @default("singleton")
+  sharedApiKeys     String  @default("") // AES-encrypted blob, same shape as User.apiKeys
+  sharedKeysEnabled Boolean @default(false) // shared keys accessible to everyone
 }
 
 model CustomModel {
-  id          String @id @default(uuid())
-  userId      String
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  value       String
-  label       String
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value  String
+  label  String
 }
 
 model Project {
-  id          String   @id @default(uuid())
-  name        String
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  scans       Scan[]
+  id        String   @id @default(uuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  scans     Scan[]
 }
 
 model Vulnerability {
