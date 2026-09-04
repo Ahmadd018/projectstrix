@@ -324,12 +324,19 @@ def deploy_service():
     
     # Delete existing pm2 process if it exists
     run_cmd("pm2 delete strix-dashboard", fail_on_error=False)
-    
+
+    # False-positive instructions must live OUTSIDE the repo so a redeploy
+    # (git clone / rm -rf) never wipes them and the app never falls back to the
+    # in-repo default. Passed into the PM2 process env so the running server
+    # actually reads it (the app resolves FP_INSTRUCTIONS_DIR at runtime).
+    fp_dir = os.environ.get("FP_INSTRUCTIONS_DIR", "/var/lib/strix/fp_instructions")
+    run_cmd(f"mkdir -p '{fp_dir}'", fail_on_error=False)
+
     # Start the app via PM2.
     # Bind to 127.0.0.1 only: the app is meant to sit behind the Nginx reverse
     # proxy (443), so it must NOT be reachable directly from outside on 48080.
     print("Starting Next.js via PM2 on 127.0.0.1:48080...")
-    run_cmd(f"cd {dashboard_dir} && pm2 start npm --name 'strix-dashboard' -- run start -- -H 127.0.0.1 -p 48080")
+    run_cmd(f"cd {dashboard_dir} && FP_INSTRUCTIONS_DIR='{fp_dir}' pm2 start npm --name 'strix-dashboard' -- run start -- -H 127.0.0.1 -p 48080")
     
     # Save PM2 list and configure startup
     run_cmd("pm2 save")
