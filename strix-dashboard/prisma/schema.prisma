@@ -46,7 +46,6 @@ model Scan {
   nextRunAt    DateTime?
   vulnCount    Int       @default(0)
   payload      Json?
-  slackMessageTs String?
   projectId    String?
   project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   vulnerabilities Vulnerability[]
@@ -58,10 +57,6 @@ model UserSettings {
   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   aggressiveness     Int     @default(50)
   maxThreads         Int     @default(4)
-  slackBotToken      String  @default("")
-  slackChannelId     String  @default("")
-  notifyOnStart      Boolean @default(false)
-  notifyOnFinish     Boolean @default(true)
   theme              String  @default("dark")
   defaultModel       String  @default("openai/gpt-4o")
   autoDeleteDays     Int     @default(0)

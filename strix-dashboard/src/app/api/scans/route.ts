@@ -66,135 +66,6 @@ function ensureRunsDir() {
   }
 }
 
-async function sendWebhookNotification(config: any, event: "start" | "finish", scanMeta: any, vulnCount: number = 0) {
-  if (!config || !config.slackBotToken || !config.slackChannelId) return;
-  
-  if (event === "start" && !config.notifyOnStart) return;
-  if (event === "finish" && !config.notifyOnFinish) return;
-
-  let blocks: any[] = [];
-  let fallbackText = "";
-  let color = "#36a64f";
-
-  if (event === "start") {
-    fallbackText = `🚀 Scan Started on ${scanMeta.target}`;
-    color = "#3498db";
-    blocks = [
-      {
-        type: "header",
-        text: { type: "plain_text", text: "🚀 Taipan Scan Initiated", emoji: true }
-      },
-      {
-        type: "section",
-        fields: [
-          { type: "mrkdwn", text: `*Target:*\n\`${scanMeta.target}\`` },
-          { type: "mrkdwn", text: `*Mode:*\n${scanMeta.scanMode}` },
-          { type: "mrkdwn", text: `*Model:*\n${scanMeta.llmModel}` },
-          { type: "mrkdwn", text: `*Scan ID:*\n\`${scanMeta.id.slice(0, 8)}\`` }
-        ]
-      },
-      { type: "divider" },
-      {
-        type: "context",
-        elements: [
-          { type: "mrkdwn", text: `🕒 Started at: ${new Date().toLocaleString()}` }
-        ]
-      }
-    ];
-  } else {
-    fallbackText = `🏁 Scan Finished on ${scanMeta.target} - ${vulnCount} vulns`;
-    color = scanMeta.status === "failed" ? "#e74c3c" : vulnCount > 0 ? "#f39c12" : "#2ecc71";
-    
-    let headerText = scanMeta.status === "failed" ? "❌ Scan Failed" : "✅ Scan Completed";
-    
-    blocks = [
-      {
-        type: "header",
-        text: { type: "plain_text", text: headerText, emoji: true }
-      },
-      {
-        type: "section",
-        fields: [
-          { type: "mrkdwn", text: `*Target:*\n\`${scanMeta.target}\`` },
-          { type: "mrkdwn", text: `*Status:*\n${scanMeta.status.toUpperCase()}` },
-          { type: "mrkdwn", text: `*Vulnerabilities Found:*\n${vulnCount > 0 ? '🚨 *' + vulnCount + '*' : '✅ 0'}` },
-          { type: "mrkdwn", text: `*Scan ID:*\n\`${scanMeta.id.slice(0, 8)}\`` }
-        ]
-      }
-    ];
-
-    if (vulnCount > 0) {
-      blocks.push({
-        type: "section",
-        text: { type: "mrkdwn", text: `⚠️ *Action Required:* Vulnerabilities were detected on the target. Please review the detailed Taipan report immediately.` }
-      });
-    }
-
-    blocks.push({ type: "divider" });
-    blocks.push({
-      type: "context",
-      elements: [
-        { type: "mrkdwn", text: `🕒 Finished at: ${new Date().toLocaleString()}` }
-      ]
-    });
-  }
-
-  const payload: any = {
-    channel: config.slackChannelId,
-    text: fallbackText,
-    attachments: [
-      {
-        color: color,
-        blocks: blocks
-      }
-    ]
-  };
-
-  try {
-    let endpoint = "https://slack.com/api/chat.postMessage";
-    
-    if (event === "finish") {
-      const dbScan = await prisma.scan.findUnique({ 
-        where: { id: scanMeta.id }, 
-        select: { slackMessageTs: true } 
-      });
-      if (dbScan?.slackMessageTs) {
-        endpoint = "https://slack.com/api/chat.update";
-        payload.ts = dbScan.slackMessageTs;
-      }
-    }
-
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.slackBotToken}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      log.warn("SLACK", `Failed to reach Slack API: ${res.status}`);
-      return;
-    }
-
-    const data = await res.json();
-    if (!data.ok) {
-      log.warn("SLACK", `Slack API returned error: ${data.error}`);
-    } else if (event === "start" && data.ts) {
-      await prisma.scan.update({
-        where: { id: scanMeta.id },
-        data: { slackMessageTs: data.ts }
-      });
-      log.info("SLACK", `Saved Slack message ts: ${data.ts}`);
-    } else {
-      log.info("SLACK", `Successfully sent ${event} notification to Slack`);
-    }
-  } catch (err: any) {
-    log.error("SLACK", `Error sending Slack notification`, err);
-  }
-}
-
 // GET /api/scans — list all scans
 export async function GET() {
   const session = await getSession();
@@ -461,17 +332,6 @@ export async function POST(req: NextRequest) {
   }
   log.info("POST /api/scans", `Scan created/resumed`, { scanId, scanDir });
 
-  const userSettings = userExists.settings || { slackBotToken: "", slackChannelId: "", notifyOnStart: false, notifyOnFinish: true, aggressiveness: 50, maxThreads: 4 };
-  const notificationConfig = {
-    slackBotToken: (userSettings as any).slackBotToken,
-    slackChannelId: (userSettings as any).slackChannelId,
-    notifyOnStart: userSettings.notifyOnStart,
-    notifyOnFinish: userSettings.notifyOnFinish
-  };
-
-  // Send start notification
-  sendWebhookNotification(notificationConfig, "start", runMeta);
-
   const strixCmd = getStrixCommand();
   const args = ["-n"]; // Non-interactive to ensure clean logs
   
@@ -586,7 +446,7 @@ export async function POST(req: NextRequest) {
 
   if (body.simulationMode) {
     log.info("POST /api/scans", "Simulation Mode enabled, bypassing real agent");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
     return NextResponse.json({ scanId, status: "running", mode: "simulation" });
   }
 
@@ -601,7 +461,7 @@ export async function POST(req: NextRequest) {
       err,
     );
     log.warn("POST /api/scans", "Falling back to DEMO mode");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
     return NextResponse.json({ scanId, status: "running", mode: "demo" });
   }
 
@@ -671,7 +531,7 @@ export async function POST(req: NextRequest) {
     updated.exitCode = code;
     fs.writeFileSync(runFile, JSON.stringify(updated, null, 2));
     
-    // Read vulns for notification and DB update
+    // Read vulns for DB update
     let vulnCount = 0;
     try {
       const vulns = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
@@ -691,10 +551,7 @@ export async function POST(req: NextRequest) {
       where: { id: scanId },
       data: { status: finalStatus, vulnCount }
     }).catch(err => log.error("PROC_CLOSE", "Failed to update DB status on scan close", err));
-    
-    // Send finish notification
-    sendWebhookNotification(notificationConfig, "finish", updated, vulnCount);
-    
+
     log.info("PROC_CLOSE", `Scan ${scanId.slice(0, 8)} finished`, {
       exitCode: code,
       status: updated.status,
@@ -721,7 +578,7 @@ export async function POST(req: NextRequest) {
       data: { status: "failed" }
     }).catch(() => {});
     log.warn("PROC_ERROR", "Falling back to DEMO mode after process error");
-    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target, notificationConfig);
+    runMockScan(scanId, scanDir, runFile, vulnFile, logFile, target);
   });
 
   return NextResponse.json({ scanId, status: "running" });
@@ -786,8 +643,7 @@ function runMockScan(
   runFile: string,
   vulnFile: string,
   logFile: string,
-  target: string,
-  notificationConfig?: any
+  target: string
 ) {
   log.info("MOCK_SCAN", `Starting mock scan for ${target}`, {
     scanId: scanId.slice(0, 8),
@@ -934,10 +790,7 @@ function runMockScan(
         where: { id: scanId },
         data: { status: "completed", vulnCount: mockVulns.length }
       }).catch(() => {});
-      
-      // Send finish notification for mock
-      sendWebhookNotification(notificationConfig, "finish", updated, mockVulns.length);
-      
+
       log.info("MOCK_SCAN", `Mock scan ${scanId.slice(0, 8)} completed`, {
         totalVulns: mockVulns.length,
       });

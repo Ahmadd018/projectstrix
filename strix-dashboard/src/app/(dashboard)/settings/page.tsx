@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Key, Bot, BellRing, Save, CheckCircle2, ChevronRight, Settings2, Ticket, Loader2, XCircle } from "lucide-react";
+import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket, Loader2, XCircle } from "lucide-react";
 
 const TABS = [
   { id: "api",           label: "API Keys",      icon: Key },
   { id: "agent",         label: "Agent Behavior", icon: Bot },
-  { id: "notifications", label: "Notifications",  icon: BellRing },
   { id: "jira",          label: "Jira",           icon: Ticket },
   { id: "preferences",   label: "Preferences",    icon: Settings2 },
 ];
@@ -16,7 +15,6 @@ export default function Settings() {
   const [keys, setKeys] = useState({ openai: "", anthropic: "", gemini: "", deepseek: "", groq: "", openrouter: "", mistral: "", cohere: "", dashscope: "", moonshot: "", vertex_ai: "" });
   const [customModels, setCustomModels] = useState<{value: string, label: string}[]>([]);
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
-  const [notificationConfig, setNotificationConfig] = useState({ slackBotToken: "", slackChannelId: "", notifyOnStart: false, notifyOnFinish: true });
   const [preferencesConfig, setPreferencesConfig] = useState({ theme: "dark", defaultModel: "openai/gpt-4o", autoDeleteDays: 0 });
   const [jiraConfig, setJiraConfig] = useState({ jiraBaseUrl: "", jiraProjectId: "", jiraIssueTypeId: "", jiraPat: "" });
   const [jiraPatSet, setJiraPatSet] = useState(false);
@@ -39,7 +37,6 @@ export default function Settings() {
         if (!data.error) {
           if (data.settings) {
             setAgentConfig({ aggressiveness: data.settings.aggressiveness, maxThreads: data.settings.maxThreads });
-            setNotificationConfig({ slackBotToken: data.settings.slackBotToken || "", slackChannelId: data.settings.slackChannelId || "", notifyOnStart: data.settings.notifyOnStart, notifyOnFinish: data.settings.notifyOnFinish });
             setPreferencesConfig({
               theme: data.settings.theme || "dark",
               defaultModel: data.settings.defaultModel || "openai/gpt-4o",
@@ -61,7 +58,7 @@ export default function Settings() {
       .catch(() => {});
   }, []);
 
-  const handleSave = async (tab: "api" | "agent" | "notifications" | "preferences" | "jira") => {
+  const handleSave = async (tab: "api" | "agent" | "preferences" | "jira") => {
     if (tab === "api") {
       await fetch("/api/user/keys", {
         method: "POST",
@@ -75,7 +72,7 @@ export default function Settings() {
         body: JSON.stringify({ type: "customModels", data: validModels })
       });
     }
-    else if (tab === "agent" || tab === "notifications" || tab === "preferences" || tab === "jira") {
+    else if (tab === "agent" || tab === "preferences" || tab === "jira") {
       // Only send jiraPat when the user typed a new one (blank = keep existing).
       const jiraData = { ...jiraConfig };
       if (!jiraData.jiraPat) delete (jiraData as any).jiraPat;
@@ -84,7 +81,7 @@ export default function Settings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "settings",
-          data: { ...agentConfig, ...notificationConfig, ...preferencesConfig, ...jiraData }
+          data: { ...agentConfig, ...preferencesConfig, ...jiraData }
         })
       });
       const out = await res.json().catch(() => ({}));
@@ -331,79 +328,6 @@ export default function Settings() {
                   </div>
                 )}
                 <button className="btn-primary" onClick={() => handleSave("agent")}>
-                  <Save size={13} /> Save Configuration
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Notifications */}
-          {activeTab === "notifications" && (
-            <div style={s.card}>
-              <div style={s.cardHead}>
-                <div style={s.cardTitle}>Webhook Notifications</div>
-                <div style={s.cardDesc}>Configure webhook URLs to receive scan updates in Slack, Discord, or other services.</div>
-              </div>
-              <div style={s.cardBody}>
-                <div style={s.field}>
-                  <label style={s.label}>Slack Bot Token</label>
-                  <input
-                    style={s.input}
-                    type="password"
-                    placeholder="xoxb-..."
-                    value={notificationConfig.slackBotToken}
-                    onChange={(e) => setNotificationConfig({ ...notificationConfig, slackBotToken: e.target.value })}
-                  />
-                  <span style={s.hint}>Create a Slack App, add 'chat:write' scope, install to workspace, and paste the Bot User OAuth Token here.</span>
-                </div>
-                
-                <div style={{...s.field, marginTop: 12}}>
-                  <label style={s.label}>Slack Channel ID</label>
-                  <input
-                    style={s.input}
-                    type="text"
-                    placeholder="e.g. C01234567"
-                    value={notificationConfig.slackChannelId}
-                    onChange={(e) => setNotificationConfig({ ...notificationConfig, slackChannelId: e.target.value })}
-                  />
-                  <span style={s.hint}>Right click a channel in Slack -› Copy Link. The Channel ID is the last part of the URL.</span>
-                </div>
-                
-                <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
-                  <input
-                    type="checkbox"
-                    id="notifyStart"
-                    checked={notificationConfig.notifyOnStart}
-                    onChange={(e) => setNotificationConfig({ ...notificationConfig, notifyOnStart: e.target.checked })}
-                    style={{ width: 16, height: 16, accentColor: "var(--fg)", cursor: "pointer" }}
-                  />
-                  <div>
-                    <label htmlFor="notifyStart" style={{ ...s.label, marginBottom: 2, cursor: "pointer" }}>Notify on Scan Start</label>
-                    <div style={s.hint}>Sends an alert when a scan begins execution.</div>
-                  </div>
-                </div>
-
-                <div style={{ ...s.field, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
-                  <input
-                    type="checkbox"
-                    id="notifyFinish"
-                    checked={notificationConfig.notifyOnFinish}
-                    onChange={(e) => setNotificationConfig({ ...notificationConfig, notifyOnFinish: e.target.checked })}
-                    style={{ width: 16, height: 16, accentColor: "var(--fg)", cursor: "pointer" }}
-                  />
-                  <div>
-                    <label htmlFor="notifyFinish" style={{ ...s.label, marginBottom: 2, cursor: "pointer" }}>Notify on Scan Finish</label>
-                    <div style={s.hint}>Sends an alert containing vulnerability counts and final status when a scan completes.</div>
-                  </div>
-                </div>
-              </div>
-              <div style={s.cardFoot}>
-                {saved && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
-                    <CheckCircle2 size={13} /> Saved
-                  </div>
-                )}
-                <button className="btn-primary" onClick={() => handleSave("notifications")}>
                   <Save size={13} /> Save Configuration
                 </button>
               </div>

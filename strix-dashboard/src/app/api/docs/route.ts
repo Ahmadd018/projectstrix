@@ -179,7 +179,7 @@ const spec = {
             content: {
               "application/json": {
                 example: {
-                  settings: { aggressiveness: 50, maxThreads: 4, webhookUrl: "", notifyOnStart: false, notifyOnFinish: true },
+                  settings: { aggressiveness: 50, maxThreads: 4 },
                   customModels: [],
                 },
               },
@@ -647,9 +647,6 @@ const spec = {
                 properties: {
                   aggressiveness: { type: "integer", minimum: 0, maximum: 100 },
                   maxThreads: { type: "integer", minimum: 1, maximum: 32 },
-                  webhookUrl: { type: "string", format: "uri" },
-                  notifyOnStart: { type: "boolean" },
-                  notifyOnFinish: { type: "boolean" },
                 },
               },
               {

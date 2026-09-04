@@ -22,10 +22,6 @@ export async function GET(req: NextRequest) {
     const base = user.settings || {
       aggressiveness: 50,
       maxThreads: 4,
-      slackBotToken: "",
-      slackChannelId: "",
-      notifyOnStart: false,
-      notifyOnFinish: true,
       theme: "dark",
       defaultModel: "openai/gpt-4o",
       autoDeleteDays: 0,
@@ -62,10 +58,6 @@ export async function POST(req: NextRequest) {
       };
       const aggressiveness = clamp(d.aggressiveness, 0, 100, 50);
       const maxThreads = clamp(d.maxThreads, 1, 32, 4);
-      const slackBotToken = typeof d.slackBotToken === "string" ? d.slackBotToken.trim().slice(0, 255) : "";
-      const slackChannelId = typeof d.slackChannelId === "string" ? d.slackChannelId.trim().slice(0, 100) : "";
-      const notifyOnStart = !!d.notifyOnStart;
-      const notifyOnFinish = !!d.notifyOnFinish;
 
       const theme = typeof d.theme === "string" && ["dark", "light", "system"].includes(d.theme) ? d.theme : "dark";
       const defaultModel = typeof d.defaultModel === "string" ? d.defaultModel.trim().slice(0, 100) : "openai/gpt-4o";
@@ -84,12 +76,12 @@ export async function POST(req: NextRequest) {
       const settings = await prisma.userSettings.upsert({
         where: { userId },
         create: {
-          userId, aggressiveness, maxThreads, slackBotToken, slackChannelId, notifyOnStart, notifyOnFinish,
+          userId, aggressiveness, maxThreads,
           theme, defaultModel, autoDeleteDays,
           jiraBaseUrl, jiraProjectId, jiraIssueTypeId, ...jiraPatUpdate,
         },
         update: {
-          aggressiveness, maxThreads, slackBotToken, slackChannelId, notifyOnStart, notifyOnFinish,
+          aggressiveness, maxThreads,
           theme, defaultModel, autoDeleteDays,
           jiraBaseUrl, jiraProjectId, jiraIssueTypeId, ...jiraPatUpdate,
         }
