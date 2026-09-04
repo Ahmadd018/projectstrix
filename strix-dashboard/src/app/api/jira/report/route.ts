@@ -150,11 +150,12 @@ export async function POST(req: Request) {
     fields.assignee = { name: body.assignee.trim() };
   }
 
-  // Reporter from the reporting user's Taipan profile — only when this integration
-  // opts in (Data Center supports it; Bir Ecosystem/Cloud cannot set reporter).
-  // Falls back to the token's default reporter if the profile is unset/unresolved.
+  // Reporter — defaults to the shared service account. The reporting user may
+  // opt to file the ticket under their own Jira identity (reportAsMe), resolved
+  // from their Taipan profile. Data Center only (Cloud can't set reporter).
+  // Falls back to the service account with a note if unset/unresolved.
   let reporterNote: string | undefined;
-  if (integration && (integration.config as any)?.setReporterFromProfile) {
+  if (body.reportAsMe === true) {
     const me = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, jiraUsername: true },
@@ -166,7 +167,7 @@ export async function POST(req: Request) {
     } else {
       reporterNote = me?.email || explicit
         ? "Could not match your profile to a Jira user — reported as the service account."
-        : "Set your email in Settings → Profile to be recorded as the reporter.";
+        : "Set your email in Settings → Profile to report as yourself.";
     }
   }
 

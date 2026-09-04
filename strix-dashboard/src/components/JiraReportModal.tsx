@@ -70,6 +70,8 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [intId, setIntId] = useState<string>("");
   const [loadingInts, setLoadingInts] = useState(false);
+  const [profile, setProfile] = useState<{ email: string; jiraUsername: string } | null>(null);
+  const [reportAsMe, setReportAsMe] = useState(false);
 
   const [summary, setSummary] = useState("");
   const [labels, setLabels] = useState("taipan, security");
@@ -93,6 +95,14 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
 
   const current = integrations.find((i) => i.id === intId) || null;
   const isCloud = current?.deployment === "CLOUD";
+
+  // Load the user's profile once, to offer "report as me".
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setProfile({ email: d.email || "", jiraUsername: d.jiraUsername || "" }); })
+      .catch(() => {});
+  }, []);
 
   // Load the user's enabled integrations when the modal opens.
   useEffect(() => {
@@ -152,6 +162,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
     setDuedate("");
     setAssignee(null);
     setParticipants([]);
+    setReportAsMe(false);
     setResult(null);
     setError(null);
     setDesc("");
@@ -185,6 +196,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
         payload.severityLevel = dcSev;
         payload.priority = dcPrio;
         payload.assignee = dcAssignee;
+        payload.reportAsMe = reportAsMe;
       }
       const res = await fetch("/api/jira/report", {
         method: "POST",
@@ -319,6 +331,26 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
                 <div style={fieldWrap}>
                   <label style={lbl}>Labels <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(comma-separated)</span></label>
                   <input style={inp} value={labels} placeholder="taipan, security" onChange={(e) => setLabels(e.target.value)} />
+                </div>
+                {/* Reporter choice — default is the shared service account. */}
+                <div style={fieldWrap}>
+                  <label style={lbl}>Reporter</label>
+                  {(() => {
+                    const hasIdentity = !!(profile && (profile.email || profile.jiraUsername));
+                    return (
+                      <>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: hasIdentity ? "var(--fg)" : "var(--fg-3)", cursor: hasIdentity ? "pointer" : "not-allowed" }}>
+                          <input type="checkbox" checked={reportAsMe} disabled={!hasIdentity} onChange={(e) => setReportAsMe(e.target.checked)} />
+                          Report as me{profile?.email ? ` (${profile.email})` : ""}
+                        </label>
+                        <span style={{ fontSize: 11, color: "var(--fg-3)" }}>
+                          {hasIdentity
+                            ? "Off = the shared service account is the reporter."
+                            : "Set your email in Settings → Profile to report as yourself."}
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
               </>
             )}
