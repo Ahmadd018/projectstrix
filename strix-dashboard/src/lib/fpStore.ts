@@ -80,6 +80,15 @@ export function addFpEntry(v: FpVulnInput): { domain: string; file: string; adde
   return { domain, file, added: true };
 }
 
+// Remove a finding's FP entry — the inverse of addFpEntry. Recomputes the same
+// domain + file name from the finding, so unmarking a false positive deletes the
+// exact file that marking created. Returns whether a file was removed.
+export function deleteFpEntry(v: FpVulnInput): { domain: string; removed: boolean } {
+  const domain = sanitizeDomain(v.target);
+  const removed = deleteFpFinding(domain, findingFileName(v));
+  return { domain, removed };
+}
+
 export interface FpFinding {
   id: string; // file name (opaque, safe basename)
   title: string;

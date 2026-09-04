@@ -190,6 +190,13 @@ export default function VulnerabilitiesPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ vulnId: v.id }),
         });
+      } else {
+        // Unmarking — remove the FP instruction file for this finding.
+        await fetch("/api/fp-instructions", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vulnId: v.id }),
+        });
       }
     } catch {
       /* keep optimistic UI; refresh will reconcile */

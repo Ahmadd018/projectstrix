@@ -52,6 +52,13 @@ export default function ScanFindings({ scan, vulns }: { scan: ScanDetail, vulns:
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ vulnId: v.dbId }),
         });
+      } else {
+        // Unmarking — remove the FP instruction file for this finding.
+        await fetch("/api/fp-instructions", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vulnId: v.dbId }),
+        });
       }
     } catch {
       /* keep optimistic UI; next poll reconciles */
