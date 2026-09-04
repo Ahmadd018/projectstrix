@@ -7,7 +7,7 @@ import { registerProcess, removeProcess } from "@/lib/scanStore";
 import { log } from "@/lib/logger";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { readApiKeys } from "@/lib/apiKeys";
+import { getEffectiveApiKeys } from "@/lib/sharedKeys";
 import { isSafePublicUrl } from "@/lib/urlGuard";
 import { syncVulnsToDb } from "@/lib/vulnSync";
 import { readFpForTargets } from "@/lib/fpStore";
@@ -240,7 +240,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch API Keys directly from DB (M-5: stored encrypted, decrypt to use).
-  const userKeys: any = readApiKeys(userExists.apiKeys);
+  // Merges in any admin-shared keys the user has opted into.
+  const userKeys: any = await getEffectiveApiKeys(createdUserId, userExists.apiKeys);
 
   let resolvedApiKey = "";
   if (llmModel.startsWith("openai/")) resolvedApiKey = userKeys.openai || "";

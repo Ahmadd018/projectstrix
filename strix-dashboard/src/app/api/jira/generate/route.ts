@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { readApiKeys } from "@/lib/apiKeys";
+import { getEffectiveApiKeys } from "@/lib/sharedKeys";
 import { buildIssueDescription } from "@/lib/jira";
 import { log } from "@/lib/logger";
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.userId as string } });
-  const keys = readApiKeys(user?.apiKeys);
+  const keys = await getEffectiveApiKeys(session.userId as string, user?.apiKeys);
   const deepseekKey = keys.deepseek;
   // Fallback to the deterministic template if no key is configured.
   const targetHost = vuln.target || vuln.scan.target;

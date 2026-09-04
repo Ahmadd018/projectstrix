@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket } from "lucide-react";
 import { JiraIntegrationsManager } from "@/components/JiraIntegrationsManager";
+import { SharedKeysAdmin } from "@/components/SharedKeysAdmin";
 
 const TABS = [
   { id: "api",           label: "API Keys",      icon: Key },
@@ -18,6 +19,9 @@ export default function Settings() {
   const [agentConfig, setAgentConfig] = useState({ aggressiveness: 50, maxThreads: 4 });
   const [preferencesConfig, setPreferencesConfig] = useState({ theme: "dark", defaultModel: "openai/gpt-4o", autoDeleteDays: 0 });
   const [saved, setSaved] = useState(false);
+  // Shared (admin-provided) keys the user can opt into, per provider.
+  const [sharedAvailable, setSharedAvailable] = useState<string[]>([]);
+  const [sharedOptIn, setSharedOptIn] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/user/keys")
@@ -25,6 +29,16 @@ export default function Settings() {
       .then(data => {
         if (!data.error && Object.keys(data).length > 0) {
           setKeys(prev => ({ ...prev, ...data }));
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/user/shared-keys")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) {
+          setSharedAvailable(data.enabled ? (data.available || []) : []);
+          setSharedOptIn(data.optIn || []);
         }
       })
       .catch(() => {});
@@ -55,6 +69,11 @@ export default function Settings() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(keys)
+      });
+      await fetch("/api/user/shared-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providers: sharedOptIn })
       });
       const validModels = customModels.filter(m => m.value.trim() && m.label.trim());
       await fetch("/api/user/settings", {
@@ -137,6 +156,7 @@ export default function Settings() {
           {/* API Keys */}
           {activeTab === "api" && (
             <>
+            <SharedKeysAdmin s={s} />
             <div style={s.card}>
               <div style={s.cardHead}>
                 <div style={s.cardTitle}>API Keys</div>
@@ -155,19 +175,36 @@ export default function Settings() {
                   { key: "dashscope",  label: "DashScope API Key",     placeholder: "sk-…",      hint: "Used for Qwen models via Alibaba Cloud DashScope." },
                   { key: "moonshot",   label: "Moonshot API Key",      placeholder: "sk-…",      hint: "Used for Kimi models via Moonshot AI." },
                   { key: "vertex_ai",  label: "Vertex AI API Key",     placeholder: "…",         hint: "Used for Gemini models via Google Cloud Vertex AI." },
-                ] as any).map(({ key, label, placeholder, hint }: any) => (
+                ] as any).map(({ key, label, placeholder, hint }: any) => {
+                  const canShare = sharedAvailable.includes(key);
+                  const usingShared = canShare && sharedOptIn.includes(key);
+                  return (
                   <div key={key} style={s.field}>
-                    <label style={s.label}>{label}</label>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <label style={s.label}>{label}</label>
+                      {canShare && (
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--fg-2)", cursor: "pointer" }}>
+                          <input
+                            type="checkbox"
+                            checked={usingShared}
+                            onChange={(e) => setSharedOptIn(e.target.checked ? [...sharedOptIn, key] : sharedOptIn.filter((p) => p !== key))}
+                          />
+                          Use shared key
+                        </label>
+                      )}
+                    </div>
                     <input
-                      style={s.input}
+                      style={{ ...s.input, opacity: usingShared ? 0.5 : 1 }}
                       type="password"
-                      placeholder={placeholder}
+                      placeholder={usingShared ? "Using the shared key provided by the admin" : placeholder}
                       value={keys[key as keyof typeof keys]}
+                      disabled={usingShared}
                       onChange={(e) => setKeys({ ...keys, [key]: e.target.value })}
                     />
-                    <span style={s.hint}>{hint}</span>
+                    <span style={s.hint}>{usingShared ? "This provider will use the admin-shared key." : hint}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <div style={s.cardFoot}>
                 {saved && (
