@@ -13,6 +13,9 @@ model User {
   role         String                @default("USER")
   status       String                @default("APPROVED")
   apiKeys      String?
+  // Profile identity used to set the Jira "reporter" when an integration opts in.
+  email        String                @default("") // maps to a Jira user by email (DC user search)
+  jiraUsername String                @default("") // optional explicit Jira username override (DC)
   tokenVersion Int                   @default(0)
   createdAt    DateTime              @default(now())
   scans        Scan[]

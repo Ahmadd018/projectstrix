@@ -85,7 +85,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
   const [participants, setParticipants] = useState<JiraUser[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ key: string; url: string } | null>(null);
+  const [result, setResult] = useState<{ key: string; url: string; note?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
   const [descLoading, setDescLoading] = useState(false);
@@ -193,7 +193,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
       });
       const out = await res.json().catch(() => ({}));
       if (res.ok && out.success) {
-        setResult({ key: out.key, url: out.url });
+        setResult({ key: out.key, url: out.url, note: out.note });
         try { localStorage.setItem(LAST_INTEGRATION_KEY, current.id); } catch {}
       } else {
         setError(out.error || `Request failed (HTTP ${res.status})`);
@@ -238,6 +238,7 @@ export function JiraReportModal({ vuln, onClose }: { vuln: JiraVuln | null; onCl
             <a href={result.url} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", textDecoration: "none" }}>
               <ExternalLink size={14} /> Open {result.key} in Jira
             </a>
+            {result.note && <span style={{ fontSize: 11, color: "var(--fg-3)", lineHeight: 1.5 }}>{result.note}</span>}
           </div>
         ) : loadingInts ? (
           <div style={{ ...inp, minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--fg-3)" }}>

@@ -12,7 +12,7 @@ interface Integration {
   authEmail: string;
   projectId: string;
   issueTypeId: string;
-  config: { companyFieldId?: string; companyOptions?: CompanyOption[]; participantsFieldId?: string } | null;
+  config: { companyFieldId?: string; companyOptions?: CompanyOption[]; participantsFieldId?: string; setReporterFromProfile?: boolean } | null;
   shared: boolean;
   mine: boolean;
   enabled: boolean;
@@ -48,11 +48,13 @@ type Form = {
   companyFieldId: string;
   participantsFieldId: string;
   companyOptions: CompanyOption[];
+  setReporterFromProfile: boolean;
   shared: boolean;
 };
 const EMPTY_FORM: Form = {
   name: "", deployment: "DATACENTER", baseUrl: "", authEmail: "", authSecret: "",
-  projectId: "", issueTypeId: "", companyFieldId: "", participantsFieldId: "", companyOptions: [], shared: false,
+  projectId: "", issueTypeId: "", companyFieldId: "", participantsFieldId: "", companyOptions: [],
+  setReporterFromProfile: false, shared: false,
 };
 
 export function JiraIntegrationsManager({ s }: { s: any }) {
@@ -89,7 +91,7 @@ export function JiraIntegrationsManager({ s }: { s: any }) {
       id: i.id, name: i.name, deployment: i.deployment, baseUrl: i.baseUrl, authEmail: i.authEmail,
       authSecret: "", projectId: i.projectId, issueTypeId: i.issueTypeId,
       companyFieldId: i.config?.companyFieldId || "", participantsFieldId: i.config?.participantsFieldId || "",
-      companyOptions: i.config?.companyOptions || [], shared: i.shared,
+      companyOptions: i.config?.companyOptions || [], setReporterFromProfile: !!i.config?.setReporterFromProfile, shared: i.shared,
     });
   }
   function applyBirTemplate() {
@@ -107,7 +109,7 @@ export function JiraIntegrationsManager({ s }: { s: any }) {
     setErr(null);
     const config = form.deployment === "CLOUD"
       ? { companyFieldId: form.companyFieldId || undefined, participantsFieldId: form.participantsFieldId || undefined, companyOptions: form.companyOptions.filter((o) => o.id && o.label) }
-      : undefined;
+      : { setReporterFromProfile: form.setReporterFromProfile };
     const body: any = {
       name: form.name, deployment: form.deployment, baseUrl: form.baseUrl, authEmail: form.authEmail,
       projectId: form.projectId, issueTypeId: form.issueTypeId, config, shared: form.shared,
@@ -319,6 +321,18 @@ export function JiraIntegrationsManager({ s }: { s: any }) {
                       ))}
                       <button className="btn-ghost" style={{ alignSelf: "flex-start", fontSize: 12 }} onClick={() => setForm({ ...form, companyOptions: [...form.companyOptions, { id: "", label: "" }] })}>+ Add option</button>
                     </div>
+                  </div>
+                )}
+
+                {/* Reporter from profile — Data Center only (Cloud can't set reporter) */}
+                {form.deployment === "DATACENTER" ? (
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--fg-2)", cursor: "pointer" }}>
+                    <input type="checkbox" style={{ marginTop: 2 }} checked={form.setReporterFromProfile} onChange={(e) => setForm({ ...form, setReporterFromProfile: e.target.checked })} />
+                    <span>Set the Jira <strong>reporter</strong> from the reporting user&apos;s Taipan profile (email → Jira user). Requires each user to set their email in Settings → Profile; falls back to the service account if unresolved.</span>
+                  </label>
+                ) : (
+                  <div style={{ fontSize: 12, color: "var(--fg-3)", lineHeight: 1.5 }}>
+                    Reporter cannot be set on Cloud Jira for this project (the field isn&apos;t on the create screen), so tickets are reported by the service account.
                   </div>
                 )}
 

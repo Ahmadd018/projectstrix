@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket } from "lucide-react";
+import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket, User } from "lucide-react";
 import { JiraIntegrationsManager } from "@/components/JiraIntegrationsManager";
 import { SharedKeysAdmin } from "@/components/SharedKeysAdmin";
 
 const TABS = [
+  { id: "profile",       label: "Profile",        icon: User },
   { id: "api",           label: "API Keys",      icon: Key },
   { id: "agent",         label: "Agent Behavior", icon: Bot },
   { id: "jira",          label: "Jira",           icon: Ticket },
@@ -22,6 +23,8 @@ export default function Settings() {
   // Shared (admin-provided) keys the user can opt into, per provider.
   const [sharedAvailable, setSharedAvailable] = useState<string[]>([]);
   const [sharedOptIn, setSharedOptIn] = useState<string[]>([]);
+  // Profile identity used to set the Jira reporter.
+  const [profile, setProfile] = useState({ username: "", email: "", jiraUsername: "" });
 
   useEffect(() => {
     fetch("/api/user/keys")
@@ -40,6 +43,13 @@ export default function Settings() {
           setSharedAvailable(data.enabled ? (data.available || []) : []);
           setSharedOptIn(data.optIn || []);
         }
+      })
+      .catch(() => {});
+
+    fetch("/api/user/profile")
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setProfile({ username: data.username || "", email: data.email || "", jiraUsername: data.jiraUsername || "" });
       })
       .catch(() => {});
 
@@ -63,8 +73,15 @@ export default function Settings() {
       .catch(() => {});
   }, []);
 
-  const handleSave = async (tab: "api" | "agent" | "preferences") => {
-    if (tab === "api") {
+  const handleSave = async (tab: "api" | "agent" | "preferences" | "profile") => {
+    if (tab === "profile") {
+      await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: profile.email, jiraUsername: profile.jiraUsername })
+      });
+    }
+    else if (tab === "api") {
       await fetch("/api/user/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,6 +170,55 @@ export default function Settings() {
 
         {/* Content */}
         <div style={{ flex: 1 }}>
+          {/* Profile */}
+          {activeTab === "profile" && (
+            <div style={s.card}>
+              <div style={s.cardHead}>
+                <div style={s.cardTitle}>Profile</div>
+                <div style={s.cardDesc}>Your identity for Jira. When an integration is set to use it, tickets you report are filed under your Jira user.</div>
+              </div>
+              <div style={s.cardBody}>
+                <div style={s.field}>
+                  <label style={s.label}>Username</label>
+                  <input style={{ ...s.input, opacity: 0.6 }} value={profile.username} disabled />
+                  <span style={s.hint}>Your Taipan login. Not editable here.</span>
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Email</label>
+                  <input
+                    style={s.input}
+                    type="email"
+                    placeholder="you@company.com"
+                    value={profile.email}
+                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                  />
+                  <span style={s.hint}>Matched to your Jira account to set you as the ticket <strong>reporter</strong> (Data Center Jira).</span>
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Jira username <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(optional)</span></label>
+                  <input
+                    style={s.input}
+                    type="text"
+                    placeholder="e.g. AghamaliyevAM"
+                    value={profile.jiraUsername}
+                    onChange={(e) => setProfile({ ...profile, jiraUsername: e.target.value })}
+                  />
+                  <span style={s.hint}>Overrides the email lookup if your Jira username differs from your email.</span>
+                </div>
+              </div>
+              <div style={s.cardFoot}>
+                {saved && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
+                    <CheckCircle2 size={13} /> Saved
+                  </div>
+                )}
+                <button className="btn-primary" onClick={() => handleSave("profile")}>
+                  <Save size={13} /> Save Profile
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* API Keys */}
           {activeTab === "api" && (
             <>

@@ -6,6 +6,7 @@ import {
   getJiraConfig,
   getDatacenterConfig,
   createJiraIssue,
+  datacenterResolveUsername,
   buildIssueDescription,
   jiraErrorMessage,
   SEVERITY_LEVEL_FIELD,
@@ -149,6 +150,26 @@ export async function POST(req: Request) {
     fields.assignee = { name: body.assignee.trim() };
   }
 
+  // Reporter from the reporting user's Taipan profile — only when this integration
+  // opts in (Data Center supports it; Bir Ecosystem/Cloud cannot set reporter).
+  // Falls back to the token's default reporter if the profile is unset/unresolved.
+  let reporterNote: string | undefined;
+  if (integration && (integration.config as any)?.setReporterFromProfile) {
+    const me = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, jiraUsername: true },
+    });
+    const explicit = (me?.jiraUsername || "").trim();
+    const name = explicit || (me?.email ? await datacenterResolveUsername(cfg, me.email) : null);
+    if (name) {
+      fields.reporter = { name };
+    } else {
+      reporterNote = me?.email || explicit
+        ? "Could not match your profile to a Jira user — reported as the service account."
+        : "Set your email in Settings → Profile to be recorded as the reporter.";
+    }
+  }
+
   let result;
   try {
     result = await createJiraIssue(cfg, fields);
@@ -168,5 +189,5 @@ export async function POST(req: Request) {
 
   const key = result.data.key;
   log.info("POST /api/jira/report", `Created Jira issue ${key} for vuln ${vulnId.slice(0, 8)}`);
-  return NextResponse.json({ success: true, key, url: `${cfg.baseUrl}/browse/${key}` });
+  return NextResponse.json({ success: true, key, url: `${cfg.baseUrl}/browse/${key}`, note: reporterNote });
 }

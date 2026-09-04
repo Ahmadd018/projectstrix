@@ -144,6 +144,25 @@ export async function createJiraIssue(cfg: JiraConfig, fields: Record<string, an
   return { ok: res.ok, status: res.status, data };
 }
 
+// Resolve a Data Center username from an email (or name) via user search.
+// Returns the first match's `name` (the username Jira wants for reporter), or null.
+export async function datacenterResolveUsername(cfg: JiraConfig, query: string): Promise<string | null> {
+  const q = (query || "").trim();
+  if (!q) return null;
+  const url = `${cfg.baseUrl}/rest/api/2/user/search?username=${encodeURIComponent(q)}&maxResults=1`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${cfg.pat}`, Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => []);
+    if (Array.isArray(data) && data.length && data[0]?.name) return String(data[0].name);
+  } catch {
+    /* network error — caller reports without reporter */
+  }
+  return null;
+}
+
 // Validate the token / connection via /myself.
 export async function jiraWhoAmI(cfg: JiraConfig) {
   const res = await fetch(`${cfg.baseUrl}/rest/api/2/myself?expand=groups`, {
