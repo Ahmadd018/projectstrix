@@ -11,6 +11,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // "Forgot password" request flow — a locked-out user asks an admin to reset it.
+  const [mode, setMode] = useState<"login" | "forgot">("login");
+  const [resetSent, setResetSent] = useState(false);
+
+  async function handleResetRequest(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await fetch("/api/auth/reset-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      // Always show the same confirmation (no account enumeration).
+      setResetSent(true);
+    } catch {
+      setResetSent(true);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -73,6 +95,8 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {mode === "login" ? (
+      <>
       <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div className="field" style={{ animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards", opacity: 0 }}>
           <label className="field-label" style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-2)" }}>Username</label>
@@ -143,9 +167,75 @@ export default function LoginPage() {
         </button>
       </form>
 
+      <div style={{ textAlign: "center", marginTop: -12 }}>
+        <button
+          type="button"
+          onClick={() => { setMode("forgot"); setError(""); setResetSent(false); }}
+          style={{ background: "none", border: "none", color: "var(--fg-3)", fontSize: 13, cursor: "pointer", transition: "color 0.2s" }}
+          onMouseOver={e => e.currentTarget.style.color = "var(--fg)"}
+          onMouseOut={e => e.currentTarget.style.color = "var(--fg-3)"}
+        >
+          Forgot your password?
+        </button>
+      </div>
+
       <div style={{ animation: "blurSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards", opacity: 0, textAlign: "center", fontSize: 13, color: "var(--fg-3)" }}>
         Don't have an account? <Link href="/register" style={{ color: "var(--fg)", textDecoration: "none", fontWeight: 500, transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color="var(--sev-high)"} onMouseOut={e => e.currentTarget.style.color="var(--fg)"}>Sign up</Link>
       </div>
+      </>
+      ) : resetSent ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, textAlign: "center" }}>
+          <div style={{ padding: "16px", background: "var(--sev-low-bg, rgba(74,222,128,0.1))", border: "1px solid rgba(74,222,128,0.3)", borderRadius: "var(--r)", fontSize: 13, color: "var(--fg-2)", lineHeight: 1.6 }}>
+            If that account exists, your reset request has been sent to the administrator.
+            They will set a new password and give it to you. You can change it yourself afterwards in Settings.
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            style={{ width: "100%", height: 44, justifyContent: "center", fontSize: 15, fontWeight: 500 }}
+            onClick={() => { setMode("login"); setResetSent(false); setError(""); }}
+          >
+            Back to sign in
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleResetRequest} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ fontSize: 13, color: "var(--fg-3)", textAlign: "center", lineHeight: 1.6 }}>
+            Enter your username and we'll notify an administrator to reset your password for you.
+          </div>
+          <div className="field">
+            <label className="field-label" style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-2)" }}>Username</label>
+            <div style={{ position: "relative" }}>
+              <User size={18} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--fg-3)", pointerEvents: "none" }} />
+              <input
+                className="field-input"
+                style={{ width: "100%", paddingLeft: 42, height: 44, fontSize: 15, background: "rgba(0,0,0,0.2)", border: "1px solid var(--border-md)", transition: "all 0.2s" }}
+                placeholder="admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                autoFocus
+                required
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="btn-primary"
+            style={{ width: "100%", height: 44, justifyContent: "center", fontSize: 15, fontWeight: 500 }}
+            disabled={loading || !username}
+          >
+            {loading ? <><Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> Sending…</> : "Send reset request"}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("login"); setError(""); }}
+            style={{ background: "none", border: "none", color: "var(--fg-3)", fontSize: 13, cursor: "pointer" }}
+          >
+            Back to sign in
+          </button>
+        </form>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes blurSlideIn {

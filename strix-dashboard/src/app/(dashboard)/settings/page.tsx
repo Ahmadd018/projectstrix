@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket, User } from "lucide-react";
+import { Key, Bot, Save, CheckCircle2, ChevronRight, Settings2, Ticket, User, Lock, AlertCircle } from "lucide-react";
 import { JiraIntegrationsManager } from "@/components/JiraIntegrationsManager";
 import { SharedKeysAdmin } from "@/components/SharedKeysAdmin";
 
@@ -25,6 +25,27 @@ export default function Settings() {
   const [sharedOptIn, setSharedOptIn] = useState<string[]>([]);
   // Profile identity used to set the Jira reporter.
   const [profile, setProfile] = useState({ username: "", email: "", jiraUsername: "" });
+  // Self-service password change (user knows their current password).
+  const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [pwState, setPwState] = useState<{ saving: boolean; error: string; ok: boolean }>({ saving: false, error: "", ok: false });
+
+  const handleChangePassword = async () => {
+    setPwState({ saving: true, error: "", ok: false });
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pw),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to change password");
+      setPw({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPwState({ saving: false, error: "", ok: true });
+      setTimeout(() => setPwState((s) => ({ ...s, ok: false })), 3000);
+    } catch (e: any) {
+      setPwState({ saving: false, error: e.message || "Failed to change password", ok: false });
+    }
+  };
 
   useEffect(() => {
     fetch("/api/user/keys")
@@ -172,6 +193,7 @@ export default function Settings() {
         <div style={{ flex: 1 }}>
           {/* Profile */}
           {activeTab === "profile" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={s.card}>
               <div style={s.cardHead}>
                 <div style={s.cardTitle}>Profile</div>
@@ -216,6 +238,70 @@ export default function Settings() {
                   <Save size={13} /> Save Profile
                 </button>
               </div>
+            </div>
+
+            {/* Change Password (self-service — requires current password) */}
+            <div style={s.card}>
+              <div style={s.cardHead}>
+                <div style={s.cardTitle}>Change Password</div>
+                <div style={s.cardDesc}>Update your password. You'll need your current one. Forgot it? Ask an admin to reset it for you.</div>
+              </div>
+              <div style={s.cardBody}>
+                <div style={s.field}>
+                  <label style={s.label}>Current password</label>
+                  <input
+                    style={s.input}
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={pw.currentPassword}
+                    onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })}
+                  />
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>New password</label>
+                  <input
+                    style={s.input}
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={pw.newPassword}
+                    onChange={(e) => setPw({ ...pw, newPassword: e.target.value })}
+                  />
+                  <span style={s.hint}>At least 12 characters, with an uppercase letter, a lowercase letter, and a number.</span>
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Confirm new password</label>
+                  <input
+                    style={s.input}
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={pw.confirmPassword}
+                    onChange={(e) => setPw({ ...pw, confirmPassword: e.target.value })}
+                  />
+                </div>
+                {pwState.error && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-critical)" }}>
+                    <AlertCircle size={13} /> {pwState.error}
+                  </div>
+                )}
+              </div>
+              <div style={s.cardFoot}>
+                {pwState.ok && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--sev-low)", marginRight: "auto" }}>
+                    <CheckCircle2 size={13} /> Password updated
+                  </div>
+                )}
+                <button
+                  className="btn-primary"
+                  onClick={handleChangePassword}
+                  disabled={pwState.saving || !pw.currentPassword || !pw.newPassword || !pw.confirmPassword}
+                >
+                  <Lock size={13} /> {pwState.saving ? "Updating…" : "Update Password"}
+                </button>
+              </div>
+            </div>
             </div>
           )}
 

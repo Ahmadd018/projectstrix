@@ -16,13 +16,24 @@ export async function GET(req: NextRequest) {
         role: true,
         status: true,
         createdAt: true,
+        resetRequests: {
+          where: { status: "PENDING" },
+          select: { id: true },
+          take: 1,
+        },
       },
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    return NextResponse.json({ users });
+    // Flatten the pending-reset relation into a simple boolean for the UI.
+    const shaped = users.map(({ resetRequests, ...u }) => ({
+      ...u,
+      resetRequested: resetRequests.length > 0,
+    }));
+
+    return NextResponse.json({ users: shaped });
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

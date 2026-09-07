@@ -25,6 +25,22 @@ model User {
   instructions Instruction[]
   ownedJira    JiraIntegration[]     @relation("OwnedJira")
   jiraOptIns   UserJiraIntegration[]
+  resetRequests PasswordResetRequest[]
+}
+
+// A locked-out user's request for an admin to reset their password. The user
+// can't log in, so they submit this from the login page; an admin sees it on the
+// User Access Control page and sets a new password, which resolves the request.
+model PasswordResetRequest {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     String    @default("PENDING") // PENDING | RESOLVED
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  resolvedBy String? // username of the admin who reset the password
+
+  @@index([userId, status])
 }
 
 model Instruction {

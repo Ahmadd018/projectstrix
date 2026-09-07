@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ShieldOff, Loader2, Trash2, Globe, FileText } from "lucide-react";
+import { ShieldOff, Loader2, Trash2, Globe, FileText, Pencil, Save, X } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
@@ -27,6 +27,45 @@ export default function FpInstructionsPage() {
   const [findings, setFindings] = useState<FpFinding[]>([]);
   const [findingsLoading, setFindingsLoading] = useState(false);
   const { confirm, alert } = useDialog();
+
+  // Inline edit of a single finding's markdown content.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  function startEdit(finding: FpFinding) {
+    setEditingId(finding.id);
+    setEditContent(finding.content);
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditContent("");
+  }
+  async function saveEdit(domain: string, finding: FpFinding) {
+    if (!editContent.trim()) {
+      alert("Content cannot be empty.", "Error");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/fp-instructions/${encodeURIComponent(domain)}?file=${encodeURIComponent(finding.id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editContent }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save");
+      }
+      cancelEdit();
+      await fetchFindings(domain);
+      fetchDomains();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Save failed", "Error");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   const fetchDomains = useCallback(async () => {
     try {
@@ -168,18 +207,72 @@ export default function FpInstructionsPage() {
                       <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
                         <FileText size={13} style={{ color: "var(--fg-3)" }} /> {f.title}
                       </span>
-                      <button
-                        onClick={() => handleDeleteFinding(selected, f)}
-                        className="btn-icon"
-                        style={{ color: "var(--sev-critical)" }}
-                        title="Delete this false positive"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        {editingId === f.id ? (
+                          <>
+                            <button
+                              onClick={() => saveEdit(selected, f)}
+                              className="btn-icon"
+                              style={{ color: "var(--sev-low)" }}
+                              title="Save changes"
+                              disabled={savingEdit}
+                            >
+                              {savingEdit ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={14} />}
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="btn-icon"
+                              style={{ color: "var(--fg-3)" }}
+                              title="Cancel"
+                              disabled={savingEdit}
+                            >
+                              <X size={14} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => startEdit(f)}
+                              className="btn-icon"
+                              style={{ color: "var(--fg-3)" }}
+                              title="Edit this false positive"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteFinding(selected, f)}
+                              className="btn-icon"
+                              style={{ color: "var(--sev-critical)" }}
+                              title="Delete this false positive"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ padding: "12px 16px" }} className="markdown-body">
-                      <MarkdownRenderer content={f.content} />
-                    </div>
+                    {editingId === f.id ? (
+                      <div style={{ padding: "12px 16px" }}>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          spellCheck={false}
+                          style={{
+                            width: "100%", minHeight: 220, resize: "vertical",
+                            background: "var(--bg-2)", border: "1px solid var(--border-md)",
+                            borderRadius: "var(--r)", color: "var(--fg)", padding: "10px 12px",
+                            fontSize: 12.5, lineHeight: 1.6, fontFamily: "var(--font-mono)", outline: "none",
+                          }}
+                        />
+                        <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 6 }}>
+                          Markdown. This exact text is injected into future scans of this target so agents skip the finding.
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: "12px 16px" }} className="markdown-body">
+                        <MarkdownRenderer content={f.content} />
+                      </div>
+                    )}
                   </div>
                 ))
               )}

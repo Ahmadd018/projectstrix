@@ -164,6 +164,20 @@ export function deleteFpDomain(domainKey: string): boolean {
   return true;
 }
 
+// Overwrite a single finding's markdown content (manual edit from the UI).
+// Only touches an existing file for the domain; never creates a new one and
+// never renames (the file id / dedup identity stays stable). Returns whether a
+// file was written.
+export function writeFpFinding(domainKey: string, fileId: string, content: string): boolean {
+  // Only allow a plain basename — never a path (traversal guard).
+  if (!fileId || fileId.includes("/") || fileId.includes("\\") || fileId.includes("..")) return false;
+  const file = path.join(domainDir(domainKey), path.basename(fileId));
+  if (!fs.existsSync(file)) return false;
+  // Normalize trailing whitespace, ensure a single trailing newline.
+  fs.writeFileSync(file, `${content.replace(/\s+$/, "")}\n`);
+  return true;
+}
+
 export function deleteFpFinding(domainKey: string, fileId: string): boolean {
   // Only allow a plain basename — never a path.
   if (!fileId || fileId.includes("/") || fileId.includes("\\") || fileId.includes("..")) return false;
