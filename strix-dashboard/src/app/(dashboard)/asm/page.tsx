@@ -289,24 +289,36 @@ export default function AsmPage() {
     );
   };
 
-  const handleRunLookup = async (id: string) => {
-    // Optimistically flip the row to "checking" so the UI responds instantly.
-    setTechs((prev) => prev.map((t) => (t.id === id ? { ...t, cveStatus: "checking" } : t)));
-    try {
-      const res = await fetch(`/api/technologies?id=${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: manualModel || undefined }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to start lookup");
-      }
-      fetchData();
-    } catch (e: any) {
-      alert(e.message, "Error");
-      fetchData();
-    }
+  const handleRunLookup = (id: string) => {
+    const t = techs.find((x) => x.id === id);
+    const label = t ? [t.vendor, t.product].filter(Boolean).join(" ") || t.product : "this asset";
+    const versionless = !t?.version;
+    const message = versionless
+      ? `Run a tech_stack recon on "${label}" to determine its exact version? No CVEs are searched in this step.`
+      : `Run a CVE lookup on "${label}"? It re-verifies the version, searches published CVEs, and auto-launches a cve_scan if one is found.`;
+    confirm(
+      message,
+      async () => {
+        // Optimistically flip the row to "checking" so the UI responds instantly.
+        setTechs((prev) => prev.map((x) => (x.id === id ? { ...x, cveStatus: "checking" } : x)));
+        try {
+          const res = await fetch(`/api/technologies?id=${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: manualModel || undefined }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to start");
+          }
+          fetchData();
+        } catch (e: any) {
+          alert(e.message, "Error");
+          fetchData();
+        }
+      },
+      versionless ? "Find version" : "Run CVE lookup",
+    );
   };
 
   const handleCveScan = (id: string, label: string) => {
