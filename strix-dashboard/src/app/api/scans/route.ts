@@ -61,6 +61,23 @@ function strixSupportsFpFlag(cmd: string): boolean {
   return strixFpFlagSupported;
 }
 
+// Only scans that ARE the ASM version-recon (kind "tech_stack") or that
+// explicitly use the shared "tech_stack" instruction may feed the ASM
+// inventory. CVE lookups, CVE scans, full scans, and ordinary user scans must
+// NOT create/update Technology rows even though their agents may emit
+// technologies.json.
+async function scanFeedsAsm(kind?: string, instruction?: string): Promise<boolean> {
+  if (kind === "tech_stack") return true;
+  const instr = (instruction || "").trim();
+  if (!instr) return false;
+  try {
+    const rows = await prisma.instruction.findMany();
+    const ts = rows.find((r) => r.title.trim().toLowerCase() === "tech_stack");
+    if (ts && ts.content && ts.content.trim() && instr.includes(ts.content.trim())) return true;
+  } catch {}
+  return false;
+}
+
 function ensureRunsDir() {
   if (!fs.existsSync(RUNS_DIR)) {
     fs.mkdirSync(RUNS_DIR, { recursive: true });
@@ -477,6 +494,9 @@ export async function POST(req: NextRequest) {
 
   const logStream = fs.createWriteStream(logFile, { flags: "a" });
   const techFile = path.join(scanDir, "technologies.json");
+  // Gate ASM inventory sync: only tech_stack recon (or a scan using the
+  // tech_stack instruction) is allowed to populate the Technology table.
+  const feedsAsm = await scanFeedsAsm(kind, instruction);
   let pythonDirSyncInterval: NodeJS.Timeout | null = null;
   let lastTechJson = ""; // dedupe live tech syncs — only sync when the file changed
 
@@ -508,8 +528,9 @@ export async function POST(req: NextRequest) {
               const parsedTech = JSON.parse(techRaw);
               if (Array.isArray(parsedTech)) {
                 fs.writeFileSync(techFile, JSON.stringify(parsedTech, null, 2));
-                // Sync into the ASM inventory live (only when the content changed).
-                if (parsedTech.length > 0 && techRaw !== lastTechJson) {
+                // Sync into the ASM inventory live (only for tech_stack recon,
+                // and only when the content changed).
+                if (feedsAsm && parsedTech.length > 0 && techRaw !== lastTechJson) {
                   lastTechJson = techRaw;
                   syncTechToDb(scanId, createdUserId, parsedTech).catch((e) =>
                     log.warn("POST /api/scans", "Live tech sync failed", { err: String(e) }),
@@ -580,12 +601,14 @@ export async function POST(req: NextRequest) {
     // a full cve_scan against the affected asset.
     (async () => {
       try {
-        let techs: any[] = [];
-        try {
-          techs = JSON.parse(fs.readFileSync(techFile, "utf-8"));
-        } catch {}
-        if (Array.isArray(techs) && techs.length > 0) {
-          await syncTechToDb(scanId, createdUserId, techs);
+        if (feedsAsm) {
+          let techs: any[] = [];
+          try {
+            techs = JSON.parse(fs.readFileSync(techFile, "utf-8"));
+          } catch {}
+          if (Array.isArray(techs) && techs.length > 0) {
+            await syncTechToDb(scanId, createdUserId, techs);
+          }
         }
         // vulns may include dependency_cve findings from a cve_lookup run.
         let vulnsForCve: any[] = [];
