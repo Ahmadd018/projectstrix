@@ -33,12 +33,16 @@ async function getAppSettings() {
 }
 
 // POST the internal /api/scans endpoint as the scheduler (impersonating the
-// asset owner). Mirrors schedulerDaemon.triggerScan.
-async function triggerInternalScan(payload: Record<string, any>): Promise<string | null> {
+// asset owner). Mirrors schedulerDaemon.triggerScan. Returns the spawned scan
+// id, or an { error } carrying the real reason so callers can surface it.
+async function triggerInternalScan(
+  payload: Record<string, any>,
+): Promise<{ scanId?: string; error?: string }> {
   const secret = process.env.SCHEDULER_SECRET;
   if (!secret) {
-    log.error("CVE_LOOKUP", "SCHEDULER_SECRET not set — cannot spawn lookup/cve scans");
-    return null;
+    const error = "SCHEDULER_SECRET is not set on the server — cannot spawn scans";
+    log.error("CVE_LOOKUP", error);
+    return { error };
   }
   const port = process.env.PORT || "48080";
   const url = `http://127.0.0.1:${port}/api/scans`;
@@ -49,14 +53,23 @@ async function triggerInternalScan(payload: Record<string, any>): Promise<string
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      log.error("CVE_LOOKUP", `Internal scan spawn returned ${res.status}: ${await res.text()}`);
-      return null;
+      let detail = "";
+      try {
+        const body = await res.json();
+        detail = body?.error || JSON.stringify(body);
+      } catch {
+        detail = (await res.text().catch(() => "")) || "";
+      }
+      const error = `scan API returned ${res.status}${detail ? `: ${detail}` : ""}`;
+      log.error("CVE_LOOKUP", `Internal scan spawn failed — ${error}`);
+      return { error };
     }
     const data = await res.json();
-    return data.scanId || payload.preGeneratedScanId || null;
-  } catch (e) {
+    return { scanId: data.scanId || payload.preGeneratedScanId };
+  } catch (e: any) {
+    const error = `could not reach the scan API at ${url} (${e?.message || e})`;
     log.error("CVE_LOOKUP", "Internal scan spawn failed", e);
-    return null;
+    return { error };
   }
 }
 
@@ -146,8 +159,11 @@ export async function sweepCveLookups(): Promise<void> {
 // Spawn one cve_lookup run for a single asset. Marks the row "checking" (with
 // its next scheduled check) *before* spawning to avoid double-fire, and rolls
 // that back if the spawn fails. Shared by the scheduler sweep and the manual
-// "Run now" trigger. Returns the spawned scan id, or null on failure.
-async function spawnLookupForTech(tech: any, next: Date): Promise<string | null> {
+// "Run now" trigger. Returns { ok, error?, scanId? } carrying the real reason.
+async function spawnLookupForTech(
+  tech: any,
+  next: Date,
+): Promise<{ ok: boolean; error?: string; scanId?: string }> {
   const prevStatus = tech.cveStatus;
   try {
     await prisma.technology.update({
@@ -156,13 +172,13 @@ async function spawnLookupForTech(tech: any, next: Date): Promise<string | null>
     });
   } catch (e) {
     log.warn("CVE_LOOKUP", `Failed to mark tech ${tech.id} as checking`, { err: String(e) });
-    return null;
+    return { ok: false, error: "database error marking asset for check" };
   }
 
   const llmModel = await defaultModelForUser(tech.userId);
   const instruction = buildLookupInstruction(tech);
 
-  const spawned = await triggerInternalScan({
+  const res = await triggerInternalScan({
     preGeneratedScanId: randomUUID(),
     userId: tech.userId,
     target: tech.target,
@@ -175,13 +191,14 @@ async function spawnLookupForTech(tech: any, next: Date): Promise<string | null>
     techId: tech.id,
   });
 
-  if (!spawned) {
+  if (!res.scanId) {
     // Roll back the "checking" state so it's retried later.
     await prisma.technology
       .update({ where: { id: tech.id }, data: { cveStatus: prevStatus } })
       .catch(() => {});
+    return { ok: false, error: res.error || "failed to start the lookup scan" };
   }
-  return spawned;
+  return { ok: true, scanId: res.scanId };
 }
 
 // Manual, on-demand lookup for one asset — ignores the global automation toggle
@@ -205,9 +222,9 @@ export async function runCveLookupNow(
   const intervalHours = settings?.cveLookupIntervalHours || 24;
   const next = new Date(Date.now() + intervalHours * 3600_000);
 
-  const spawned = await spawnLookupForTech(tech, next);
-  if (!spawned) return { ok: false, error: "failed to start the lookup scan" };
-  log.info("CVE_LOOKUP", `Manual lookup started for tech ${techId} (${String(spawned).slice(0, 8)})`);
+  const res = await spawnLookupForTech(tech, next);
+  if (!res.ok) return { ok: false, error: res.error };
+  log.info("CVE_LOOKUP", `Manual lookup started for tech ${techId} (${String(res.scanId).slice(0, 8)})`);
   return { ok: true };
 }
 
@@ -233,7 +250,7 @@ export async function runFullScanForTech(
   const scanId = randomUUID();
   const trimmed = (instruction || "").trim();
 
-  const spawned = await triggerInternalScan({
+  const res = await triggerInternalScan({
     preGeneratedScanId: scanId,
     userId: tech.userId,
     target: tech.target,
@@ -245,9 +262,9 @@ export async function runFullScanForTech(
     ...(trimmed ? { instruction: trimmed } : {}),
   });
 
-  if (!spawned) return { ok: false, error: "failed to start the scan" };
-  log.info("CVE_LOOKUP", `Manual full scan started for tech ${techId} (${String(spawned).slice(0, 8)})`);
-  return { ok: true, scanId: String(spawned) };
+  if (!res.scanId) return { ok: false, error: res.error || "failed to start the scan" };
+  log.info("CVE_LOOKUP", `Manual full scan started for tech ${techId} (${res.scanId.slice(0, 8)})`);
+  return { ok: true, scanId: res.scanId };
 }
 
 // ── Post-scan hook: process a finished cve_lookup and spawn cve_scan on a hit ──
@@ -333,7 +350,7 @@ async function spawnCveScan(
   const cveList = foundCves.map((c) => c.cve).join(", ");
   const scanName = `CVE scan — ${label}${cveList ? ` (${cveList})` : ""}`;
 
-  const spawned = await triggerInternalScan({
+  const res = await triggerInternalScan({
     preGeneratedScanId: randomUUID(),
     userId: tech.userId,
     target: tech.target,
@@ -351,8 +368,8 @@ async function spawnCveScan(
     techId: tech.id,
   });
 
-  if (!spawned) return { ok: false, error: "failed to start the cve_scan" };
-  return { ok: true, scanId: String(spawned) };
+  if (!res.scanId) return { ok: false, error: res.error || "failed to start the cve_scan" };
+  return { ok: true, scanId: res.scanId };
 }
 
 // Manual, on-demand cve_scan for one asset — ignores the automation toggle.
