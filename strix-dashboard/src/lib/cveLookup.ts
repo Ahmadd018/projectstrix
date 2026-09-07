@@ -20,6 +20,20 @@ import { getProcess, removeProcess } from "./scanStore";
 // Scan statuses that mean "still running" (a lookup we can stop).
 const ACTIVE_STATUSES = ["running", "crawling", "scanning", "analyzing"];
 
+// Host of a target URL/string, for grouping ASM scans by domain on the Scans page.
+function hostOf(target: string): string {
+  const t = (target || "").trim();
+  if (!t) return "unknown";
+  try {
+    return new URL(t.includes("://") ? t : `https://${t}`).host || t;
+  } catch {
+    return t.replace(/^[a-z]+:\/\//i, "").split("/")[0] || t;
+  }
+}
+// All ASM-spawned scans use this project name so the Scans page groups them by
+// domain; the scanName still says which kind of run it is.
+const asmProject = (target: string) => `ASM: ${hostOf(target)}`;
+
 // How many assets to kick per sweep, to bound LLM cost / concurrent runs.
 const MAX_LOOKUPS_PER_SWEEP = 5;
 
@@ -240,7 +254,7 @@ async function spawnForTech(
     preGeneratedScanId: randomUUID(),
     userId: tech.userId,
     target: tech.target,
-    projectName: hasVersion ? "ASM CVE Lookup" : "ASM Tech Recon",
+    projectName: asmProject(tech.target),
     scanName: `${hasVersion ? "CVE lookup" : "Version recon"} — ${label}`,
     llmModel,
     scanMode: "quick",
@@ -437,7 +451,7 @@ export async function runFullScanForTech(
     preGeneratedScanId: scanId,
     userId: tech.userId,
     target: tech.target,
-    projectName: "ASM Full Scan",
+    projectName: asmProject(tech.target),
     scanName: `Full scan — ${label} (${tech.target})`,
     llmModel,
     scanMode: "standard",
@@ -566,16 +580,28 @@ async function spawnCveScan(
     };
   }
 
+  // One CVE scan per asset at a time: if one is already running for this tech,
+  // don't spawn another — a single scan validates ALL of the version's CVEs.
+  try {
+    const active = await prisma.scan.findFirst({
+      where: { techId: tech.id, kind: "cve_scan", status: { in: ACTIVE_STATUSES } },
+    });
+    if (active) {
+      return { ok: false, error: "a CVE scan is already running for this asset" };
+    }
+  } catch {}
+
   const llmModel = await resolveModel(tech.userId, model);
   const label = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
-  const cveList = foundCves.map((c) => c.cve).join(", ");
+  // De-dup + stable order so all of the version's CVEs go into one run.
+  const cveList = Array.from(new Set(foundCves.map((c) => c.cve))).sort().join(", ");
   const scanName = `CVE scan — ${label}${cveList ? ` (${cveList})` : ""}`;
 
   const res = await triggerInternalScan({
     preGeneratedScanId: randomUUID(),
     userId: tech.userId,
     target: tech.target,
-    projectName: "ASM CVE Scan",
+    projectName: asmProject(tech.target),
     scanName,
     llmModel,
     scanMode: "standard",

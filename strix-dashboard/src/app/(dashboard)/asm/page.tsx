@@ -95,6 +95,23 @@ function hostOf(target: string): string {
   }
 }
 
+// Classify an asset as a client-side JS library vs. general server/tech-stack
+// software, so the two can be shown in separate sections per domain.
+const JS_LIB_HINTS = [
+  "jquery", "react", "angular", "vue", "bootstrap", "lodash", "moment", "axios",
+  "d3", "ember", "backbone", "svelte", "alpine", "gsap", "three.js", "polyfill",
+  "modernizr", "handlebars", "underscore", "require.js", "tailwind", "swiper",
+  "slick", "fontawesome", "font awesome", "chart.js", "datatables",
+];
+function isJsLibrary(t: { category?: string; ecosystem?: string; product?: string }): boolean {
+  const cat = (t.category || "").toLowerCase();
+  const eco = (t.ecosystem || "").toLowerCase();
+  const prod = (t.product || "").toLowerCase();
+  if (/(^|\W)(library|js|javascript|front-?end)(\W|$)/.test(cat)) return true;
+  if (["npm", "javascript", "js", "yarn", "pnpm", "cdn", "jsdelivr"].includes(eco)) return true;
+  return JS_LIB_HINTS.some((h) => prod.includes(h));
+}
+
 function timeAgo(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso).getTime();
@@ -912,7 +929,34 @@ export default function AsmPage() {
                           <th style={{ padding: "10px 16px", fontWeight: 600, textAlign: "right" }}>Actions</th>
                         </tr>
                       </thead>
-                      <tbody>{g.items.map((t) => renderTechRow(t))}</tbody>
+                      <tbody>
+                        {(() => {
+                          const software = g.items.filter((t) => !isJsLibrary(t));
+                          const libs = g.items.filter((t) => isJsLibrary(t));
+                          const section = (title: string, items: Technology[]) =>
+                            items.length === 0 ? null : (
+                              <React.Fragment key={title}>
+                                <tr>
+                                  <td colSpan={6} style={{ padding: "8px 16px", background: "var(--bg-2)", borderTop: "1px solid var(--border)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-3)" }}>
+                                    {title} <span style={{ fontWeight: 500, opacity: 0.7 }}>({items.length})</span>
+                                  </td>
+                                </tr>
+                                {items.map((t) => renderTechRow(t))}
+                              </React.Fragment>
+                            );
+                          // Show sub-headers only when both kinds are present;
+                          // otherwise just render the rows plainly.
+                          if (software.length > 0 && libs.length > 0) {
+                            return (
+                              <>
+                                {section("Software / Tech stack", software)}
+                                {section("JS libraries", libs)}
+                              </>
+                            );
+                          }
+                          return g.items.map((t) => renderTechRow(t));
+                        })()}
+                      </tbody>
                     </table>
                   </div>
                 )}

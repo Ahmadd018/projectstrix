@@ -23,6 +23,20 @@ export interface TechRecord {
 
 const norm = (s: string) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
 
+// Canonical origin (scheme://host, lowercased) so the same host reported as
+// "x.az", "https://x.az", "https://x.az/path" all collapse to one asset key
+// and re-scans update in place instead of inserting duplicates.
+function canonicalTarget(raw: string): string {
+  const t = (raw || "").trim();
+  if (!t) return t;
+  try {
+    const u = new URL(t.includes("://") ? t : `https://${t}`);
+    return `${u.protocol}//${u.host}`.toLowerCase();
+  } catch {
+    return t.toLowerCase().replace(/\/+$/, "");
+  }
+}
+
 // Would these two product names refer to the same thing? Exact after
 // normalization, or one is a whole substring of the other ("Apache" ⊂
 // "Apache HTTP Server"). Used to collapse versionless duplicates that agents
@@ -45,8 +59,9 @@ export async function syncTechToDb(
   let synced = 0;
   for (const t of techs) {
     const product = String(t.product ?? "").trim();
-    const target = String(t.target ?? "").trim();
-    if (!product || !target) continue;
+    const rawTarget = String(t.target ?? "").trim();
+    if (!product || !rawTarget) continue;
+    const target = canonicalTarget(rawTarget);
 
     const vendor = String(t.vendor ?? "").trim();
     const version = String(t.version ?? "").trim();
@@ -57,8 +72,11 @@ export async function syncTechToDb(
 
     try {
       // Look at everything already tracked on this host so we can dedupe against
-      // near-matches, not just the exact (vendor, product) key.
-      const onHost = await prisma.technology.findMany({ where: { userId, target } });
+      // near-matches, not just the exact (vendor, product) key. Compare by
+      // canonical origin so legacy rows with a differently-formatted target
+      // still match.
+      const userRows = await prisma.technology.findMany({ where: { userId } });
+      const onHost = userRows.filter((r) => canonicalTarget(r.target) === target);
 
       // Pick the best existing match:
       //  1. exact vendor+product (case-insensitive),
