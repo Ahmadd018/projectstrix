@@ -10,6 +10,7 @@
 import { prisma } from "./prisma";
 import { log } from "./logger";
 import { sweepCveLookups } from "./cveLookup";
+import { cleanupOrphanVulnerabilities } from "./vulnSync";
 
 let schedulerStarted = false;
 // The CVE-lookup sweep runs on a slower cadence than the 10s scan poll.
@@ -157,6 +158,9 @@ export function startScheduler() {
   if (!hasSecret) {
     log.error("SCHEDULER", "SCHEDULER_SECRET is NOT set! Scheduled scans will NOT work. Run deploy.py to fix.");
   }
+
+  // One-time housekeeping on startup: purge findings whose scan is gone.
+  cleanupOrphanVulnerabilities().catch(() => {});
 
   // Run immediately on startup, then every 10 seconds
   checkScheduledScans();

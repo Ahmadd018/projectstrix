@@ -8,6 +8,29 @@
 // so createMany/skipDuplicates cannot be relied on for de-duplication).
 import { randomUUID } from "crypto";
 import { prisma } from "./prisma";
+import { log } from "./logger";
+
+// Remove Vulnerability rows whose Scan no longer exists (orphans left behind
+// before scan-deletion started removing findings explicitly, or if the DB FK
+// cascade was never applied). Idempotent — safe to run repeatedly.
+export async function cleanupOrphanVulnerabilities(): Promise<number> {
+  try {
+    const scans = await prisma.scan.findMany({ select: { id: true } });
+    const ids = scans.map((s) => s.id);
+    // If there are no scans at all, every vulnerability is an orphan.
+    const res =
+      ids.length > 0
+        ? await prisma.vulnerability.deleteMany({ where: { scanId: { notIn: ids } } })
+        : await prisma.vulnerability.deleteMany();
+    if (res.count > 0) {
+      log.info("VULN_CLEANUP", `Deleted ${res.count} orphaned vulnerability row(s)`);
+    }
+    return res.count;
+  } catch (e) {
+    log.error("VULN_CLEANUP", "Failed to clean orphaned vulnerabilities", e);
+    return 0;
+  }
+}
 
 export interface DbVulnMeta {
   id: string; // DB uuid — used by triage APIs
