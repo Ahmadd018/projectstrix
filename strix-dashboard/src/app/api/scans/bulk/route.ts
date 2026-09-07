@@ -66,7 +66,9 @@ export async function DELETE(req: NextRequest) {
         } catch (e) {}
       }
 
-      // Delete from database
+      // Delete from database — remove findings first (don't rely on the DB FK
+      // cascade, which may not exist on an already-created table).
+      await prisma.vulnerability.deleteMany({ where: { scanId: id } });
       await prisma.scan.delete({ where: { id } });
       deletedCount++;
     }

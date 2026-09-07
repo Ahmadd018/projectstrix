@@ -157,6 +157,9 @@ export async function DELETE(
         }
       } catch (e) {}
     }
+    // Remove the scan's findings explicitly (don't rely on the DB FK cascade,
+    // which may not have been applied to an existing table by `db push`).
+    await prisma.vulnerability.deleteMany({ where: { scanId: id } });
     await prisma.scan.delete({ where: { id } });
     return NextResponse.json({ success: true, deleted: true });
   }

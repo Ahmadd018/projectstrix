@@ -230,6 +230,30 @@ function ScansContent() {
   const toggleGroup = (g: string) =>
     setCollapsedGroups((prev) => ({ ...prev, [g]: !prev[g] }));
 
+  // Delete every scan in a group (the folder title), not one by one.
+  const deleteGroup = (group: string, groupScans: Scan[]) => {
+    confirm(
+      `Delete all ${groupScans.length} scan${groupScans.length === 1 ? "" : "s"} in "${group}"? This permanently removes the runs and their results.`,
+      async () => {
+        try {
+          const res = await fetch("/api/scans/bulk", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: groupScans.map((s) => s.id) }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to delete group");
+          }
+          fetchScans();
+        } catch (e: any) {
+          alert(e.message || "Failed to delete group", "Error");
+        }
+      },
+      "Delete group",
+    );
+  };
+
   async function handleLaunch(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -537,6 +561,14 @@ function ScansContent() {
                     <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--fg-3)" }}>
                       {groupScans.length}
                     </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteGroup(group, groupScans); }}
+                      title={`Delete all scans in "${group}"`}
+                      className="btn-icon"
+                      style={{ padding: 4, minHeight: 0, color: "var(--sev-critical)" }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
                     {isCollapsed
                       ? <ChevronRight size={12} style={{ color: "var(--fg-3)" }} />
                       : <ChevronDown size={12} style={{ color: "var(--fg-3)" }} />}
