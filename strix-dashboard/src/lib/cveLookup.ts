@@ -212,6 +212,56 @@ async function spawnLookupForTech(
   return { ok: true, scanId: res.scanId };
 }
 
+// Run a CVE lookup across the whole inventory at once (one button). Scoped to
+// the caller's own assets unless admin. Skips assets already "checking".
+// Ignores the automation toggle. Spawns sequentially with a small delay so we
+// don't hammer the scan API / LLM all at once.
+export async function runAllCveLookups(opts: {
+  userId: string;
+  isAdmin: boolean;
+  model?: string;
+}): Promise<{ started: number; skipped: number; failed: number; error?: string }> {
+  let techs;
+  try {
+    techs = await prisma.technology.findMany({
+      where: opts.isAdmin ? {} : { userId: opts.userId },
+    });
+  } catch (e) {
+    log.error("CVE_LOOKUP", "runAllCveLookups query failed", e);
+    return { started: 0, skipped: 0, failed: 0, error: "failed to load inventory" };
+  }
+
+  const settings = await getAppSettings();
+  const intervalHours = settings?.cveLookupIntervalHours || 24;
+  const next = new Date(Date.now() + intervalHours * 3600_000);
+
+  let started = 0;
+  let skipped = 0;
+  let failed = 0;
+  let firstError: string | undefined;
+
+  for (const tech of techs) {
+    if (tech.cveStatus === "checking") {
+      skipped++;
+      continue;
+    }
+    const res = await spawnLookupForTech(tech, next, opts.model);
+    if (res.ok) {
+      started++;
+    } else {
+      failed++;
+      if (!firstError) firstError = res.error;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  log.info(
+    "CVE_LOOKUP",
+    `Bulk lookup: started=${started} skipped=${skipped} failed=${failed} (total=${techs.length})`,
+  );
+  return { started, skipped, failed, error: failed > 0 ? firstError : undefined };
+}
+
 // Manual, on-demand lookup for one asset — ignores the global automation toggle
 // so a user can check a chosen target immediately. On a CVE hit the lookup's
 // completion still auto-spawns the cve_scan (see maybeSpawnCveScanForScan).

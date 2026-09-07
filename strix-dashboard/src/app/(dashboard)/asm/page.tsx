@@ -121,6 +121,7 @@ export default function AsmPage() {
   // Model used by the MANUAL actions (lookup / cve scan / full scan). Seeded from
   // the configured lookup model once settings load.
   const [manualModel, setManualModel] = useState("");
+  const [runningAll, setRunningAll] = useState(false);
   const [fullScan, setFullScan] = useState<{ techId: string; label: string } | null>(null);
   const [fsInstruction, setFsInstruction] = useState("");
   const [fsModel, setFsModel] = useState("");
@@ -207,6 +208,41 @@ export default function AsmPage() {
       next.has(host) ? next.delete(host) : next.add(host);
       return next;
     });
+  };
+
+  const handleRunAll = () => {
+    const n = techs.filter((t) => t.cveStatus !== "checking").length;
+    if (n === 0) {
+      alert("No assets to check right now.", "CVE lookup");
+      return;
+    }
+    confirm(
+      `Run a CVE lookup on all ${n} inventory ${n === 1 ? "entry" : "entries"}? Each spawns a lookup scan (using the "Manual scan model"), and any asset with a CVE will auto-launch a cve_scan.`,
+      async () => {
+        setRunningAll(true);
+        // Optimistically flip everything to "checking".
+        setTechs((prev) => prev.map((t) => (t.cveStatus === "checking" ? t : { ...t, cveStatus: "checking" })));
+        try {
+          const res = await fetch("/api/technologies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "lookup-all", model: manualModel || undefined }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Failed to start lookups");
+          const parts = [`${data.started} started`];
+          if (data.skipped) parts.push(`${data.skipped} already running`);
+          if (data.failed) parts.push(`${data.failed} failed${data.error ? ` (${data.error})` : ""}`);
+          alert(parts.join(", ") + ".", "Bulk CVE lookup");
+        } catch (e: any) {
+          alert(e.message, "Error");
+        } finally {
+          setRunningAll(false);
+          fetchData();
+        }
+      },
+      "Run CVE lookup on all",
+    );
   };
 
   const handleRunLookup = async (id: string) => {
@@ -583,9 +619,21 @@ export default function AsmPage() {
             published advisories for CVEs; a confirmed CVE automatically launches a full <code>cve_scan</code>.
           </p>
         </div>
-        <button onClick={fetchData} className="btn-secondary" style={{ gap: 8 }}>
-          <RefreshCw size={14} /> Refresh
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={handleRunAll}
+            className="btn-primary"
+            style={{ gap: 8 }}
+            disabled={runningAll || techs.length === 0}
+            title="Run a CVE lookup on every asset in the inventory"
+          >
+            {runningAll ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />}
+            Run CVE lookup (all)
+          </button>
+          <button onClick={fetchData} className="btn-secondary" style={{ gap: 8 }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Automation control */}

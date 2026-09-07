@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { log } from "@/lib/logger";
-import { runCveLookupNow, runCveScanNow, runFullScanForTech } from "@/lib/cveLookup";
+import { runCveLookupNow, runCveScanNow, runFullScanForTech, runAllCveLookups } from "@/lib/cveLookup";
 
 // GET /api/technologies — list the ASM inventory (third-party/vendor solutions
 // detected across scans, with the version we currently track and CVE status).
@@ -79,6 +79,28 @@ export async function PATCH(req: NextRequest) {
     log.error("PATCH /api/technologies", "Failed to start scan", err);
     return NextResponse.json({ error: "Failed to start scan" }, { status: 500 });
   }
+}
+
+// POST /api/technologies — bulk action. Body: { action: "lookup-all", model? }.
+// Starts a CVE lookup for every inventory entry the caller can see.
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  const action = String(body?.action || "");
+  const model = typeof body?.model === "string" && body.model.trim() ? body.model.trim() : undefined;
+
+  if (action !== "lookup-all") {
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  }
+
+  const result = await runAllCveLookups({
+    userId: session.userId as string,
+    isAdmin: session.role === "ADMIN",
+    model,
+  });
+  return NextResponse.json(result);
 }
 
 // PUT /api/technologies?id=<id> — edit an inventory entry's fields.
