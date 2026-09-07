@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff, Ticket, ExternalLink } from "lucide-react";
+import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff, Ticket } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { buildFpInstruction as buildFpInstructionLib, hostFromTarget } from "@/lib/fpInstruction";
+import { JiraReportModal, JiraVuln } from "@/components/JiraReportModal";
 
 interface Vulnerability {
   id: string;
@@ -37,36 +38,6 @@ interface VulnWithScan extends Vulnerability {
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, informative: 4, info: 4 };
 const SEVERITIES = ["all", "critical", "high", "medium", "low", "informative"] as const;
 
-// Jira report modal options (kept in sync with src/lib/jira.ts mappings).
-const JIRA_SEVERITY_LEVELS = [
-  { key: "critical", label: "Critical" },
-  { key: "high", label: "High" },
-  { key: "medium", label: "Medium" },
-  { key: "low", label: "Low" },
-  { key: "informational", label: "Informational" },
-  { key: "none", label: "None" },
-];
-const JIRA_PRIORITIES = [
-  { key: "highest", label: "Highest" },
-  { key: "high", label: "High" },
-  { key: "medium", label: "Medium" },
-  { key: "low", label: "Low" },
-];
-// Default severity-level / priority from the finding's severity.
-function defaultSeverityLevel(sev: string): string {
-  const s = sev.toLowerCase();
-  if (s === "info" || s === "informative" || s === "informational") return "informational";
-  if (["critical", "high", "medium", "low"].includes(s)) return s;
-  return "none";
-}
-function defaultPriority(sev: string): string {
-  const s = sev.toLowerCase();
-  if (s === "critical") return "highest";
-  if (s === "high") return "high";
-  if (s === "medium") return "medium";
-  return "low";
-}
-
 function sevClass(s: string) {
   const normalized = s.toLowerCase() === "info" ? "informative" : s.toLowerCase();
   return `sev sev-${normalized}`;
@@ -86,85 +57,10 @@ export default function VulnerabilitiesPage() {
   const [deletingBulk, setDeletingBulk] = useState(false);
   const [fpText, setFpText] = useState<string | null>(null);
   const [fpCopied, setFpCopied] = useState(false);
-  const [jiraVuln, setJiraVuln] = useState<VulnWithScan | null>(null);
-  const [jiraForm, setJiraForm] = useState({ summary: "", assignee: "", labels: "", severityLevel: "none", priority: "low" });
-  const [jiraSubmitting, setJiraSubmitting] = useState(false);
-  const [jiraResult, setJiraResult] = useState<{ key: string; url: string } | null>(null);
-  const [jiraError, setJiraError] = useState<string | null>(null);
-  const [jiraDesc, setJiraDesc] = useState("");
-  const [jiraDescLoading, setJiraDescLoading] = useState(false);
-  const [jiraDescNote, setJiraDescNote] = useState<string | null>(null);
+  // Multi-config Jira report — the shared modal handles integration choice,
+  // AI description generation, and submission (same as ScanFindings).
+  const [jiraVuln, setJiraVuln] = useState<JiraVuln | null>(null);
   const { confirm, alert } = useDialog();
-
-  async function generateJiraDesc(vulnId: string) {
-    setJiraDescLoading(true);
-    setJiraDescNote(null);
-    try {
-      const res = await fetch("/api/jira/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vulnId }),
-      });
-      const out = await res.json().catch(() => ({}));
-      if (res.ok && out.description) {
-        setJiraDesc(out.description);
-        if (out.generated === false) setJiraDescNote(out.reason || "Used template (AI unavailable).");
-      } else {
-        setJiraDescNote(out.error || "Could not generate description.");
-      }
-    } catch (e: any) {
-      setJiraDescNote(e?.message || "Network error while generating.");
-    } finally {
-      setJiraDescLoading(false);
-    }
-  }
-
-  function openJiraModal(v: VulnWithScan) {
-    setJiraForm({
-      summary: `[${v.severity.toUpperCase()}] ${v.title}`,
-      assignee: "",
-      labels: "taipan, security",
-      severityLevel: defaultSeverityLevel(v.severity),
-      priority: defaultPriority(v.severity),
-    });
-    setJiraResult(null);
-    setJiraError(null);
-    setJiraDesc("");
-    setJiraDescNote(null);
-    setJiraVuln(v);
-    generateJiraDesc(v.id);
-  }
-
-  async function submitJira() {
-    if (!jiraVuln) return;
-    setJiraSubmitting(true);
-    setJiraError(null);
-    try {
-      const res = await fetch("/api/jira/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vulnId: jiraVuln.id,
-          summary: jiraForm.summary,
-          assignee: jiraForm.assignee,
-          labels: jiraForm.labels.split(",").map((l) => l.trim()).filter(Boolean),
-          severityLevel: jiraForm.severityLevel,
-          priority: jiraForm.priority,
-          description: jiraDesc,
-        }),
-      });
-      const out = await res.json().catch(() => ({}));
-      if (res.ok && out.success) {
-        setJiraResult({ key: out.key, url: out.url });
-      } else {
-        setJiraError(out.error || `Request failed (HTTP ${res.status})`);
-      }
-    } catch (e: any) {
-      setJiraError(e?.message || "Network error");
-    } finally {
-      setJiraSubmitting(false);
-    }
-  }
 
   // Build a ready-to-paste, fully-detailed instruction telling the agent to skip
   // this finding (shared implementation in @/lib/fpInstruction).
@@ -666,7 +562,7 @@ export default function VulnerabilitiesPage() {
                 <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16, marginTop: 4, display: "flex", flexDirection: "column", gap: 10 }}>
                   <button
                     className="btn-primary"
-                    onClick={() => openJiraModal(selected)}
+                    onClick={() => setJiraVuln({ id: selected.id, title: selected.title, severity: selected.severity })}
                     style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center" }}
                   >
                     <Ticket size={14} />
@@ -756,123 +652,8 @@ export default function VulnerabilitiesPage() {
         </div>
       )}
 
-      {/* Report to Jira modal */}
-      {jiraVuln && (
-        <div
-          onClick={() => setJiraVuln(null)}
-          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-        >
-          <div
-            className="glass-panel animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 560, padding: 20, display: "flex", flexDirection: "column", gap: 14, maxHeight: "90vh", overflowY: "auto" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
-                <Ticket size={16} /> Report to Jira
-              </div>
-              <button onClick={() => setJiraVuln(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-2)" }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            {jiraResult ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--sev-low)" }}>
-                  <Check size={16} /> Created <strong>{jiraResult.key}</strong>
-                </div>
-                <a href={jiraResult.url} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", textDecoration: "none" }}>
-                  <ExternalLink size={14} /> Open {jiraResult.key} in Jira
-                </a>
-              </div>
-            ) : (
-              <>
-                {(() => {
-                  const fieldWrap: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6 };
-                  const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: "var(--fg-2)" };
-                  const inp: React.CSSProperties = { width: "100%", padding: "8px 10px", background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 13 };
-                  return (
-                    <>
-                      <div style={fieldWrap}>
-                        <label style={lbl}>Summary</label>
-                        <input style={inp} value={jiraForm.summary} onChange={(e) => setJiraForm({ ...jiraForm, summary: e.target.value })} />
-                      </div>
-                      <div style={{ display: "flex", gap: 12 }}>
-                        <div style={{ ...fieldWrap, flex: 1 }}>
-                          <label style={lbl}>Severity level</label>
-                          <select style={inp} value={jiraForm.severityLevel} onChange={(e) => setJiraForm({ ...jiraForm, severityLevel: e.target.value })}>
-                            {JIRA_SEVERITY_LEVELS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ ...fieldWrap, flex: 1 }}>
-                          <label style={lbl}>Priority</label>
-                          <select style={inp} value={jiraForm.priority} onChange={(e) => setJiraForm({ ...jiraForm, priority: e.target.value })}>
-                            {JIRA_PRIORITIES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <div style={fieldWrap}>
-                        <label style={lbl}>Assignee <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(username, optional)</span></label>
-                        <input style={inp} value={jiraForm.assignee} placeholder="e.g. AghamaliyevAM" onChange={(e) => setJiraForm({ ...jiraForm, assignee: e.target.value })} />
-                      </div>
-                      <div style={fieldWrap}>
-                        <label style={lbl}>Labels <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(comma-separated)</span></label>
-                        <input style={inp} value={jiraForm.labels} placeholder="taipan, security" onChange={(e) => setJiraForm({ ...jiraForm, labels: e.target.value })} />
-                      </div>
-                      <div style={fieldWrap}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <label style={lbl}>Description <span style={{ color: "var(--fg-3)", fontWeight: 400 }}>(AI-generated, editable)</span></label>
-                          <button
-                            onClick={() => jiraVuln && generateJiraDesc(jiraVuln.id)}
-                            disabled={jiraDescLoading}
-                            style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg-2)", fontSize: 11, padding: "3px 8px", cursor: "pointer" }}
-                          >
-                            {jiraDescLoading ? <Loader2 size={11} className="animate-spin" /> : <Settings2 size={11} />}
-                            Regenerate
-                          </button>
-                        </div>
-                        {jiraDescLoading && !jiraDesc ? (
-                          <div style={{ ...inp, minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-3)", fontSize: 12, gap: 8 }}>
-                            <Loader2 size={14} className="animate-spin" /> Generating report with AI…
-                          </div>
-                        ) : (
-                          <textarea
-                            style={{ ...inp, minHeight: 160, resize: "vertical", fontFamily: "var(--font-mono, monospace)", lineHeight: 1.5 }}
-                            value={jiraDesc}
-                            onChange={(e) => setJiraDesc(e.target.value)}
-                          />
-                        )}
-                        {jiraDescNote && (
-                          <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{jiraDescNote}</span>
-                        )}
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {jiraError && (
-                  <div style={{ fontSize: 12, color: "var(--sev-critical, #e5484d)", background: "rgba(229,72,77,0.08)", border: "1px solid rgba(229,72,77,0.25)", borderRadius: "var(--r)", padding: "8px 10px", lineHeight: 1.5 }}>
-                    {jiraError}
-                  </div>
-                )}
-
-                <button
-                  className="btn-primary"
-                  disabled={jiraSubmitting || jiraDescLoading || !jiraForm.summary.trim() || !jiraDesc.trim()}
-                  onClick={submitJira}
-                  style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}
-                >
-                  {jiraSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Ticket size={14} />}
-                  {jiraSubmitting ? "Creating…" : "Create Jira issue"}
-                </button>
-                <p style={{ fontSize: 11, color: "var(--fg-2)", margin: 0, lineHeight: 1.5 }}>
-                  The issue description is generated from the finding as a narrative + mitigation. Configure Jira in Settings → Jira first.
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Report to Jira — shared multi-config modal (integration picker + AI desc) */}
+      <JiraReportModal vuln={jiraVuln} onClose={() => setJiraVuln(null)} />
     </div>
   );
 }
