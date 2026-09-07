@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff, Ticket } from "lucide-react";
+import { ShieldAlert, Search, Info, Terminal, Lightbulb, X, Loader2, Settings2, Copy, Check, ShieldOff, Ticket, Trash2 } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { buildFpInstruction as buildFpInstructionLib, hostFromTarget } from "@/lib/fpInstruction";
@@ -9,6 +9,7 @@ import { JiraReportModal, JiraVuln } from "@/components/JiraReportModal";
 
 interface Vulnerability {
   id: string;
+  vulnId?: string; // strix finding id (matches vulnerabilities.json + DB.vulnId)
   title: string;
   severity: "critical" | "high" | "medium" | "low" | "informative" | "info";
   endpoint: string;
@@ -143,9 +144,13 @@ export default function VulnerabilitiesPage() {
     confirm(`Are you sure you want to permanently delete ${selectedIds.size} selected vulnerability(s)?`, async () => {
       setDeletingBulk(true);
       try {
-        const items = Array.from(selectedIds).map(id => {
-          const [scanId, vulnId] = id.split("::");
-          return { scanId, vulnId };
+        // Selection keys are `${scanId}::${row.id}` (DB uuid); the delete API
+        // matches the strix vulnId (used in vulnerabilities.json and DB.vulnId),
+        // so resolve each row's real vulnId (fall back to the uuid).
+        const items = Array.from(selectedIds).map(key => {
+          const [scanId, rowId] = key.split("::");
+          const v = allVulns.find(x => x.scanId === scanId && x.id === rowId);
+          return { scanId, vulnId: v?.vulnId || rowId };
         });
 
         await fetch("/api/vulnerabilities/bulk", {
@@ -163,6 +168,30 @@ export default function VulnerabilitiesPage() {
         setDeletingBulk(false);
       }
     });
+  }
+
+  // Delete a single vulnerability (from its detail panel).
+  async function handleDeleteOne(v: VulnWithScan) {
+    confirm(`Permanently delete this finding?\n\n"${v.title}"`, async () => {
+      // Optimistic removal.
+      setAllVulns(prev => prev.filter(x => !(x.id === v.id && x.scanId === v.scanId)));
+      setSelected(null);
+      try {
+        const res = await fetch("/api/vulnerabilities/bulk", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: [{ scanId: v.scanId, vulnId: v.vulnId || v.id }] }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Delete failed");
+        }
+      } catch (e: any) {
+        alert(e.message || "Delete failed", "Error");
+      } finally {
+        fetchAll();
+      }
+    }, "Delete finding");
   }
 
   const toggleSelection = (id: string) => {
@@ -598,6 +627,17 @@ export default function VulnerabilitiesPage() {
                   <p style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 2, lineHeight: 1.5 }}>
                     Report a confirmed finding as a Jira issue, or mark it a false positive (tags the finding and gives you an instruction to paste into a scan).
                   </p>
+                  <button
+                    onClick={() => handleDeleteOne(selected)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center",
+                      padding: "9px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      background: "var(--sev-critical-bg, rgba(255,59,59,0.12))", color: "var(--sev-critical)",
+                      border: "1px solid var(--sev-critical)33", marginTop: 4,
+                    }}
+                  >
+                    <Trash2 size={14} /> Delete finding
+                  </button>
                 </div>
               </div>
             </>
