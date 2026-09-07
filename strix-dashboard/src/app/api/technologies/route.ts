@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { log } from "@/lib/logger";
+import { runCveLookupNow, runCveScanNow, runFullScanForTech } from "@/lib/cveLookup";
 
 // GET /api/technologies — list the ASM inventory (third-party/vendor solutions
 // detected across scans, with the version we currently track and CVE status).
@@ -34,14 +35,27 @@ export async function GET() {
   }
 }
 
-// PATCH /api/technologies?id=<id> — queue an immediate re-check (the scheduler
-// picks it up on its next CVE sweep, when automation is enabled).
+// PATCH /api/technologies?id=<id>&action=<lookup|cvescan|fullscan> — start a scan
+// for this asset RIGHT NOW, independent of the global automation toggle.
+//   action=lookup  (default): a quick cve_lookup (re-verify version + find CVEs;
+//                   on a hit its completion auto-spawns the cve_scan).
+//   action=cvescan: a cve_scan (loads the "cve_scan" instruction) against the
+//                   target, using CVEs already recorded on the asset.
+//   action=fullscan: a normal full pentest of the target (all vuln classes).
 export async function PATCH(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+  const action = (req.nextUrl.searchParams.get("action") || "lookup").toLowerCase();
+
+  // Optional body: { instruction } for a full scan (choose one from the pool).
+  const body = await req.json().catch(() => ({}));
+  const instruction = typeof body?.instruction === "string" ? body.instruction : undefined;
+  if (instruction && instruction.length > 8000) {
+    return NextResponse.json({ error: "Instruction too long (max 8000 chars)" }, { status: 400 });
+  }
 
   try {
     const row = await prisma.technology.findUnique({ where: { id } });
@@ -49,14 +63,19 @@ export async function PATCH(req: NextRequest) {
     if (session.role !== "ADMIN" && row.userId !== session.userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    await prisma.technology.update({
-      where: { id },
-      data: { nextCveCheckAt: new Date(), cveStatus: row.cveStatus === "checking" ? "unknown" : row.cveStatus },
-    });
+    const result =
+      action === "fullscan"
+        ? await runFullScanForTech(id, instruction)
+        : action === "cvescan"
+          ? await runCveScanNow(id)
+          : await runCveLookupNow(id);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error || "Failed to start scan" }, { status: 409 });
+    }
     return NextResponse.json({ success: true });
   } catch (err) {
-    log.error("PATCH /api/technologies", "Failed to queue re-check", err);
-    return NextResponse.json({ error: "Failed to queue re-check" }, { status: 500 });
+    log.error("PATCH /api/technologies", "Failed to start scan", err);
+    return NextResponse.json({ error: "Failed to start scan" }, { status: 500 });
   }
 }
 

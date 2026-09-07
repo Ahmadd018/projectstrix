@@ -138,43 +138,116 @@ export async function sweepCveLookups(): Promise<void> {
   const next = new Date(now.getTime() + intervalHours * 3600_000);
 
   for (const tech of due) {
-    // Mark before spawning to avoid double-fire across ticks/instances.
-    try {
-      await prisma.technology.update({
-        where: { id: tech.id },
-        data: { cveStatus: "checking", nextCveCheckAt: next },
-      });
-    } catch (e) {
-      log.warn("CVE_LOOKUP", `Failed to mark tech ${tech.id} as checking`, { err: String(e) });
-      continue;
-    }
-
-    const llmModel = await defaultModelForUser(tech.userId);
-    const lookupScanId = randomUUID();
-    const instruction = buildLookupInstruction(tech as any);
-
-    const spawned = await triggerInternalScan({
-      preGeneratedScanId: lookupScanId,
-      userId: tech.userId,
-      target: tech.target,
-      projectName: "ASM CVE Lookup",
-      scanName: `CVE lookup — ${[tech.vendor, tech.product].filter(Boolean).join(" ")}`,
-      llmModel,
-      scanMode: "quick",
-      instruction,
-      kind: "cve_lookup",
-      techId: tech.id,
-    });
-
-    if (!spawned) {
-      // Roll back the "checking" state so it's retried next sweep.
-      await prisma.technology
-        .update({ where: { id: tech.id }, data: { cveStatus: tech.cveStatus } })
-        .catch(() => {});
-    }
-
+    await spawnLookupForTech(tech, next);
     await new Promise((r) => setTimeout(r, 1000));
   }
+}
+
+// Spawn one cve_lookup run for a single asset. Marks the row "checking" (with
+// its next scheduled check) *before* spawning to avoid double-fire, and rolls
+// that back if the spawn fails. Shared by the scheduler sweep and the manual
+// "Run now" trigger. Returns the spawned scan id, or null on failure.
+async function spawnLookupForTech(tech: any, next: Date): Promise<string | null> {
+  const prevStatus = tech.cveStatus;
+  try {
+    await prisma.technology.update({
+      where: { id: tech.id },
+      data: { cveStatus: "checking", nextCveCheckAt: next },
+    });
+  } catch (e) {
+    log.warn("CVE_LOOKUP", `Failed to mark tech ${tech.id} as checking`, { err: String(e) });
+    return null;
+  }
+
+  const llmModel = await defaultModelForUser(tech.userId);
+  const instruction = buildLookupInstruction(tech);
+
+  const spawned = await triggerInternalScan({
+    preGeneratedScanId: randomUUID(),
+    userId: tech.userId,
+    target: tech.target,
+    projectName: "ASM CVE Lookup",
+    scanName: `CVE lookup — ${[tech.vendor, tech.product].filter(Boolean).join(" ")}`,
+    llmModel,
+    scanMode: "quick",
+    instruction,
+    kind: "cve_lookup",
+    techId: tech.id,
+  });
+
+  if (!spawned) {
+    // Roll back the "checking" state so it's retried later.
+    await prisma.technology
+      .update({ where: { id: tech.id }, data: { cveStatus: prevStatus } })
+      .catch(() => {});
+  }
+  return spawned;
+}
+
+// Manual, on-demand lookup for one asset — ignores the global automation toggle
+// so a user can check a chosen target immediately. On a CVE hit the lookup's
+// completion still auto-spawns the cve_scan (see maybeSpawnCveScanForScan).
+export async function runCveLookupNow(
+  techId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  let tech;
+  try {
+    tech = await prisma.technology.findUnique({ where: { id: techId } });
+  } catch {
+    return { ok: false, error: "lookup failed" };
+  }
+  if (!tech) return { ok: false, error: "asset not found" };
+  if (tech.cveStatus === "checking") {
+    return { ok: false, error: "a lookup is already in progress for this asset" };
+  }
+
+  const settings = await getAppSettings();
+  const intervalHours = settings?.cveLookupIntervalHours || 24;
+  const next = new Date(Date.now() + intervalHours * 3600_000);
+
+  const spawned = await spawnLookupForTech(tech, next);
+  if (!spawned) return { ok: false, error: "failed to start the lookup scan" };
+  log.info("CVE_LOOKUP", `Manual lookup started for tech ${techId} (${String(spawned).slice(0, 8)})`);
+  return { ok: true };
+}
+
+// Launch a normal, full pentest (kind="standard") against an ASM asset's target
+// — the same thing the New Scan page does, started straight from the inventory.
+// This is NOT part of the CVE pipeline: it does full recon + tests every vuln
+// class, and does not auto-spawn anything on completion. Ignores the automation
+// toggle. Its own tech detection still feeds the ASM inventory.
+export async function runFullScanForTech(
+  techId: string,
+  instruction?: string,
+): Promise<{ ok: boolean; error?: string; scanId?: string }> {
+  let tech;
+  try {
+    tech = await prisma.technology.findUnique({ where: { id: techId } });
+  } catch {
+    return { ok: false, error: "lookup failed" };
+  }
+  if (!tech) return { ok: false, error: "asset not found" };
+
+  const llmModel = await defaultModelForUser(tech.userId);
+  const label = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
+  const scanId = randomUUID();
+  const trimmed = (instruction || "").trim();
+
+  const spawned = await triggerInternalScan({
+    preGeneratedScanId: scanId,
+    userId: tech.userId,
+    target: tech.target,
+    projectName: "ASM Full Scan",
+    scanName: `Full scan — ${label} (${tech.target})`,
+    llmModel,
+    scanMode: "standard",
+    kind: "standard",
+    ...(trimmed ? { instruction: trimmed } : {}),
+  });
+
+  if (!spawned) return { ok: false, error: "failed to start the scan" };
+  log.info("CVE_LOOKUP", `Manual full scan started for tech ${techId} (${String(spawned).slice(0, 8)})`);
+  return { ok: true, scanId: String(spawned) };
 }
 
 // ── Post-scan hook: process a finished cve_lookup and spawn cve_scan on a hit ──
@@ -227,24 +300,38 @@ export async function maybeSpawnCveScanForScan(scanId: string, vulns: any[]): Pr
     return;
   }
 
-  // CVE found → auto-spawn a full cve_scan immediately, loading the "cve_scan"
-  // instruction. Skip (with a clear warning) if that instruction is missing.
-  const cveScanInstruction = await getInstructionContent("cve_scan");
-  if (!cveScanInstruction) {
-    log.warn(
-      "CVE_LOOKUP",
-      `CVE(s) found for tech ${scan.techId} but no instruction titled 'cve_scan' exists — ` +
-        `create one to enable automatic CVE scans. Skipping auto-scan.`,
-    );
-    return;
-  }
-
+  // CVE found → auto-spawn a cve_scan immediately.
   const tech = await prisma.technology.findUnique({ where: { id: scan.techId } });
   if (!tech) return;
+  const res = await spawnCveScan(tech, foundCves);
+  if (!res.ok) {
+    log.warn("CVE_LOOKUP", `Auto cve_scan for tech ${tech.id} not started: ${res.error}`);
+  } else {
+    log.info("CVE_LOOKUP", `Auto-spawned cve_scan for tech ${tech.id}`);
+  }
+}
+
+// Spawn a cve_scan (kind="cve_scan") for one asset, loading the "cve_scan"
+// instruction and pinning the concrete component/version/CVE context so the run
+// is self-contained. Shared by the automatic path and the manual button.
+// `foundCves` may be empty (a manual run before any lookup) — the scan then
+// validates whatever known CVEs apply to the component/version.
+async function spawnCveScan(
+  tech: any,
+  foundCves: Array<{ cve: string }>,
+): Promise<{ ok: boolean; error?: string; scanId?: string }> {
+  const cveScanInstruction = await getInstructionContent("cve_scan");
+  if (!cveScanInstruction) {
+    return {
+      ok: false,
+      error: "no instruction titled 'cve_scan' exists — create one to enable CVE scans",
+    };
+  }
 
   const llmModel = await defaultModelForUser(tech.userId);
+  const label = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
   const cveList = foundCves.map((c) => c.cve).join(", ");
-  const scanName = `CVE scan — ${[tech.vendor, tech.product].filter(Boolean).join(" ")} (${cveList})`;
+  const scanName = `CVE scan — ${label}${cveList ? ` (${cveList})` : ""}`;
 
   const spawned = await triggerInternalScan({
     preGeneratedScanId: randomUUID(),
@@ -254,21 +341,36 @@ export async function maybeSpawnCveScanForScan(scanId: string, vulns: any[]): Pr
     scanName,
     llmModel,
     scanMode: "standard",
-    // The cve_scan instruction drives the behavior; we prepend the concrete
-    // context (which component/version/CVEs) so the run is fully self-contained.
     instruction:
-      `Target component: ${[tech.vendor, tech.product].filter(Boolean).join(" ")} ` +
-      `version ${tech.version || "(unknown)"} on ${tech.target}.\n` +
-      `Confirmed CVEs to validate/exploit: ${cveList}.\n\n` +
+      `Target component: ${label} version ${tech.version || "(unknown)"} on ${tech.target}.\n` +
+      (cveList
+        ? `Confirmed CVEs to validate/exploit: ${cveList}.\n\n`
+        : `Search for and validate/exploit any published CVE affecting this exact version.\n\n`) +
       cveScanInstruction,
     kind: "cve_scan",
     techId: tech.id,
   });
 
-  if (spawned) {
-    log.info(
-      "CVE_LOOKUP",
-      `Auto-spawned cve_scan ${String(spawned).slice(0, 8)} for tech ${tech.id} (${cveList})`,
-    );
+  if (!spawned) return { ok: false, error: "failed to start the cve_scan" };
+  return { ok: true, scanId: String(spawned) };
+}
+
+// Manual, on-demand cve_scan for one asset — ignores the automation toggle.
+// Uses CVEs already recorded on the asset (from a prior lookup) if present.
+export async function runCveScanNow(
+  techId: string,
+): Promise<{ ok: boolean; error?: string; scanId?: string }> {
+  let tech;
+  try {
+    tech = await prisma.technology.findUnique({ where: { id: techId } });
+  } catch {
+    return { ok: false, error: "lookup failed" };
   }
+  if (!tech) return { ok: false, error: "asset not found" };
+  const foundCves = Array.isArray(tech.foundCves) ? (tech.foundCves as any[]) : [];
+  const res = await spawnCveScan(tech, foundCves);
+  if (res.ok) {
+    log.info("CVE_LOOKUP", `Manual cve_scan started for tech ${techId} (${String(res.scanId).slice(0, 8)})`);
+  }
+  return res;
 }
