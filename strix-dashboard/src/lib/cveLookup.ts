@@ -123,6 +123,42 @@ function buildLookupInstruction(tech: {
     .join("\n");
 }
 
+// Version-recon instruction for an asset with no known version. Prefers a
+// user-authored instruction titled "tech_stack" (context prepended); otherwise
+// a built-in fingerprint-only prompt. NEVER searches CVEs — its only job is to
+// determine the exact running version and record it via report_technology.
+async function buildTechStackInstruction(tech: {
+  vendor: string;
+  product: string;
+  target: string;
+  ecosystem: string;
+  description: string;
+}): Promise<string> {
+  const name = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
+  const context = [
+    `TECH-STACK RECON — non-exploitative fingerprinting only. DO NOT exploit, fuzz, or intrusively test.`,
+    ``,
+    `On ${tech.target}, precisely determine the EXACT version of this component:`,
+    `- Product: ${name}`,
+    tech.ecosystem ? `- Ecosystem: ${tech.ecosystem}` : ``,
+    tech.description ? `- Notes: ${tech.description}` : ``,
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+
+  const override = await getInstructionContent("tech_stack");
+  if (override) {
+    return `${context}\n\n${override}`;
+  }
+  return [
+    context,
+    ``,
+    `Use every passive/light signal: HTTP headers (Server, X-Powered-By, Set-Cookie), banners, static asset paths & hashes, version/build endpoints, meta tags, changelogs, JS globals, favicon hashes, error pages.`,
+    `When you identify the exact version, record the confirmed product + vendor + version by calling report_technology (this updates the ASM inventory in place). Also record any other third-party/vendor components you fingerprint, with their versions.`,
+    `Do NOT search for or file CVEs — that happens in a later step. If you genuinely cannot determine the version, report what you can and finish; do NOT guess a version.`,
+  ].join("\n");
+}
+
 // Look up the shared instruction titled "cve_scan" (case-insensitive). Returns
 // its content, or null if none exists.
 async function getInstructionContent(title: string): Promise<string | null> {
@@ -165,21 +201,25 @@ export async function sweepCveLookups(): Promise<void> {
   const next = new Date(now.getTime() + intervalHours * 3600_000);
 
   for (const tech of due) {
-    await spawnLookupForTech(tech, next);
+    await spawnForTech(tech, next);
     await new Promise((r) => setTimeout(r, 1000));
   }
 }
 
-// Spawn one cve_lookup run for a single asset. Marks the row "checking" (with
-// its next scheduled check) *before* spawning to avoid double-fire, and rolls
-// that back if the spawn fails. Shared by the scheduler sweep and the manual
-// "Run now" trigger. Returns { ok, error?, scanId? } carrying the real reason.
-async function spawnLookupForTech(
+// Dispatch the right run for one asset:
+//   • has a version → cve_lookup (verify version + search CVEs),
+//   • no version    → tech_stack recon (find the version only; no CVE search).
+// Marks the row "checking" (with its next scheduled check) *before* spawning to
+// avoid double-fire, and rolls that back if the spawn fails.
+async function spawnForTech(
   tech: any,
   next: Date,
   model?: string,
-): Promise<{ ok: boolean; error?: string; scanId?: string }> {
+): Promise<{ ok: boolean; error?: string; scanId?: string; kind?: string }> {
+  const hasVersion = !!(tech.version && String(tech.version).trim());
+  const kind = hasVersion ? "cve_lookup" : "tech_stack";
   const prevStatus = tech.cveStatus;
+
   try {
     await prisma.technology.update({
       where: { id: tech.id },
@@ -191,18 +231,21 @@ async function spawnLookupForTech(
   }
 
   const llmModel = await resolveModel(tech.userId, model);
-  const instruction = buildLookupInstruction(tech);
+  const label = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
+  const instruction = hasVersion
+    ? buildLookupInstruction(tech)
+    : await buildTechStackInstruction(tech);
 
   const res = await triggerInternalScan({
     preGeneratedScanId: randomUUID(),
     userId: tech.userId,
     target: tech.target,
-    projectName: "ASM CVE Lookup",
-    scanName: `CVE lookup — ${[tech.vendor, tech.product].filter(Boolean).join(" ")}`,
+    projectName: hasVersion ? "ASM CVE Lookup" : "ASM Tech Recon",
+    scanName: `${hasVersion ? "CVE lookup" : "Version recon"} — ${label}`,
     llmModel,
     scanMode: "quick",
     instruction,
-    kind: "cve_lookup",
+    kind,
     techId: tech.id,
   });
 
@@ -211,9 +254,9 @@ async function spawnLookupForTech(
     await prisma.technology
       .update({ where: { id: tech.id }, data: { cveStatus: prevStatus } })
       .catch(() => {});
-    return { ok: false, error: res.error || "failed to start the lookup scan" };
+    return { ok: false, error: res.error || "failed to start the scan", kind };
   }
-  return { ok: true, scanId: res.scanId };
+  return { ok: true, scanId: res.scanId, kind };
 }
 
 // Kill a running scan process (same-process scanStore) and mark it stopped.
@@ -237,7 +280,7 @@ export async function stopCveLookupForTech(
   let scans;
   try {
     scans = await prisma.scan.findMany({
-      where: { techId, kind: "cve_lookup", status: { in: ACTIVE_STATUSES } },
+      where: { techId, kind: { in: ["cve_lookup", "tech_stack"] }, status: { in: ACTIVE_STATUSES } },
     });
   } catch {
     return { ok: false, stopped: 0 };
@@ -262,7 +305,7 @@ export async function stopAllCveLookups(opts: {
   try {
     scans = await prisma.scan.findMany({
       where: {
-        kind: "cve_lookup",
+        kind: { in: ["cve_lookup", "tech_stack"] },
         status: { in: ACTIVE_STATUSES },
         ...(opts.isAdmin ? {} : { userId: opts.userId }),
       },
@@ -319,7 +362,7 @@ export async function runAllCveLookups(opts: {
       skipped++;
       continue;
     }
-    const res = await spawnLookupForTech(tech, next, opts.model);
+    const res = await spawnForTech(tech, next, opts.model);
     if (res.ok) {
       started++;
     } else {
@@ -358,9 +401,12 @@ export async function runCveLookupNow(
   const intervalHours = settings?.cveLookupIntervalHours || 24;
   const next = new Date(Date.now() + intervalHours * 3600_000);
 
-  const res = await spawnLookupForTech(tech, next, model);
+  const res = await spawnForTech(tech, next, model);
   if (!res.ok) return { ok: false, error: res.error };
-  log.info("CVE_LOOKUP", `Manual lookup started for tech ${techId} (${String(res.scanId).slice(0, 8)})`);
+  log.info(
+    "CVE_LOOKUP",
+    `Manual ${res.kind === "tech_stack" ? "version recon" : "lookup"} started for tech ${techId} (${String(res.scanId).slice(0, 8)})`,
+  );
   return { ok: true };
 }
 
@@ -416,24 +462,45 @@ export async function maybeSpawnCveScanForScan(
   } catch {
     return;
   }
-  // Only a completed cve_lookup drives the automation. A cve_scan (or any normal
-  // scan) never spawns further scans, so the loop terminates.
-  if (!scan || scan.kind !== "cve_lookup" || !scan.techId) return;
+  // Only cve_lookup / tech_stack runs drive ASM automation. A cve_scan (or any
+  // normal scan) never spawns further scans, so the loop terminates.
+  if (!scan || !scan.techId) return;
+  if (scan.kind !== "cve_lookup" && scan.kind !== "tech_stack") return;
 
-  // A lookup that was stopped/failed must NOT be treated as a clean result —
+  const settings = await getAppSettings();
+  const intervalHours = settings?.cveLookupIntervalHours || 24;
+
+  // A run that was stopped/failed must NOT be treated as a clean result —
   // just release the "checking" state so the asset isn't stuck.
   if (finalStatus && finalStatus !== "completed") {
     await prisma.technology
-      .update({
-        where: { id: scan.techId },
-        data: { cveStatus: "unknown" },
-      })
+      .update({ where: { id: scan.techId }, data: { cveStatus: "unknown" } })
       .catch(() => {});
     return;
   }
 
-  const settings = await getAppSettings();
-  const intervalHours = settings?.cveLookupIntervalHours || 24;
+  // tech_stack recon: only job was to find the version (techSync already applied
+  // any report_technology update). Release "checking"; if a version is now known
+  // make it due for a real CVE lookup soon, else back off by the interval.
+  if (scan.kind === "tech_stack") {
+    const tech = await prisma.technology.findUnique({ where: { id: scan.techId } });
+    const hasVersion = !!(tech?.version && tech.version.trim());
+    await prisma.technology
+      .update({
+        where: { id: scan.techId },
+        data: {
+          cveStatus: "unknown",
+          versionCheckedAt: new Date(),
+          nextCveCheckAt: hasVersion ? new Date() : new Date(Date.now() + intervalHours * 3600_000),
+        },
+      })
+      .catch(() => {});
+    log.info(
+      "CVE_LOOKUP",
+      `Version recon ${scanId.slice(0, 8)} finished — ${hasVersion ? "version found, queued for CVE lookup" : "no version found"}`,
+    );
+    return;
+  }
 
   // Extract CVE findings (dependency_cve findings carry a `cve` field).
   const cveFindings = (Array.isArray(vulns) ? vulns : []).filter(

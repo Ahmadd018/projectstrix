@@ -218,7 +218,7 @@ export default function AsmPage() {
       return;
     }
     confirm(
-      `Run a CVE lookup on all ${n} inventory ${n === 1 ? "entry" : "entries"}? Each spawns a lookup scan (using the "Manual scan model"), and any asset with a CVE will auto-launch a cve_scan.`,
+      `Check all ${n} inventory ${n === 1 ? "entry" : "entries"}? Versioned assets get a CVE lookup (a CVE auto-launches a cve_scan); versionless assets get a tech_stack recon to find the version first. Uses the "Manual scan model".`,
       async () => {
         setRunningAll(true);
         // Optimistically flip everything to "checking".
@@ -572,10 +572,14 @@ export default function AsmPage() {
               ) : (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleRunLookup(t.id); }}
-                  title="Re-verify the version and search for CVEs; runs a cve_scan if a CVE is found"
+                  title={
+                    t.version
+                      ? "Re-verify the version and search for CVEs; runs a cve_scan if a CVE is found"
+                      : "No version known — run a tech_stack recon to determine the exact version first"
+                  }
                   style={actionBtnStyle}
                 >
-                  <RefreshCw size={14} /> CVE lookup
+                  <RefreshCw size={14} /> {t.version ? "CVE lookup" : "Find version"}
                 </button>
               )}
               <button
