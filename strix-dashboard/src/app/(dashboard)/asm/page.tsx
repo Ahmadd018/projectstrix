@@ -14,6 +14,9 @@ import {
   Boxes,
   Radar,
   Crosshair,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { LLM_MODELS } from "@/lib/models";
@@ -110,6 +113,9 @@ export default function AsmPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [collapsedHosts, setCollapsedHosts] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<Technology>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
   const [instructions, setInstructions] = useState<{ id: string; title: string; content: string }[]>([]);
   const [customModels, setCustomModels] = useState<{ value: string; label: string }[]>([]);
   // Model used by the MANUAL actions (lookup / cve scan / full scan). Seeded from
@@ -286,6 +292,48 @@ export default function AsmPage() {
     }, "Remove Asset");
   };
 
+  const startEdit = (t: Technology) => {
+    setEditingId(t.id);
+    setEditDraft({
+      product: t.product,
+      vendor: t.vendor,
+      version: t.version,
+      category: t.category,
+      ecosystem: t.ecosystem,
+      description: t.description,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft({});
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editDraft.product || !editDraft.product.trim()) {
+      alert("Product cannot be empty", "Error");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/technologies?id=${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editDraft),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save");
+      }
+      cancelEdit();
+      fetchData();
+    } catch (e: any) {
+      alert(e.message, "Error");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const updateSettings = async (patch: Partial<Settings>) => {
     if (!settings) return;
     const next = { ...settings, ...patch };
@@ -305,6 +353,31 @@ export default function AsmPage() {
     }
   };
 
+  const editInputStyle: React.CSSProperties = {
+    width: "100%",
+    background: "var(--bg-2)",
+    border: "1px solid var(--border-hi, var(--border))",
+    borderRadius: 6,
+    color: "var(--fg)",
+    fontSize: 12,
+    padding: "6px 8px",
+    outline: "none",
+  };
+  const actionBtnStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "5px 9px",
+    fontSize: 12,
+    fontWeight: 500,
+    border: "1px solid var(--border)",
+    background: "var(--bg-2)",
+    color: "var(--fg-2)",
+    borderRadius: 6,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+
   const renderTechRow = (t: Technology) => {
     const cves = Array.isArray(t.foundCves) ? t.foundCves : [];
     const isOpen = expanded === t.id;
@@ -312,12 +385,76 @@ export default function AsmPage() {
     const bareHost = hostOf(t.target);
     // Show the full target as a subline only when it carries more than the host.
     const showTargetSub = t.target && t.target !== bareHost && t.target !== `https://${bareHost}` && t.target !== `http://${bareHost}`;
+    const editing = editingId === t.id;
     return (
       <React.Fragment key={t.id}>
         <tr
-          style={{ borderTop: "1px solid var(--border)", cursor: cves.length ? "pointer" : "default" }}
-          onClick={() => cves.length && setExpanded(isOpen ? null : t.id)}
+          style={{ borderTop: "1px solid var(--border)", cursor: !editing && cves.length ? "pointer" : "default" }}
+          onClick={() => !editing && cves.length && setExpanded(isOpen ? null : t.id)}
         >
+          {editing ? (
+            <>
+              <td style={{ padding: "10px 16px" }}>
+                <input
+                  value={editDraft.product ?? ""}
+                  onChange={(e) => setEditDraft({ ...editDraft, product: e.target.value })}
+                  placeholder="Product"
+                  style={{ ...editInputStyle, fontWeight: 600, marginBottom: 4 }}
+                />
+                <input
+                  value={editDraft.vendor ?? ""}
+                  onChange={(e) => setEditDraft({ ...editDraft, vendor: e.target.value })}
+                  placeholder="Vendor"
+                  style={editInputStyle}
+                />
+              </td>
+              <td style={{ padding: "10px 16px" }}>
+                <input
+                  value={editDraft.version ?? ""}
+                  onChange={(e) => setEditDraft({ ...editDraft, version: e.target.value })}
+                  placeholder="Version"
+                  style={{ ...editInputStyle, fontFamily: "var(--font-mono)" }}
+                />
+              </td>
+              <td style={{ padding: "10px 16px" }}>
+                <input
+                  value={editDraft.category ?? ""}
+                  onChange={(e) => setEditDraft({ ...editDraft, category: e.target.value })}
+                  placeholder="Category"
+                  style={{ ...editInputStyle, marginBottom: 4 }}
+                />
+                <input
+                  value={editDraft.ecosystem ?? ""}
+                  onChange={(e) => setEditDraft({ ...editDraft, ecosystem: e.target.value })}
+                  placeholder="Ecosystem"
+                  style={editInputStyle}
+                />
+              </td>
+              <td style={{ padding: "10px 16px" }}>
+                <StatusBadge status={t.cveStatus} />
+              </td>
+              <td style={{ padding: "10px 16px", color: "var(--fg-3)", fontSize: 12 }}>{timeAgo(t.cveCheckedAt)}</td>
+              <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); saveEdit(t.id); }}
+                    disabled={savingEdit}
+                    style={{ ...actionBtnStyle, color: "#4ade80", borderColor: "#4ade8055" }}
+                  >
+                    {savingEdit ? <Loader2 size={14} className="spin" /> : <Check size={14} />} Save
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                    disabled={savingEdit}
+                    style={actionBtnStyle}
+                  >
+                    <X size={14} /> Cancel
+                  </button>
+                </div>
+              </td>
+            </>
+          ) : (
+            <>
           <td style={{ padding: "12px 16px" }}>
             <div style={{ fontWeight: 600, color: "var(--fg)" }}>{t.product}</div>
             {t.vendor && <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 2 }}>{t.vendor}</div>}
@@ -342,41 +479,48 @@ export default function AsmPage() {
             )}
           </td>
           <td style={{ padding: "12px 16px", color: "var(--fg-3)", fontSize: 12 }}>{timeAgo(t.cveCheckedAt)}</td>
-          <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleRunLookup(t.id); }}
-              className="btn-icon"
-              title="Run CVE lookup now (checks this target immediately, and runs a cve_scan if a CVE is found)"
-              style={{ marginRight: 4 }}
-              disabled={t.cveStatus === "checking"}
-            >
-              <RefreshCw size={15} className={t.cveStatus === "checking" ? "spin" : undefined} />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleCveScan(t.id, label); }}
-              className="btn-icon"
-              title="Run a CVE scan now (validate/exploit known CVEs via the cve_scan instruction)"
-              style={{ marginRight: 4 }}
-            >
-              <Crosshair size={15} />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); openFullScan(t.id, label); }}
-              className="btn-icon"
-              title="Run a full security scan of this target (complete pentest, all vulnerability classes)"
-              style={{ marginRight: 4 }}
-            >
-              <Radar size={15} />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-              className="btn-icon"
-              title="Remove"
-              style={{ color: "var(--sev-critical)" }}
-            >
-              <Trash2 size={15} />
-            </button>
+          <td style={{ padding: "12px 16px", textAlign: "right" }}>
+            <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleRunLookup(t.id); }}
+                title="Re-verify the version and search for CVEs; runs a cve_scan if a CVE is found"
+                style={actionBtnStyle}
+                disabled={t.cveStatus === "checking"}
+              >
+                <RefreshCw size={14} className={t.cveStatus === "checking" ? "spin" : undefined} /> CVE lookup
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleCveScan(t.id, label); }}
+                title="Validate/exploit known CVEs via the cve_scan instruction"
+                style={actionBtnStyle}
+              >
+                <Crosshair size={14} /> CVE scan
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); openFullScan(t.id, label); }}
+                title="Full pentest of this target (all vulnerability classes)"
+                style={actionBtnStyle}
+              >
+                <Radar size={14} /> Full scan
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); startEdit(t); }}
+                title="Edit this asset's details"
+                style={actionBtnStyle}
+              >
+                <Pencil size={14} /> Edit
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
+                title="Remove from inventory"
+                style={{ ...actionBtnStyle, color: "var(--sev-critical)", borderColor: "var(--sev-critical)33" }}
+              >
+                <Trash2 size={14} /> Remove
+              </button>
+            </div>
           </td>
+            </>
+          )}
         </tr>
         {isOpen && cves.length > 0 && (
           <tr style={{ background: "var(--bg-2)" }}>
@@ -630,7 +774,7 @@ export default function AsmPage() {
 
                 {!collapsed && (
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 820 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 1060 }}>
                       <thead>
                         <tr style={{ textAlign: "left", color: "var(--fg-3)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                           <th style={{ padding: "10px 16px", fontWeight: 600 }}>Product</th>

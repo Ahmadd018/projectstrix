@@ -81,6 +81,58 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+// PUT /api/technologies?id=<id> — edit an inventory entry's fields.
+// Body may include: product, vendor, version, ecosystem, category, description.
+// If the version changes, the asset is re-queued for a CVE re-check.
+const EDITABLE_FIELDS = ["product", "vendor", "version", "ecosystem", "category", "description"] as const;
+export async function PUT(req: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+  const body = await req.json().catch(() => ({}));
+
+  try {
+    const row = await prisma.technology.findUnique({ where: { id } });
+    if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (session.role !== "ADMIN" && row.userId !== session.userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const data: any = {};
+    for (const f of EDITABLE_FIELDS) {
+      if (typeof body[f] === "string") data[f] = body[f].trim();
+    }
+    if ("product" in data && !data.product) {
+      return NextResponse.json({ error: "Product cannot be empty" }, { status: 400 });
+    }
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "No editable fields provided" }, { status: 400 });
+    }
+
+    // A corrected version should trigger a fresh CVE evaluation.
+    if ("version" in data && data.version !== row.version) {
+      data.cveStatus = "unknown";
+      data.foundCves = undefined;
+      data.nextCveCheckAt = new Date();
+    }
+
+    const updated = await prisma.technology.update({ where: { id }, data });
+    return NextResponse.json({ technology: updated });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return NextResponse.json(
+        { error: "Another entry with the same target, vendor and product already exists" },
+        { status: 409 },
+      );
+    }
+    log.error("PUT /api/technologies", "Failed to update technology", err);
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
+}
+
 // DELETE /api/technologies?id=<id> — remove one inventory entry.
 export async function DELETE(req: NextRequest) {
   const session = await getSession();
