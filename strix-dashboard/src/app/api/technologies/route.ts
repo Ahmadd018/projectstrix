@@ -26,6 +26,7 @@ export async function GET() {
       settings: {
         cveLookupEnabled: settings.cveLookupEnabled,
         cveLookupIntervalHours: settings.cveLookupIntervalHours,
+        cveLookupModel: settings.cveLookupModel,
       },
       isAdmin: session.role === "ADMIN",
     });
@@ -50,9 +51,10 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
   const action = (req.nextUrl.searchParams.get("action") || "lookup").toLowerCase();
 
-  // Optional body: { instruction } for a full scan (choose one from the pool).
+  // Optional body: { instruction } for a full scan, { model } to pick the LLM.
   const body = await req.json().catch(() => ({}));
   const instruction = typeof body?.instruction === "string" ? body.instruction : undefined;
+  const model = typeof body?.model === "string" && body.model.trim() ? body.model.trim() : undefined;
   if (instruction && instruction.length > 8000) {
     return NextResponse.json({ error: "Instruction too long (max 8000 chars)" }, { status: 400 });
   }
@@ -65,10 +67,10 @@ export async function PATCH(req: NextRequest) {
     }
     const result =
       action === "fullscan"
-        ? await runFullScanForTech(id, instruction)
+        ? await runFullScanForTech(id, instruction, model)
         : action === "cvescan"
-          ? await runCveScanNow(id)
-          : await runCveLookupNow(id);
+          ? await runCveScanNow(id, model)
+          : await runCveLookupNow(id, model);
     if (!result.ok) {
       return NextResponse.json({ error: result.error || "Failed to start scan" }, { status: 409 });
     }

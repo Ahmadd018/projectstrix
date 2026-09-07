@@ -16,6 +16,7 @@ import {
   Crosshair,
 } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
+import { LLM_MODELS } from "@/lib/models";
 
 interface FoundCve {
   cve: string;
@@ -46,6 +47,7 @@ interface Technology {
 interface Settings {
   cveLookupEnabled: boolean;
   cveLookupIntervalHours: number;
+  cveLookupModel: string;
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
@@ -109,8 +111,13 @@ export default function AsmPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [collapsedHosts, setCollapsedHosts] = useState<Set<string>>(new Set());
   const [instructions, setInstructions] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [customModels, setCustomModels] = useState<{ value: string; label: string }[]>([]);
+  // Model used by the MANUAL actions (lookup / cve scan / full scan). Seeded from
+  // the configured lookup model once settings load.
+  const [manualModel, setManualModel] = useState("");
   const [fullScan, setFullScan] = useState<{ techId: string; label: string } | null>(null);
   const [fsInstruction, setFsInstruction] = useState("");
+  const [fsModel, setFsModel] = useState("");
   const [fsLaunching, setFsLaunching] = useState(false);
   const { confirm, alert } = useDialog();
 
@@ -122,6 +129,8 @@ export default function AsmPage() {
         setTechs(data.technologies || []);
         setSettings(data.settings || null);
         setIsAdmin(!!data.isAdmin);
+        // Seed the manual-action model from the configured lookup model, once.
+        setManualModel((prev) => prev || data.settings?.cveLookupModel || "");
       }
     } catch (e) {
       console.error(e);
@@ -135,6 +144,10 @@ export default function AsmPage() {
     fetch("/api/instructions")
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setInstructions(Array.isArray(d) ? d : []))
+      .catch(() => {});
+    fetch("/api/user/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.customModels) setCustomModels(d.customModels); })
       .catch(() => {});
     const iv = setInterval(fetchData, 15000); // reflect scheduler progress live
     return () => clearInterval(iv);
@@ -194,7 +207,11 @@ export default function AsmPage() {
     // Optimistically flip the row to "checking" so the UI responds instantly.
     setTechs((prev) => prev.map((t) => (t.id === id ? { ...t, cveStatus: "checking" } : t)));
     try {
-      const res = await fetch(`/api/technologies?id=${id}`, { method: "PATCH" });
+      const res = await fetch(`/api/technologies?id=${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: manualModel || undefined }),
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to start lookup");
@@ -211,7 +228,11 @@ export default function AsmPage() {
       `Start a CVE scan of "${label}"? This runs your "cve_scan" instruction against the target to validate/exploit known CVEs.`,
       async () => {
         try {
-          const res = await fetch(`/api/technologies?id=${id}&action=cvescan`, { method: "PATCH" });
+          const res = await fetch(`/api/technologies?id=${id}&action=cvescan`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: manualModel || undefined }),
+          });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
             throw new Error(data.error || "Failed to start CVE scan");
@@ -227,6 +248,7 @@ export default function AsmPage() {
 
   const openFullScan = (id: string, label: string) => {
     setFsInstruction("");
+    setFsModel(manualModel || settings?.cveLookupModel || "");
     setFullScan({ techId: id, label });
   };
 
@@ -237,7 +259,7 @@ export default function AsmPage() {
       const res = await fetch(`/api/technologies?id=${fullScan.techId}&action=fullscan`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: fsInstruction.trim() || undefined }),
+        body: JSON.stringify({ instruction: fsInstruction.trim() || undefined, model: fsModel || undefined }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -461,7 +483,19 @@ export default function AsmPage() {
             </div>
           </div>
           {isAdmin && (
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--fg-2)" }}>
+                Model
+                <select
+                  value={settings.cveLookupModel || ""}
+                  onChange={(e) => updateSettings({ cveLookupModel: e.target.value })}
+                  style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--fg)", fontSize: 13, padding: "6px 8px", maxWidth: 220 }}
+                >
+                  {[...LLM_MODELS, ...customModels].map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </label>
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--fg-2)" }}>
                 Interval (h)
                 <input
@@ -542,6 +576,19 @@ export default function AsmPage() {
             </button>
           ))}
         </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--fg-3)" }}>
+          <span style={{ whiteSpace: "nowrap" }}>Manual scan model</span>
+          <select
+            value={manualModel}
+            onChange={(e) => setManualModel(e.target.value)}
+            title="Model used by the ↻ CVE lookup and ⌖ CVE scan buttons"
+            style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--r)", color: "var(--fg)", fontSize: 12, padding: "8px 10px", maxWidth: 220 }}
+          >
+            {[...LLM_MODELS, ...customModels].map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Inventory grouped by subdomain / host */}
@@ -629,6 +676,19 @@ export default function AsmPage() {
               <p style={{ color: "var(--fg-3)", fontSize: 13, marginTop: 6 }}>
                 Complete pentest of <span style={{ color: "var(--fg-2)", fontWeight: 600 }}>{fullScan.label}</span>. You can optionally load an instruction from your pool to steer it.
               </p>
+            </div>
+
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-2)", display: "block", marginBottom: 6 }}>Model</label>
+              <select
+                value={fsModel}
+                onChange={(e) => setFsModel(e.target.value)}
+                style={{ width: "100%", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--fg)", fontSize: 13, padding: "10px 12px" }}
+              >
+                {[...LLM_MODELS, ...customModels].map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
             </div>
 
             <div>

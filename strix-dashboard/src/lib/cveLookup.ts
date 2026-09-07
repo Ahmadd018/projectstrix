@@ -73,7 +73,17 @@ async function triggerInternalScan(
   }
 }
 
-async function defaultModelForUser(userId: string): Promise<string> {
+// Resolve the model for an automated run. Precedence:
+//   1. an explicit model passed by the caller (manual action picker),
+//   2. the admin-configured cveLookupModel (AppSettings),
+//   3. the asset owner's default model,
+//   4. openai/gpt-4o.
+async function resolveModel(userId: string, explicit?: string): Promise<string> {
+  if (explicit && explicit.trim()) return explicit.trim();
+  try {
+    const settings = await getAppSettings();
+    if (settings?.cveLookupModel) return settings.cveLookupModel;
+  } catch {}
   try {
     const s = await prisma.userSettings.findUnique({ where: { userId } });
     if (s?.defaultModel) return s.defaultModel;
@@ -163,6 +173,7 @@ export async function sweepCveLookups(): Promise<void> {
 async function spawnLookupForTech(
   tech: any,
   next: Date,
+  model?: string,
 ): Promise<{ ok: boolean; error?: string; scanId?: string }> {
   const prevStatus = tech.cveStatus;
   try {
@@ -175,7 +186,7 @@ async function spawnLookupForTech(
     return { ok: false, error: "database error marking asset for check" };
   }
 
-  const llmModel = await defaultModelForUser(tech.userId);
+  const llmModel = await resolveModel(tech.userId, model);
   const instruction = buildLookupInstruction(tech);
 
   const res = await triggerInternalScan({
@@ -206,6 +217,7 @@ async function spawnLookupForTech(
 // completion still auto-spawns the cve_scan (see maybeSpawnCveScanForScan).
 export async function runCveLookupNow(
   techId: string,
+  model?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   let tech;
   try {
@@ -222,7 +234,7 @@ export async function runCveLookupNow(
   const intervalHours = settings?.cveLookupIntervalHours || 24;
   const next = new Date(Date.now() + intervalHours * 3600_000);
 
-  const res = await spawnLookupForTech(tech, next);
+  const res = await spawnLookupForTech(tech, next, model);
   if (!res.ok) return { ok: false, error: res.error };
   log.info("CVE_LOOKUP", `Manual lookup started for tech ${techId} (${String(res.scanId).slice(0, 8)})`);
   return { ok: true };
@@ -236,6 +248,7 @@ export async function runCveLookupNow(
 export async function runFullScanForTech(
   techId: string,
   instruction?: string,
+  model?: string,
 ): Promise<{ ok: boolean; error?: string; scanId?: string }> {
   let tech;
   try {
@@ -245,7 +258,7 @@ export async function runFullScanForTech(
   }
   if (!tech) return { ok: false, error: "asset not found" };
 
-  const llmModel = await defaultModelForUser(tech.userId);
+  const llmModel = await resolveModel(tech.userId, model);
   const label = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
   const scanId = randomUUID();
   const trimmed = (instruction || "").trim();
@@ -336,6 +349,7 @@ export async function maybeSpawnCveScanForScan(scanId: string, vulns: any[]): Pr
 async function spawnCveScan(
   tech: any,
   foundCves: Array<{ cve: string }>,
+  model?: string,
 ): Promise<{ ok: boolean; error?: string; scanId?: string }> {
   const cveScanInstruction = await getInstructionContent("cve_scan");
   if (!cveScanInstruction) {
@@ -345,7 +359,7 @@ async function spawnCveScan(
     };
   }
 
-  const llmModel = await defaultModelForUser(tech.userId);
+  const llmModel = await resolveModel(tech.userId, model);
   const label = [tech.vendor, tech.product].filter(Boolean).join(" ") || tech.product;
   const cveList = foundCves.map((c) => c.cve).join(", ");
   const scanName = `CVE scan — ${label}${cveList ? ` (${cveList})` : ""}`;
@@ -376,6 +390,7 @@ async function spawnCveScan(
 // Uses CVEs already recorded on the asset (from a prior lookup) if present.
 export async function runCveScanNow(
   techId: string,
+  model?: string,
 ): Promise<{ ok: boolean; error?: string; scanId?: string }> {
   let tech;
   try {
@@ -385,7 +400,7 @@ export async function runCveScanNow(
   }
   if (!tech) return { ok: false, error: "asset not found" };
   const foundCves = Array.isArray(tech.foundCves) ? (tech.foundCves as any[]) : [];
-  const res = await spawnCveScan(tech, foundCves);
+  const res = await spawnCveScan(tech, foundCves, model);
   if (res.ok) {
     log.info("CVE_LOOKUP", `Manual cve_scan started for tech ${techId} (${String(res.scanId).slice(0, 8)})`);
   }

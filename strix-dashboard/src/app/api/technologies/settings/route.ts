@@ -17,6 +17,9 @@ export async function POST(req: NextRequest) {
     // Clamp to a sane range (1h – 30d).
     data.cveLookupIntervalHours = Math.max(1, Math.min(720, Math.round(body.cveLookupIntervalHours)));
   }
+  if (typeof body.cveLookupModel === "string" && body.cveLookupModel.trim()) {
+    data.cveLookupModel = body.cveLookupModel.trim();
+  }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });
   }
@@ -30,6 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       cveLookupEnabled: updated.cveLookupEnabled,
       cveLookupIntervalHours: updated.cveLookupIntervalHours,
+      cveLookupModel: updated.cveLookupModel,
     });
   } catch (err) {
     log.error("POST /api/technologies/settings", "Failed to update settings", err);

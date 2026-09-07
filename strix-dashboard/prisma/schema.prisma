@@ -145,6 +145,8 @@ model AppSettings {
   // re-verifies each tracked Technology's live version and searches for CVEs.
   cveLookupEnabled      Boolean @default(false)
   cveLookupIntervalHours Int    @default(24)
+  // Model used by automatic CVE-lookup runs (must have an API key configured).
+  cveLookupModel        String  @default("openai/gpt-4o")
 }
 
 // Attack Surface Management (ASM) inventory: a third-party / vendor solution
