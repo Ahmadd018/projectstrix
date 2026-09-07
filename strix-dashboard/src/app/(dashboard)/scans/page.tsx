@@ -210,6 +210,23 @@ function ScansContent() {
     return groups;
   }, [filteredScans]);
 
+  // ASM scan groups ("ASM: <host>") start collapsed by default — they can be
+  // numerous and noisy. Seed each new ASM group once; manual toggles (which
+  // record the key) are preserved, and non-ASM groups stay expanded.
+  useEffect(() => {
+    setCollapsedGroups((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const key of Object.keys(groupedScans)) {
+        if (key.startsWith("ASM:") && !(key in next)) {
+          next[key] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [groupedScans]);
+
   const toggleGroup = (g: string) =>
     setCollapsedGroups((prev) => ({ ...prev, [g]: !prev[g] }));
 
