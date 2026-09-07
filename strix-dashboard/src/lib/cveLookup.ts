@@ -34,6 +34,19 @@ function hostOf(target: string): string {
 // domain; the scanName still says which kind of run it is.
 const asmProject = (target: string) => `ASM: ${hostOf(target)}`;
 
+// Origin (scheme://host) of a target. A CVE scan must run against the whole
+// application origin, not a deep asset URL (e.g. a static .js bundle), so the
+// agent has a real surface to reach the vulnerable sink.
+function originOf(target: string): string {
+  const t = (target || "").trim();
+  try {
+    const u = new URL(t.includes("://") ? t : `https://${t}`);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return t;
+  }
+}
+
 // How many assets to kick per sweep, to bound LLM cost / concurrent runs.
 const MAX_LOOKUPS_PER_SWEEP = 5;
 
@@ -597,16 +610,23 @@ async function spawnCveScan(
   const cveList = Array.from(new Set(foundCves.map((c) => c.cve))).sort().join(", ");
   const scanName = `CVE scan — ${label}${cveList ? ` (${cveList})` : ""}`;
 
+  // Scan the whole application origin so the agent can actually drive app flows
+  // that reach the vulnerable sink — not just fetch the static asset URL.
+  const origin = originOf(tech.target);
+  const detectedAt = tech.target && tech.target !== origin ? tech.target : null;
+
   const res = await triggerInternalScan({
     preGeneratedScanId: randomUUID(),
     userId: tech.userId,
-    target: tech.target,
+    target: origin,
     projectName: asmProject(tech.target),
     scanName,
     llmModel,
     scanMode: "standard",
     instruction:
-      `Target component: ${label} version ${tech.version || "(unknown)"} on ${tech.target}.\n` +
+      `Target component: ${label} version ${tech.version || "(unknown)"} running on ${origin}.\n` +
+      (detectedAt ? `Component was fingerprinted at: ${detectedAt}\n` : "") +
+      `Scope: the whole application at ${origin} is authorized. Explore the app to find a flow that reaches the vulnerable sink; do NOT limit testing to the static asset URL.\n` +
       (cveList
         ? `Confirmed CVEs to validate/exploit: ${cveList}.\n\n`
         : `Search for and validate/exploit any published CVE affecting this exact version.\n\n`) +
