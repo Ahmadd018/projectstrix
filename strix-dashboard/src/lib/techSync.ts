@@ -1,0 +1,106 @@
+// Syncs a scan's on-disk ASM inventory (technologies.json, produced by the
+// strix `report_technology` tool) into the Technology table. Each record is a
+// third-party/vendor solution detected on a target, keyed by
+// (userId, target, vendor, product) so re-detection updates the version in
+// place rather than creating duplicates.
+//
+// When a re-detection reports a *different* non-empty version, the row is reset
+// for re-checking (cveStatus -> unknown, nextCveCheckAt -> now) so the CVE
+// lookup re-evaluates the new version promptly.
+import { prisma } from "./prisma";
+import { log } from "./logger";
+
+export interface TechRecord {
+  product?: string;
+  target?: string;
+  vendor?: string;
+  version?: string;
+  ecosystem?: string;
+  category?: string;
+  description?: string;
+  evidence?: string;
+}
+
+export async function syncTechToDb(
+  scanId: string,
+  userId: string,
+  techs: TechRecord[],
+): Promise<number> {
+  if (!Array.isArray(techs) || techs.length === 0) return 0;
+
+  let synced = 0;
+  for (const t of techs) {
+    const product = String(t.product ?? "").trim();
+    const target = String(t.target ?? "").trim();
+    if (!product || !target) continue;
+
+    const vendor = String(t.vendor ?? "").trim();
+    const version = String(t.version ?? "").trim();
+    const ecosystem = String(t.ecosystem ?? "").trim();
+    const category = String(t.category ?? "").trim();
+    const description = String(t.description ?? "").trim();
+    const evidence = String(t.evidence ?? "").trim();
+
+    try {
+      const existing = await prisma.technology.findUnique({
+        where: {
+          userId_target_vendor_product: { userId, target, vendor, product },
+        },
+      });
+
+      if (!existing) {
+        await prisma.technology.create({
+          data: {
+            userId,
+            target,
+            vendor,
+            product,
+            version,
+            ecosystem,
+            category,
+            description,
+            evidence,
+            firstScanId: scanId,
+            cveStatus: "unknown",
+            // Due immediately so the scheduler's first sweep evaluates it.
+            nextCveCheckAt: new Date(),
+            lastSeenAt: new Date(),
+          },
+        });
+        synced++;
+        continue;
+      }
+
+      // Update in place. Only overwrite fields the new sighting actually carries.
+      const versionChanged = !!version && version !== existing.version;
+      const data: any = { lastSeenAt: new Date() };
+      if (version) data.version = version;
+      if (evidence) data.evidence = evidence;
+      if (description) data.description = description;
+      if (category) data.category = category;
+      if (ecosystem) data.ecosystem = ecosystem;
+      if (vendor && !existing.vendor) data.vendor = vendor;
+      // New version → re-evaluate CVEs promptly. Skip while a lookup is already
+      // in flight ("checking"): that run finalizes status/next-check on close,
+      // and resetting here would make the asset eligible for a second sweep.
+      if (versionChanged && existing.cveStatus !== "checking") {
+        data.cveStatus = "unknown";
+        data.nextCveCheckAt = new Date();
+      }
+      await prisma.technology.update({
+        where: { id: existing.id },
+        data,
+      });
+      synced++;
+    } catch (e) {
+      log.warn("TECH_SYNC", `Failed to sync technology '${product}' on '${target}'`, {
+        err: String(e),
+      });
+    }
+  }
+
+  if (synced > 0) {
+    log.info("TECH_SYNC", `Synced ${synced} technology record(s) for scan ${scanId.slice(0, 8)}`);
+  }
+  return synced;
+}

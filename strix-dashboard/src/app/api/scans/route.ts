@@ -10,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 import { getEffectiveApiKeys } from "@/lib/sharedKeys";
 import { isSafePublicUrl } from "@/lib/urlGuard";
 import { syncVulnsToDb } from "@/lib/vulnSync";
+import { syncTechToDb } from "@/lib/techSync";
+import { maybeSpawnCveScanForScan } from "@/lib/cveLookup";
 import { readFpForTargets } from "@/lib/fpStore";
 
 import os from "os";
@@ -152,6 +154,8 @@ export async function POST(req: NextRequest) {
     maxTurns,
     resumeRun,
     overrideLlm,
+    kind,
+    techId,
   } = body;
 
   log.debug("POST /api/scans", "Scan parameters", {
@@ -276,6 +280,9 @@ export async function POST(req: NextRequest) {
            scanMode: scanMode || "standard",
            status: isScheduled ? "scheduled" : "running",
            startedAt: isScheduled ? new Date(body.scheduledAt) : new Date(),
+           // Automated-scan lineage (ASM CVE pipeline): "standard" | "cve_lookup" | "cve_scan".
+           kind: typeof kind === "string" && kind ? kind : "standard",
+           techId: typeof techId === "string" && techId ? techId : null,
            // L-1: Strip the resolved API key before persisting — keys are fetched fresh from DB on each run
            payload: { ...body, apiKey: undefined } as any,
          }
@@ -469,9 +476,12 @@ export async function POST(req: NextRequest) {
   registerProcess(scanId, proc);
 
   const logStream = fs.createWriteStream(logFile, { flags: "a" });
+  const techFile = path.join(scanDir, "technologies.json");
   let pythonDirSyncInterval: NodeJS.Timeout | null = null;
+  let lastTechJson = ""; // dedupe live tech syncs — only sync when the file changed
 
-  // Poll for the nested python vulnerabilities.json and copy it to our UUID vulnerabilities.json
+  // Poll for the nested python vulnerabilities.json / technologies.json and copy
+  // them up to our UUID-level files.
   pythonDirSyncInterval = setInterval(() => {
     const nestedRunsDir = path.join(scanDir, "strix_runs");
     if (fs.existsSync(nestedRunsDir)) {
@@ -489,6 +499,24 @@ export async function POST(req: NextRequest) {
                    fs.writeFileSync(vulnFile, JSON.stringify(parsed, null, 2));
                 }
              } catch {}
+          }
+
+          const nestedTechFile = path.join(nestedRunsDir, targetDir.name, "technologies.json");
+          if (fs.existsSync(nestedTechFile)) {
+            const techRaw = fs.readFileSync(nestedTechFile, "utf-8");
+            try {
+              const parsedTech = JSON.parse(techRaw);
+              if (Array.isArray(parsedTech)) {
+                fs.writeFileSync(techFile, JSON.stringify(parsedTech, null, 2));
+                // Sync into the ASM inventory live (only when the content changed).
+                if (parsedTech.length > 0 && techRaw !== lastTechJson) {
+                  lastTechJson = techRaw;
+                  syncTechToDb(scanId, createdUserId, parsedTech).catch((e) =>
+                    log.warn("POST /api/scans", "Live tech sync failed", { err: String(e) }),
+                  );
+                }
+              }
+            } catch {}
           }
         }
       } catch (e) {
@@ -546,7 +574,30 @@ export async function POST(req: NextRequest) {
         );
       }
     } catch {}
-    
+
+    // Final ASM inventory sync from technologies.json, then — for an automated
+    // cve_lookup run — decide whether the discovered CVEs warrant auto-spawning
+    // a full cve_scan against the affected asset.
+    (async () => {
+      try {
+        let techs: any[] = [];
+        try {
+          techs = JSON.parse(fs.readFileSync(techFile, "utf-8"));
+        } catch {}
+        if (Array.isArray(techs) && techs.length > 0) {
+          await syncTechToDb(scanId, createdUserId, techs);
+        }
+        // vulns may include dependency_cve findings from a cve_lookup run.
+        let vulnsForCve: any[] = [];
+        try {
+          vulnsForCve = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
+        } catch {}
+        await maybeSpawnCveScanForScan(scanId, vulnsForCve);
+      } catch (e) {
+        log.warn("PROC_CLOSE", "ASM/CVE post-processing failed", { err: String(e) });
+      }
+    })();
+
     // Update DB with final status and vuln count
     prisma.scan.update({
       where: { id: scanId },

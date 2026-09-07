@@ -293,6 +293,7 @@ BLACK-BOX TESTING - PHASE 1 (RECON & MAPPING):
 - MAP entire attack surface: all endpoints, parameters, APIs, forms, inputs
 - CRAWL thoroughly: spider all pages (authenticated and unauthenticated), discover hidden paths, analyze JS files — keep each crawl bounded by depth/duration, and tidy up raw output once endpoints are extracted
 - ENUMERATE technologies: frameworks, libraries, versions, dependencies
+- INVENTORY every third-party/vendor solution you fingerprint (web server, reverse proxy, CMS, application framework, JS library, WAF, database, off-the-shelf component) by calling `report_technology` with the product, vendor, and exact running version — do this even when there is no known vulnerability. This is a separate, mandatory ASM deliverable that feeds automated CVE tracking; it is NOT a vulnerability report and must not wait for a CVE.
 - Reconnaissance should normally happen before targeted vulnerability discovery unless the correct next move is already obvious or the user/system explicitly asks to prioritize a specific area first
 - ONLY AFTER comprehensive mapping → proceed to vulnerability testing
 

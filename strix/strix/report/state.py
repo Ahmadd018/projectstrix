@@ -20,6 +20,7 @@ from strix.report.writer import (
     read_run_record,
     write_executive_report,
     write_run_record,
+    write_technologies,
     write_vulnerabilities,
 )
 from strix.telemetry import posthog, scarf
@@ -117,6 +118,10 @@ class ReportState:
         self.end_time: str | None = None
 
         self.vulnerability_reports: list[dict[str, Any]] = []
+        # ASM inventory: third-party / vendor solutions fingerprinted on the
+        # target(s), keyed by (target, vendor, product) to de-dup across agents.
+        self.technology_reports: list[dict[str, Any]] = []
+        self._seen_tech_keys: set[str] = set()
         self.final_scan_result: str | None = None
 
         self.scan_results: dict[str, Any] | None = None
@@ -212,6 +217,86 @@ class ReportState:
                 "report state hydrated %d vulnerability report(s)",
                 len(self.vulnerability_reports),
             )
+
+        tech_path = run_dir / "technologies.json"
+        if tech_path.exists():
+            try:
+                tech_data = json.loads(tech_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                logger.warning("technologies.json at %s is corrupt; ignoring", tech_path)
+                tech_data = []
+            if isinstance(tech_data, list):
+                self.technology_reports = [t for t in tech_data if isinstance(t, dict)]
+                for t in self.technology_reports:
+                    self._seen_tech_keys.add(self._tech_key(t))
+                logger.info(
+                    "report state hydrated %d technology report(s)",
+                    len(self.technology_reports),
+                )
+
+    @staticmethod
+    def _tech_key(tech: dict[str, Any]) -> str:
+        return "|".join(
+            str(tech.get(field, "")).strip().lower()
+            for field in ("target", "vendor", "product")
+        )
+
+    def add_technology(
+        self,
+        product: str,
+        target: str,
+        vendor: str | None = None,
+        version: str | None = None,
+        ecosystem: str | None = None,
+        category: str | None = None,
+        description: str | None = None,
+        evidence: str | None = None,
+        agent_id: str | None = None,
+        agent_name: str | None = None,
+    ) -> tuple[str, bool]:
+        """Record a detected third-party/vendor solution.
+
+        De-dups on (target, vendor, product). A repeat sighting refreshes the
+        version/evidence in place rather than adding a duplicate row. Returns
+        ``(report_id, is_new)``.
+        """
+        record: dict[str, Any] = {
+            "product": product.strip(),
+            "target": target.strip(),
+            "vendor": (vendor or "").strip(),
+            "version": (version or "").strip(),
+            "ecosystem": (ecosystem or "").strip(),
+            "category": (category or "").strip(),
+            "description": (description or "").strip(),
+            "evidence": (evidence or "").strip(),
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        }
+        if agent_id:
+            record["agent_id"] = agent_id
+        if agent_name:
+            record["agent_name"] = agent_name
+
+        key = self._tech_key(record)
+        for existing in self.technology_reports:
+            if self._tech_key(existing) == key:
+                # Refresh version/evidence/description if the new sighting adds detail.
+                for field in ("version", "evidence", "description", "category", "ecosystem"):
+                    if record[field]:
+                        existing[field] = record[field]
+                existing["timestamp"] = record["timestamp"]
+                self.save_run_data()
+                return existing["id"], False
+
+        report_id = f"tech-{len(self.technology_reports) + 1:04d}"
+        record["id"] = report_id
+        self.technology_reports.append(record)
+        self._seen_tech_keys.add(key)
+        logger.info("Added technology report: %s - %s %s", report_id, product, record["version"])
+        self.save_run_data()
+        return report_id, True
+
+    def get_existing_technologies(self) -> list[dict[str, Any]]:
+        return list(self.technology_reports)
 
     def add_vulnerability_report(
         self,
@@ -428,6 +513,10 @@ class ReportState:
 
             if self.vulnerability_reports:
                 write_vulnerabilities(run_dir, self.vulnerability_reports, self._saved_vuln_ids)
+
+            # ASM inventory — always emit (even empty) so the dashboard sync
+            # reflects the current run's detected technologies.
+            write_technologies(run_dir, self.technology_reports)
 
             # SARIF 2.1.0 emitter for CI / ASPM integration. Always emit (even
             # empty) so a clean run overwrites a prior findings.sarif rather than

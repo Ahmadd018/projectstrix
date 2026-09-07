@@ -175,6 +175,27 @@ def write_vulnerabilities(
     return len(new_reports)
 
 
+def write_technologies(
+    run_dir: Path,
+    technology_reports: list[dict[str, Any]],
+) -> None:
+    """Persist the ASM technology inventory as ``technologies.json``.
+
+    Always written (even empty) so a re-run reflects the current state. The
+    dashboard polls this file and syncs it into the Technology table.
+    """
+    _atomic_write_text(
+        run_dir / "technologies.json",
+        json.dumps(technology_reports, ensure_ascii=False, indent=2, default=str),
+    )
+    if technology_reports:
+        logger.info(
+            "Updated technology inventory (%d): %s",
+            len(technology_reports),
+            run_dir / "technologies.json",
+        )
+
+
 def _atomic_write_text(path: Path, payload: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(

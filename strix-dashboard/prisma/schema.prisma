@@ -26,6 +26,7 @@ model User {
   ownedJira    JiraIntegration[]     @relation("OwnedJira")
   jiraOptIns   UserJiraIntegration[]
   resetRequests PasswordResetRequest[]
+  technologies Technology[]
 }
 
 // A locked-out user's request for an admin to reset their password. The user
@@ -70,6 +71,14 @@ model Scan {
   projectId       String?
   project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
   vulnerabilities Vulnerability[]
+  // Distinguishes automated scan types. "standard" = a normal user/scheduled
+  // scan; "cve_lookup" = a lightweight ASM version-recheck + CVE-search run;
+  // "cve_scan" = a full verification scan auto-spawned when the lookup found a
+  // CVE (it auto-loads the instruction titled "cve_scan").
+  kind            String          @default("standard")
+  // For kind="cve_lookup"/"cve_scan": the Technology asset this scan targets.
+  techId          String?
+  technology      Technology?     @relation("TechScans", fields: [techId], references: [id], onDelete: SetNull)
 }
 
 model UserSettings {
@@ -132,6 +141,43 @@ model AppSettings {
   id                String  @id @default("singleton")
   sharedApiKeys     String  @default("") // AES-encrypted blob, same shape as User.apiKeys
   sharedKeysEnabled Boolean @default(false) // shared keys accessible to everyone
+  // ASM / CVE-lookup automation. When enabled, the scheduler daemon periodically
+  // re-verifies each tracked Technology's live version and searches for CVEs.
+  cveLookupEnabled      Boolean @default(false)
+  cveLookupIntervalHours Int    @default(24)
+}
+
+// Attack Surface Management (ASM) inventory: a third-party / vendor solution
+// (web server, CMS, framework, library, WAF, …) detected on a target during a
+// scan, with the version we currently believe is running. The recurring CVE
+// lookup re-verifies the version (updating it in place) and searches published
+// advisories for that exact version; a hit auto-spawns a "cve_scan".
+model Technology {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target           String // host/URL where the solution was detected
+  vendor           String    @default("") // e.g. "Atlassian", "nginx", "WordPress"
+  product          String // e.g. "Confluence", "nginx", "jQuery"
+  version          String    @default("") // best-known running version
+  ecosystem        String    @default("") // npm/pypi/maven/os/webserver/cms/…
+  category         String    @default("") // "web server" | "CMS" | "framework" | "library" | …
+  description      String    @default("")
+  evidence         String    @default("") // how it was fingerprinted
+  firstScanId      String? // scan that first detected it
+  // CVE-lookup lifecycle.
+  cveStatus        String    @default("unknown") // unknown | clean | vulnerable | checking
+  foundCves        Json? // [{ cve, cvss, severity, summary, fixedVersion }]
+  versionCheckedAt DateTime? // last time the live version was re-verified
+  cveCheckedAt     DateTime? // last completed CVE lookup
+  nextCveCheckAt   DateTime? // scheduler picks rows due at/after this
+  lastSeenAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  scans            Scan[]    @relation("TechScans")
+
+  @@unique([userId, target, vendor, product])
+  @@index([nextCveCheckAt])
 }
 
 model CustomModel {

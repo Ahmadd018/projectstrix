@@ -1003,6 +1003,126 @@ async def create_dependency_report(
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
+async def _do_report_technology(
+    *,
+    product: str,
+    target: str,
+    vendor: str | None,
+    version: str | None,
+    ecosystem: str | None,
+    category: str | None,
+    description: str | None,
+    evidence: str | None,
+    agent_id: str | None = None,
+    agent_name: str | None = None,
+) -> dict[str, Any]:
+    errors: list[str] = []
+    if not product or not product.strip():
+        errors.append("product cannot be empty")
+    if not target or not target.strip():
+        errors.append("target cannot be empty")
+    if errors:
+        return {"success": False, "error": "Validation failed", "errors": errors}
+
+    try:
+        from strix.report.state import get_global_report_state
+
+        report_state = get_global_report_state()
+        if report_state is None:
+            logger.warning("No global report state; technology not persisted")
+            return {
+                "success": True,
+                "message": f"Technology '{product}' recorded (not persisted)",
+                "warning": "Report state unavailable",
+            }
+
+        report_id, is_new = report_state.add_technology(
+            product=product,
+            target=target,
+            vendor=vendor,
+            version=version,
+            ecosystem=ecosystem,
+            category=category,
+            description=description,
+            evidence=evidence,
+            agent_id=agent_id if isinstance(agent_id, str) else None,
+            agent_name=agent_name if isinstance(agent_name, str) else None,
+        )
+    except (ImportError, AttributeError) as e:
+        logger.exception("report_technology persistence failed")
+        return {"success": False, "error": f"Failed to record technology: {e!s}"}
+    else:
+        return {
+            "success": True,
+            "message": (
+                f"Technology '{product}' {'recorded' if is_new else 'updated'} successfully"
+            ),
+            "report_id": report_id,
+            "is_new": is_new,
+        }
+
+
+@function_tool(timeout=60, strict_mode=False)
+async def report_technology(
+    ctx: RunContextWrapper,
+    product: str,
+    target: str,
+    vendor: str = "",
+    version: str = "",
+    ecosystem: str = "",
+    category: str = "",
+    description: str = "",
+    evidence: str = "",
+) -> str:
+    """Record a detected third-party / vendor solution (ASM inventory).
+
+    File this **whenever you fingerprint a third-party or vendor product**
+    running on a target — a web server, reverse proxy, CMS, application
+    framework, JavaScript library, WAF, database, or any off-the-shelf
+    component — **even when there is no known vulnerability**. This builds the
+    attack-surface inventory that a later automated CVE lookup re-checks: it
+    re-verifies the running version and searches published advisories for that
+    exact version.
+
+    This is NOT a vulnerability report. Do not use it for custom application
+    logic, and do not wait for a CVE — record the technology as soon as you
+    identify it and its version.
+
+    **De-dup**: keyed on ``(target, vendor, product)``. Re-filing the same
+    product on the same target just refreshes the version/evidence, so always
+    file the most precise version you can confirm.
+
+    Args:
+        product: Product name, e.g. ``"nginx"``, ``"Confluence"``, ``"jQuery"``.
+        target: Host/URL where it was detected, e.g. ``"https://app.example.com"``.
+        vendor: Vendor/maintainer, e.g. ``"Atlassian"``, ``"nginx"``, ``"WordPress"``.
+        version: Exact running version if known, e.g. ``"1.21.6"``. Leave empty
+            if you truly cannot determine it — but try hard, the version is what
+            the CVE lookup keys on.
+        ecosystem: Package/platform ecosystem when applicable —
+            ``npm``/``pypi``/``maven``/``os``/``webserver``/``cms``/….
+        category: Human category — ``"web server"``, ``"CMS"``, ``"framework"``,
+            ``"library"``, ``"WAF"``, ``"database"``, ….
+        description: Optional one-line note about the component/role.
+        evidence: How you fingerprinted it (header, banner, JS path, meta tag,
+            hash, etc.) — concrete proof of the product and version.
+    """
+    agent_id, agent_name = _caller_identity(ctx)
+    result = await _do_report_technology(
+        product=product,
+        target=target,
+        vendor=vendor,
+        version=version,
+        ecosystem=ecosystem,
+        category=category,
+        description=description,
+        evidence=evidence,
+        agent_id=agent_id,
+        agent_name=agent_name,
+    )
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
 _SEVERITY_ORDER = {
     "critical": 0,
     "high": 1,

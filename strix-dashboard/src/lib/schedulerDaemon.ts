@@ -9,8 +9,12 @@
 
 import { prisma } from "./prisma";
 import { log } from "./logger";
+import { sweepCveLookups } from "./cveLookup";
 
 let schedulerStarted = false;
+// The CVE-lookup sweep runs on a slower cadence than the 10s scan poll.
+let lastCveSweepAt = 0;
+const CVE_SWEEP_INTERVAL_MS = 60_000;
 
 async function triggerScan(scan: any) {
   try {
@@ -126,6 +130,13 @@ async function checkScheduledScans() {
       await triggerScan(scan);
 
       await new Promise((r) => setTimeout(r, 1000));
+    }
+
+    // ── 3. ASM CVE lookups (throttled to CVE_SWEEP_INTERVAL_MS) ──────────────
+    const nowMs = Date.now();
+    if (nowMs - lastCveSweepAt >= CVE_SWEEP_INTERVAL_MS) {
+      lastCveSweepAt = nowMs;
+      await sweepCveLookups().catch((e) => log.error("SCHEDULER", "CVE sweep failed", e));
     }
   } catch (err: any) {
     log.error("SCHEDULER", "DB poll error", err);
