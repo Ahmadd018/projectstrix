@@ -592,7 +592,7 @@ export async function POST(req: NextRequest) {
         try {
           vulnsForCve = JSON.parse(fs.readFileSync(vulnFile, "utf-8"));
         } catch {}
-        await maybeSpawnCveScanForScan(scanId, vulnsForCve);
+        await maybeSpawnCveScanForScan(scanId, vulnsForCve, finalStatus);
       } catch (e) {
         log.warn("PROC_CLOSE", "ASM/CVE post-processing failed", { err: String(e) });
       }

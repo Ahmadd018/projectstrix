@@ -17,6 +17,7 @@ import {
   Pencil,
   Check,
   X,
+  Square,
 } from "lucide-react";
 import { useDialog } from "@/components/DialogProvider";
 import { LLM_MODELS } from "@/lib/models";
@@ -233,7 +234,7 @@ export default function AsmPage() {
           const parts = [`${data.started} started`];
           if (data.skipped) parts.push(`${data.skipped} already running`);
           if (data.failed) parts.push(`${data.failed} failed${data.error ? ` (${data.error})` : ""}`);
-          alert(parts.join(", ") + ".", "Bulk CVE lookup");
+          alert(parts.join(", ") + ".", "Bulk CVE lookup", data.failed ? "error" : "success");
         } catch (e: any) {
           alert(e.message, "Error");
         } finally {
@@ -242,6 +243,49 @@ export default function AsmPage() {
         }
       },
       "Run CVE lookup on all",
+    );
+  };
+
+  const handleStopLookup = async (id: string) => {
+    setTechs((prev) => prev.map((t) => (t.id === id ? { ...t, cveStatus: "unknown" } : t)));
+    try {
+      const res = await fetch(`/api/technologies?id=${id}&action=stop`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to stop");
+      }
+    } catch (e: any) {
+      alert(e.message, "Error");
+    } finally {
+      fetchData();
+    }
+  };
+
+  const handleStopAll = () => {
+    confirm(
+      "Stop all in-progress CVE lookups?",
+      async () => {
+        setTechs((prev) => prev.map((t) => (t.cveStatus === "checking" ? { ...t, cveStatus: "unknown" } : t)));
+        try {
+          const res = await fetch("/api/technologies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "stop-all" }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Failed to stop");
+          alert(`Stopped ${data.stopped ?? 0} lookup(s).`, "Stopped", "success");
+        } catch (e: any) {
+          alert(e.message, "Error");
+        } finally {
+          fetchData();
+        }
+      },
+      "Stop all lookups",
     );
   };
 
@@ -279,7 +323,7 @@ export default function AsmPage() {
             const data = await res.json().catch(() => ({}));
             throw new Error(data.error || "Failed to start CVE scan");
           }
-          alert("CVE scan started. Track it on the Scans page.", "Scan launched");
+          alert("CVE scan started. Track it on the Scans page.", "Scan launched", "success");
         } catch (e: any) {
           alert(e.message, "Error");
         }
@@ -308,7 +352,7 @@ export default function AsmPage() {
         throw new Error(data.error || "Failed to start scan");
       }
       setFullScan(null);
-      alert("Full scan started. Track it on the Scans page.", "Scan launched");
+      alert("Full scan started. Track it on the Scans page.", "Scan launched", "success");
     } catch (e: any) {
       alert(e.message, "Error");
     } finally {
@@ -517,14 +561,23 @@ export default function AsmPage() {
           <td style={{ padding: "12px 16px", color: "var(--fg-3)", fontSize: 12 }}>{timeAgo(t.cveCheckedAt)}</td>
           <td style={{ padding: "12px 16px", textAlign: "right" }}>
             <div style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleRunLookup(t.id); }}
-                title="Re-verify the version and search for CVEs; runs a cve_scan if a CVE is found"
-                style={actionBtnStyle}
-                disabled={t.cveStatus === "checking"}
-              >
-                <RefreshCw size={14} className={t.cveStatus === "checking" ? "spin" : undefined} /> CVE lookup
-              </button>
+              {t.cveStatus === "checking" ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleStopLookup(t.id); }}
+                  title="Stop the in-progress CVE lookup for this asset"
+                  style={{ ...actionBtnStyle, color: "var(--sev-critical)", borderColor: "var(--sev-critical)33" }}
+                >
+                  <Square size={13} /> Stop
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleRunLookup(t.id); }}
+                  title="Re-verify the version and search for CVEs; runs a cve_scan if a CVE is found"
+                  style={actionBtnStyle}
+                >
+                  <RefreshCw size={14} /> CVE lookup
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); handleCveScan(t.id, label); }}
                 title="Validate/exploit known CVEs via the cve_scan instruction"
@@ -630,6 +683,16 @@ export default function AsmPage() {
             {runningAll ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />}
             Run CVE lookup (all)
           </button>
+          {counts.checking > 0 && (
+            <button
+              onClick={handleStopAll}
+              className="btn-secondary"
+              style={{ gap: 8, color: "var(--sev-critical)", borderColor: "var(--sev-critical)" }}
+              title="Stop all in-progress CVE lookups"
+            >
+              <Square size={14} /> Stop all ({counts.checking})
+            </button>
+          )}
           <button onClick={fetchData} className="btn-secondary" style={{ gap: 8 }}>
             <RefreshCw size={14} /> Refresh
           </button>

@@ -21,6 +21,20 @@ export interface TechRecord {
   evidence?: string;
 }
 
+const norm = (s: string) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+// Would these two product names refer to the same thing? Exact after
+// normalization, or one is a whole substring of the other ("Apache" ⊂
+// "Apache HTTP Server"). Used to collapse versionless duplicates that agents
+// report under slightly different names.
+function similarProduct(a: string, b: string): boolean {
+  const na = norm(a);
+  const nb = norm(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  return na.includes(nb) || nb.includes(na);
+}
+
 export async function syncTechToDb(
   scanId: string,
   userId: string,
@@ -42,11 +56,19 @@ export async function syncTechToDb(
     const evidence = String(t.evidence ?? "").trim();
 
     try {
-      const existing = await prisma.technology.findUnique({
-        where: {
-          userId_target_vendor_product: { userId, target, vendor, product },
-        },
-      });
+      // Look at everything already tracked on this host so we can dedupe against
+      // near-matches, not just the exact (vendor, product) key.
+      const onHost = await prisma.technology.findMany({ where: { userId, target } });
+
+      // Pick the best existing match:
+      //  1. exact vendor+product (case-insensitive),
+      //  2. same product regardless of vendor,
+      //  3. a similar product name when either side has no version (collapses
+      //     versionless noise like "Apache" vs "Apache HTTP Server").
+      const existing =
+        onHost.find((r) => norm(r.product) === norm(product) && norm(r.vendor) === norm(vendor)) ||
+        onHost.find((r) => norm(r.product) === norm(product)) ||
+        onHost.find((r) => (!r.version || !version) && similarProduct(r.product, product));
 
       if (!existing) {
         await prisma.technology.create({
@@ -71,8 +93,9 @@ export async function syncTechToDb(
         continue;
       }
 
-      // Update in place. Only overwrite fields the new sighting actually carries.
-      const versionChanged = !!version && version !== existing.version;
+      // Merge this sighting into the existing row.
+      const finalVersion = version || existing.version;
+      const versionChanged = !!finalVersion && finalVersion !== existing.version;
       const data: any = { lastSeenAt: new Date() };
       if (version) data.version = version;
       if (evidence) data.evidence = evidence;
@@ -80,6 +103,11 @@ export async function syncTechToDb(
       if (category) data.category = category;
       if (ecosystem) data.ecosystem = ecosystem;
       if (vendor && !existing.vendor) data.vendor = vendor;
+      // Adopt the more specific product name when this sighting is at least as
+      // authoritative (carries a version) and names the product more fully.
+      if (version && !existing.version && product.length > existing.product.length) {
+        data.product = product;
+      }
       // New version → re-evaluate CVEs promptly. Skip while a lookup is already
       // in flight ("checking"): that run finalizes status/next-check on close,
       // and resetting here would make the asset eligible for a second sweep.
@@ -87,10 +115,19 @@ export async function syncTechToDb(
         data.cveStatus = "unknown";
         data.nextCveCheckAt = new Date();
       }
-      await prisma.technology.update({
-        where: { id: existing.id },
-        data,
-      });
+      try {
+        await prisma.technology.update({ where: { id: existing.id }, data });
+      } catch (e: any) {
+        // A product/vendor rename could collide with the unique key — retry
+        // without the rename so we still refresh the rest.
+        if (e?.code === "P2002") {
+          delete data.product;
+          delete data.vendor;
+          await prisma.technology.update({ where: { id: existing.id }, data });
+        } else {
+          throw e;
+        }
+      }
       synced++;
     } catch (e) {
       log.warn("TECH_SYNC", `Failed to sync technology '${product}' on '${target}'`, {

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { AlertCircle, HelpCircle } from "lucide-react";
+import { AlertCircle, HelpCircle, CheckCircle2 } from "lucide-react";
 
-type DialogType = "alert" | "confirm";
+type DialogType = "alert" | "confirm" | "success";
 
 interface DialogOptions {
   title?: string;
@@ -16,7 +16,7 @@ interface DialogOptions {
 interface DialogContextProps {
   showDialog: (options: DialogOptions) => void;
   confirm: (message: string, onConfirm: () => void, title?: string) => void;
-  alert: (message: string, title?: string) => void;
+  alert: (message: string, title?: string, variant?: "error" | "success") => void;
 }
 
 const DialogContext = createContext<DialogContextProps | undefined>(undefined);
@@ -38,8 +38,8 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     setDialog({ type: "confirm", message, onConfirm, title });
   };
 
-  const alert = (message: string, title?: string) => {
-    setDialog({ type: "alert", message, title });
+  const alert = (message: string, title?: string, variant?: "error" | "success") => {
+    setDialog({ type: variant === "success" ? "success" : "alert", message, title });
   };
 
   const closeDialog = () => setDialog(null);
@@ -86,14 +86,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
               <div style={{
                 width: 48, height: 48, borderRadius: "50%",
-                background: dialog.type === "confirm" ? "rgba(168,85,247,0.1)" : "rgba(248,113,113,0.1)",
-                color: dialog.type === "confirm" ? "#a855f7" : "#f87171",
+                background: dialog.type === "confirm" ? "rgba(168,85,247,0.1)" : dialog.type === "success" ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.1)",
+                color: dialog.type === "confirm" ? "#a855f7" : dialog.type === "success" ? "#4ade80" : "#f87171",
                 display: "flex", alignItems: "center", justifyContent: "center"
               }}>
-                {dialog.type === "confirm" ? <HelpCircle size={24} /> : <AlertCircle size={24} />}
+                {dialog.type === "confirm" ? <HelpCircle size={24} /> : dialog.type === "success" ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
               </div>
               <h2 style={{ fontSize: 20, margin: 0, color: "var(--fg)" }}>
-                {dialog.title || (dialog.type === "confirm" ? "Confirm Action" : "Alert")}
+                {dialog.title || (dialog.type === "confirm" ? "Confirm Action" : dialog.type === "success" ? "Success" : "Alert")}
               </h2>
             </div>
             
@@ -112,9 +112,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 </button>
               )}
               <button
-                className={dialog.type === "confirm" ? "btn-primary" : "btn-danger"}
+                className={dialog.type === "confirm" ? "btn-primary" : "btn-secondary"}
                 onClick={handleConfirm}
-                style={{ padding: "10px 24px", fontSize: 14, fontWeight: 600, background: dialog.type === "confirm" ? "var(--fg)" : "var(--sev-critical-bg)", color: dialog.type === "confirm" ? "var(--bg)" : "var(--sev-critical)", border: "none", borderRadius: 8 }}
+                style={{
+                  padding: "10px 24px", fontSize: 14, fontWeight: 600, border: "none", borderRadius: 8,
+                  background: dialog.type === "confirm" ? "var(--fg)" : dialog.type === "success" ? "rgba(74,222,128,0.15)" : "var(--sev-critical-bg)",
+                  color: dialog.type === "confirm" ? "var(--bg)" : dialog.type === "success" ? "#4ade80" : "var(--sev-critical)",
+                }}
               >
                 {dialog.type === "confirm" ? "Confirm" : "OK"}
               </button>

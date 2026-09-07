@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { log } from "@/lib/logger";
-import { runCveLookupNow, runCveScanNow, runFullScanForTech, runAllCveLookups } from "@/lib/cveLookup";
+import {
+  runCveLookupNow,
+  runCveScanNow,
+  runFullScanForTech,
+  runAllCveLookups,
+  stopCveLookupForTech,
+  stopAllCveLookups,
+} from "@/lib/cveLookup";
 
 // GET /api/technologies — list the ASM inventory (third-party/vendor solutions
 // detected across scans, with the version we currently track and CVE status).
@@ -65,6 +72,11 @@ export async function PATCH(req: NextRequest) {
     if (session.role !== "ADMIN" && row.userId !== session.userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    if (action === "stop") {
+      const r = await stopCveLookupForTech(id);
+      return NextResponse.json(r);
+    }
+
     const result =
       action === "fullscan"
         ? await runFullScanForTech(id, instruction, model)
@@ -90,6 +102,14 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const action = String(body?.action || "");
   const model = typeof body?.model === "string" && body.model.trim() ? body.model.trim() : undefined;
+
+  if (action === "stop-all") {
+    const r = await stopAllCveLookups({
+      userId: session.userId as string,
+      isAdmin: session.role === "ADMIN",
+    });
+    return NextResponse.json(r);
+  }
 
   if (action !== "lookup-all") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

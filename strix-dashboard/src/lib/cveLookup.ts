@@ -15,6 +15,10 @@
 import { randomUUID } from "crypto";
 import { prisma } from "./prisma";
 import { log } from "./logger";
+import { getProcess, removeProcess } from "./scanStore";
+
+// Scan statuses that mean "still running" (a lookup we can stop).
+const ACTIVE_STATUSES = ["running", "crawling", "scanning", "analyzing"];
 
 // How many assets to kick per sweep, to bound LLM cost / concurrent runs.
 const MAX_LOOKUPS_PER_SWEEP = 5;
@@ -212,6 +216,76 @@ async function spawnLookupForTech(
   return { ok: true, scanId: res.scanId };
 }
 
+// Kill a running scan process (same-process scanStore) and mark it stopped.
+async function stopScanId(scanId: string): Promise<void> {
+  const proc = getProcess(scanId);
+  if (proc) {
+    try {
+      proc.kill("SIGTERM");
+    } catch (e) {
+      log.warn("CVE_LOOKUP", `Failed to SIGTERM scan ${scanId}`, { err: String(e) });
+    }
+    removeProcess(scanId);
+  }
+  await prisma.scan.update({ where: { id: scanId }, data: { status: "stopped" } }).catch(() => {});
+}
+
+// Stop the in-progress cve_lookup(s) for one asset and clear its "checking" state.
+export async function stopCveLookupForTech(
+  techId: string,
+): Promise<{ ok: boolean; stopped: number }> {
+  let scans;
+  try {
+    scans = await prisma.scan.findMany({
+      where: { techId, kind: "cve_lookup", status: { in: ACTIVE_STATUSES } },
+    });
+  } catch {
+    return { ok: false, stopped: 0 };
+  }
+  for (const s of scans) await stopScanId(s.id);
+  await prisma.technology
+    .update({
+      where: { id: techId },
+      data: { cveStatus: "unknown" },
+    })
+    .catch(() => {});
+  log.info("CVE_LOOKUP", `Stopped ${scans.length} lookup(s) for tech ${techId}`);
+  return { ok: true, stopped: scans.length };
+}
+
+// Stop ALL in-progress cve_lookup scans in scope and clear their assets' state.
+export async function stopAllCveLookups(opts: {
+  userId: string;
+  isAdmin: boolean;
+}): Promise<{ ok: boolean; stopped: number }> {
+  let scans;
+  try {
+    scans = await prisma.scan.findMany({
+      where: {
+        kind: "cve_lookup",
+        status: { in: ACTIVE_STATUSES },
+        ...(opts.isAdmin ? {} : { userId: opts.userId }),
+      },
+    });
+  } catch {
+    return { ok: false, stopped: 0 };
+  }
+  const techIds = new Set<string>();
+  for (const s of scans) {
+    await stopScanId(s.id);
+    if (s.techId) techIds.add(s.techId);
+  }
+  // Also clear any tech stuck on "checking" in scope (covers scans already gone).
+  await prisma.technology
+    .updateMany({
+      where: { cveStatus: "checking", ...(opts.isAdmin ? {} : { userId: opts.userId }) },
+      data: { cveStatus: "unknown" },
+    })
+    .catch(() => {});
+  log.info("CVE_LOOKUP", `Stopped ${scans.length} lookup(s) across ${techIds.size} asset(s)`);
+  return { ok: true, stopped: scans.length };
+}
+
 // Run a CVE lookup across the whole inventory at once (one button). Scoped to
 // the caller's own assets unless admin. Skips assets already "checking".
 // Ignores the automation toggle. Spawns sequentially with a small delay so we
@@ -331,7 +405,11 @@ export async function runFullScanForTech(
 }
 
 // ── Post-scan hook: process a finished cve_lookup and spawn cve_scan on a hit ──
-export async function maybeSpawnCveScanForScan(scanId: string, vulns: any[]): Promise<void> {
+export async function maybeSpawnCveScanForScan(
+  scanId: string,
+  vulns: any[],
+  finalStatus?: string,
+): Promise<void> {
   let scan;
   try {
     scan = await prisma.scan.findUnique({ where: { id: scanId } });
@@ -341,6 +419,18 @@ export async function maybeSpawnCveScanForScan(scanId: string, vulns: any[]): Pr
   // Only a completed cve_lookup drives the automation. A cve_scan (or any normal
   // scan) never spawns further scans, so the loop terminates.
   if (!scan || scan.kind !== "cve_lookup" || !scan.techId) return;
+
+  // A lookup that was stopped/failed must NOT be treated as a clean result —
+  // just release the "checking" state so the asset isn't stuck.
+  if (finalStatus && finalStatus !== "completed") {
+    await prisma.technology
+      .update({
+        where: { id: scan.techId },
+        data: { cveStatus: "unknown" },
+      })
+      .catch(() => {});
+    return;
+  }
 
   const settings = await getAppSettings();
   const intervalHours = settings?.cveLookupIntervalHours || 24;
