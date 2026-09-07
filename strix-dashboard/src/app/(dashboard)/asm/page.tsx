@@ -131,6 +131,9 @@ export default function AsmPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [collapsedHosts, setCollapsedHosts] = useState<Set<string>>(new Set());
+  // Sub-sections (per host: "<host>::software" / "<host>::libs") are COLLAPSED by
+  // default — rows only show once the user clicks the section header.
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Technology>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -224,6 +227,14 @@ export default function AsmPage() {
     setCollapsedHosts((prev) => {
       const next = new Set(prev);
       next.has(host) ? next.delete(host) : next.add(host);
+      return next;
+    });
+  };
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   };
@@ -933,28 +944,32 @@ export default function AsmPage() {
                         {(() => {
                           const software = g.items.filter((t) => !isJsLibrary(t));
                           const libs = g.items.filter((t) => isJsLibrary(t));
-                          const section = (title: string, items: Technology[]) =>
-                            items.length === 0 ? null : (
-                              <React.Fragment key={title}>
-                                <tr>
-                                  <td colSpan={6} style={{ padding: "8px 16px", background: "var(--bg-2)", borderTop: "1px solid var(--border)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-3)" }}>
+                          const section = (key: string, title: string, items: Technology[]) => {
+                            if (items.length === 0) return null;
+                            const open = openSections.has(key);
+                            const vuln = items.filter((i) => i.cveStatus === "vulnerable").length;
+                            return (
+                              <React.Fragment key={key}>
+                                <tr onClick={() => toggleSection(key)} style={{ cursor: "pointer" }}>
+                                  <td colSpan={6} style={{ padding: "9px 16px", background: "var(--bg-2)", borderTop: "1px solid var(--border)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-2)", userSelect: "none" }}>
+                                    <span style={{ color: "var(--fg-3)", marginRight: 8 }}>{open ? "▼" : "▶"}</span>
                                     {title} <span style={{ fontWeight: 500, opacity: 0.7 }}>({items.length})</span>
+                                    {vuln > 0 && (
+                                      <span style={{ marginLeft: 10, color: "#ff6b6b", fontWeight: 700 }}>{vuln} vulnerable</span>
+                                    )}
+                                    {!open && <span style={{ marginLeft: 10, fontWeight: 500, opacity: 0.6, textTransform: "none", letterSpacing: 0 }}>— click to show</span>}
                                   </td>
                                 </tr>
-                                {items.map((t) => renderTechRow(t))}
+                                {open && items.map((t) => renderTechRow(t))}
                               </React.Fragment>
                             );
-                          // Show sub-headers only when both kinds are present;
-                          // otherwise just render the rows plainly.
-                          if (software.length > 0 && libs.length > 0) {
-                            return (
-                              <>
-                                {section("Software / Tech stack", software)}
-                                {section("JS libraries", libs)}
-                              </>
-                            );
-                          }
-                          return g.items.map((t) => renderTechRow(t));
+                          };
+                          return (
+                            <>
+                              {section(`${g.host}::software`, "Software / Tech stack", software)}
+                              {section(`${g.host}::libs`, "JS libraries", libs)}
+                            </>
+                          );
                         })()}
                       </tbody>
                     </table>
